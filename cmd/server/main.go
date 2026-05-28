@@ -10,6 +10,7 @@ import (
 	"butterfly.orx.me/core/app"
 	"github.com/gin-gonic/gin"
 	"github.com/orvice/neo-line/internal/httpapi"
+	"github.com/orvice/neo-line/internal/mcpserver"
 	"github.com/orvice/neo-line/internal/scheduler"
 	"github.com/orvice/neo-line/internal/store"
 )
@@ -45,6 +46,7 @@ func main() {
 				c.JSON(http.StatusOK, gin.H{"message": "pong"})
 			})
 			httpapi.Register(r, mongoStore)
+			mcpserver.Register(r, mongoStore)
 		},
 		InitFunc: []func() error{
 			func() error {

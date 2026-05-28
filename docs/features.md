@@ -435,6 +435,38 @@ GET /v1/servers/:id/monitors/:monitor_id/results
 - monitor 列表：`page_size`、`page_token`
 - result 列表：`page_size`、`page_token`、`start_time`、`end_time`，时间格式为 RFC3339。
 
+## MCP Server
+
+**状态：** 已实现
+
+neo-line 基于官方 `github.com/modelcontextprotocol/go-sdk` 暴露一个 MCP（Model Context Protocol）server，方便 AI 客户端以工具调用方式只读访问监控数据。
+
+运行行为：
+
+- 使用 streamable HTTP transport，挂载在 gin router 的 `/mcp` 路径上。
+- 仅提供只读工具，底层复用 MongoDB store，与现有 `GET` 查询接口数据一致。
+- 工具的输入 / 输出 schema 由 Go struct 通过 `jsonschema` tag 自动推导。
+
+可用工具：
+
+- `list_servers`：列出 server，支持 `environment`、`tags`、`page_size`、`page_token`。
+- `get_server`：按 `id` 查询单个 server。
+- `get_server_health`：查询 server 聚合健康状态及各状态 monitor 数量。
+- `list_server_events`：查询 server 状态变化事件。
+- `list_monitors`：列出 server 下的 monitor。
+- `get_monitor`：按 `server_id` + `monitor_id` 查询单个 monitor。
+- `list_check_results`：查询 monitor 探测结果，支持 RFC3339 的 `start_time` / `end_time` 范围。
+
+### MCP 鉴权
+
+**状态：** 已实现
+
+MCP 端点使用简单的 header token 鉴权：
+
+- 通过环境变量 `MCP_AUTH_TOKEN` 配置静态 token。
+- 设置后，请求需在 `Authorization: Bearer <token>` 或 `X-MCP-Token: <token>` 头中携带该 token，否则返回 `401`。
+- 未设置 `MCP_AUTH_TOKEN` 时，`/mcp` 不做鉴权（适用于受信任内网或本地开发）。
+
 ## 用户与鉴权
 
 **状态：** 已实现
