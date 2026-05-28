@@ -1,0 +1,14 @@
+.git
+.github
+.gitignore
+Dockerfile
+README.md
+docs
+
+tmp
+dist
+build
+coverage.out
+
+*.log
+*.test
