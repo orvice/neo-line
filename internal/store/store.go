@@ -114,12 +114,12 @@ type ServerHealth struct {
 	UnknownMonitors    uint32    `json:"unknown_monitors"`
 }
 
-type Store struct {
+type MongoStore struct {
 	client   *mongo.Client
 	database *mongo.Database
 }
 
-func New(ctx context.Context) (*Store, error) {
+func New(ctx context.Context) (*MongoStore, error) {
 	uri := env("MONGODB_URI", "mongodb://localhost:27017")
 	database := env("MONGODB_DATABASE", "neo_line")
 	client, err := mongo.Connect(options.Client().ApplyURI(uri))
@@ -132,17 +132,17 @@ func New(ctx context.Context) (*Store, error) {
 		_ = client.Disconnect(context.Background())
 		return nil, err
 	}
-	return &Store{client: client, database: client.Database(database)}, nil
+	return &MongoStore{client: client, database: client.Database(database)}, nil
 }
 
-func (s *Store) Close(ctx context.Context) error {
+func (s *MongoStore) Close(ctx context.Context) error {
 	if s == nil || s.client == nil {
 		return nil
 	}
 	return s.client.Disconnect(ctx)
 }
 
-func (s *Store) ListServers(ctx context.Context, environment string, tags []string, limit int64, pageToken string) ([]Server, string, error) {
+func (s *MongoStore) ListServers(ctx context.Context, environment string, tags []string, limit int64, pageToken string) ([]Server, string, error) {
 	filter := bson.M{}
 	if environment != "" {
 		filter["environment"] = environment
@@ -153,7 +153,7 @@ func (s *Store) ListServers(ctx context.Context, environment string, tags []stri
 	return findPage[Server](ctx, s.servers(), filter, limit, pageToken, bson.D{{Key: "created_at", Value: -1}})
 }
 
-func (s *Store) CreateServer(ctx context.Context, server Server) (Server, error) {
+func (s *MongoStore) CreateServer(ctx context.Context, server Server) (Server, error) {
 	now := time.Now().UTC()
 	if server.ID == "" {
 		server.ID = "srv_" + uuid.NewString()
@@ -168,13 +168,13 @@ func (s *Store) CreateServer(ctx context.Context, server Server) (Server, error)
 	return server, err
 }
 
-func (s *Store) GetServer(ctx context.Context, id string) (Server, error) {
+func (s *MongoStore) GetServer(ctx context.Context, id string) (Server, error) {
 	var server Server
 	err := s.servers().FindOne(ctx, bson.M{"id": id}).Decode(&server)
 	return server, err
 }
 
-func (s *Store) UpdateServer(ctx context.Context, id string, server Server) (Server, error) {
+func (s *MongoStore) UpdateServer(ctx context.Context, id string, server Server) (Server, error) {
 	existing, err := s.GetServer(ctx, id)
 	if err != nil {
 		return Server{}, err
@@ -189,7 +189,7 @@ func (s *Store) UpdateServer(ctx context.Context, id string, server Server) (Ser
 	return server, err
 }
 
-func (s *Store) DeleteServer(ctx context.Context, id string) error {
+func (s *MongoStore) DeleteServer(ctx context.Context, id string) error {
 	res, err := s.servers().DeleteOne(ctx, bson.M{"id": id})
 	if err != nil {
 		return err
@@ -201,11 +201,11 @@ func (s *Store) DeleteServer(ctx context.Context, id string) error {
 	return err
 }
 
-func (s *Store) ListMonitors(ctx context.Context, serverID string, limit int64, pageToken string) ([]Monitor, string, error) {
+func (s *MongoStore) ListMonitors(ctx context.Context, serverID string, limit int64, pageToken string) ([]Monitor, string, error) {
 	return findPage[Monitor](ctx, s.monitors(), bson.M{"server_id": serverID}, limit, pageToken, bson.D{{Key: "created_at", Value: -1}})
 }
 
-func (s *Store) CreateMonitor(ctx context.Context, serverID string, monitor Monitor) (Monitor, error) {
+func (s *MongoStore) CreateMonitor(ctx context.Context, serverID string, monitor Monitor) (Monitor, error) {
 	if _, err := s.GetServer(ctx, serverID); err != nil {
 		return Monitor{}, err
 	}
@@ -222,13 +222,13 @@ func (s *Store) CreateMonitor(ctx context.Context, serverID string, monitor Moni
 	return monitor, err
 }
 
-func (s *Store) GetMonitor(ctx context.Context, serverID, monitorID string) (Monitor, error) {
+func (s *MongoStore) GetMonitor(ctx context.Context, serverID, monitorID string) (Monitor, error) {
 	var monitor Monitor
 	err := s.monitors().FindOne(ctx, bson.M{"server_id": serverID, "id": monitorID}).Decode(&monitor)
 	return monitor, err
 }
 
-func (s *Store) UpdateMonitor(ctx context.Context, serverID, monitorID string, monitor Monitor) (Monitor, error) {
+func (s *MongoStore) UpdateMonitor(ctx context.Context, serverID, monitorID string, monitor Monitor) (Monitor, error) {
 	existing, err := s.GetMonitor(ctx, serverID, monitorID)
 	if err != nil {
 		return Monitor{}, err
@@ -245,7 +245,7 @@ func (s *Store) UpdateMonitor(ctx context.Context, serverID, monitorID string, m
 	return monitor, err
 }
 
-func (s *Store) DeleteMonitor(ctx context.Context, serverID, monitorID string) error {
+func (s *MongoStore) DeleteMonitor(ctx context.Context, serverID, monitorID string) error {
 	res, err := s.monitors().DeleteOne(ctx, bson.M{"server_id": serverID, "id": monitorID})
 	if err != nil {
 		return err
@@ -256,7 +256,7 @@ func (s *Store) DeleteMonitor(ctx context.Context, serverID, monitorID string) e
 	return nil
 }
 
-func (s *Store) ListCheckResults(ctx context.Context, serverID, monitorID string, limit int64, pageToken string, start, end *time.Time) ([]CheckResult, string, error) {
+func (s *MongoStore) ListCheckResults(ctx context.Context, serverID, monitorID string, limit int64, pageToken string, start, end *time.Time) ([]CheckResult, string, error) {
 	filter := bson.M{"server_id": serverID, "monitor_id": monitorID}
 	if start != nil || end != nil {
 		timeFilter := bson.M{}
@@ -271,11 +271,11 @@ func (s *Store) ListCheckResults(ctx context.Context, serverID, monitorID string
 	return findPage[CheckResult](ctx, s.results(), filter, limit, pageToken, bson.D{{Key: "started_at", Value: -1}})
 }
 
-func (s *Store) ListServerEvents(ctx context.Context, serverID string, limit int64, pageToken string) ([]ServerEvent, string, error) {
+func (s *MongoStore) ListServerEvents(ctx context.Context, serverID string, limit int64, pageToken string) ([]ServerEvent, string, error) {
 	return findPage[ServerEvent](ctx, s.events(), bson.M{"server_id": serverID}, limit, pageToken, bson.D{{Key: "occurred_at", Value: -1}})
 }
 
-func (s *Store) GetServerHealth(ctx context.Context, serverID string) (ServerHealth, error) {
+func (s *MongoStore) GetServerHealth(ctx context.Context, serverID string) (ServerHealth, error) {
 	server, err := s.GetServer(ctx, serverID)
 	if err != nil {
 		return ServerHealth{}, err
@@ -460,7 +460,7 @@ func IsNotFound(err error) bool {
 	return errors.Is(err, mongo.ErrNoDocuments)
 }
 
-func (s *Store) servers() *mongo.Collection  { return s.database.Collection("servers") }
-func (s *Store) monitors() *mongo.Collection { return s.database.Collection("monitors") }
-func (s *Store) results() *mongo.Collection  { return s.database.Collection("monitor_results") }
-func (s *Store) events() *mongo.Collection   { return s.database.Collection("server_events") }
+func (s *MongoStore) servers() *mongo.Collection  { return s.database.Collection("servers") }
+func (s *MongoStore) monitors() *mongo.Collection { return s.database.Collection("monitors") }
+func (s *MongoStore) results() *mongo.Collection  { return s.database.Collection("monitor_results") }
+func (s *MongoStore) events() *mongo.Collection   { return s.database.Collection("server_events") }

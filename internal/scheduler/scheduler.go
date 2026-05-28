@@ -23,7 +23,7 @@ const (
 
 // Scheduler drives periodic execution of monitors.
 type Scheduler struct {
-	store  *store.Store
+	store  store.Store
 	logger *slog.Logger
 
 	mu       sync.Mutex
@@ -33,7 +33,7 @@ type Scheduler struct {
 }
 
 // New builds a Scheduler backed by the given store.
-func New(st *store.Store) *Scheduler {
+func New(st store.Store) *Scheduler {
 	return &Scheduler{
 		store:    st,
 		lastRun:  make(map[string]time.Time),

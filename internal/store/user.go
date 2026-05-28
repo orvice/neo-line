@@ -48,7 +48,7 @@ type Session struct {
 // EnsureAuthIndexes creates the indexes the user system relies on. The unique
 // email index keeps account creation idempotent and the TTL index expires
 // sessions automatically once they pass ExpiresAt.
-func (s *Store) EnsureAuthIndexes(ctx context.Context) error {
+func (s *MongoStore) EnsureAuthIndexes(ctx context.Context) error {
 	if _, err := s.users().Indexes().CreateOne(ctx, mongo.IndexModel{
 		Keys:    bson.D{{Key: "email", Value: 1}},
 		Options: options.Index().SetUnique(true),
@@ -68,7 +68,7 @@ func (s *Store) EnsureAuthIndexes(ctx context.Context) error {
 // credentials. The admin password comes from the environment, so it is the
 // source of truth: an existing account has its password hash refreshed on
 // every startup, allowing rotation by changing the env value.
-func (s *Store) EnsureAdminUser(ctx context.Context, email, password string) error {
+func (s *MongoStore) EnsureAdminUser(ctx context.Context, email, password string) error {
 	email = normalizeEmail(email)
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
@@ -99,7 +99,7 @@ func (s *Store) EnsureAdminUser(ctx context.Context, email, password string) err
 }
 
 // Authenticate verifies an email/password pair and returns the matching user.
-func (s *Store) Authenticate(ctx context.Context, email, password string) (User, error) {
+func (s *MongoStore) Authenticate(ctx context.Context, email, password string) (User, error) {
 	var user User
 	err := s.users().FindOne(ctx, bson.M{"email": normalizeEmail(email)}).Decode(&user)
 	if errors.Is(err, mongo.ErrNoDocuments) {
@@ -115,7 +115,7 @@ func (s *Store) Authenticate(ctx context.Context, email, password string) (User,
 }
 
 // CreateSession issues a bearer token for a user.
-func (s *Store) CreateSession(ctx context.Context, user User) (Session, error) {
+func (s *MongoStore) CreateSession(ctx context.Context, user User) (Session, error) {
 	tokenBytes := make([]byte, 32)
 	if _, err := rand.Read(tokenBytes); err != nil {
 		return Session{}, err
@@ -137,7 +137,7 @@ func (s *Store) CreateSession(ctx context.Context, user User) (Session, error) {
 
 // GetSession returns a valid session for a token. Expired sessions are treated
 // as not found and removed.
-func (s *Store) GetSession(ctx context.Context, token string) (Session, error) {
+func (s *MongoStore) GetSession(ctx context.Context, token string) (Session, error) {
 	var session Session
 	err := s.sessions().FindOne(ctx, bson.M{"token": token}).Decode(&session)
 	if err != nil {
@@ -151,7 +151,7 @@ func (s *Store) GetSession(ctx context.Context, token string) (Session, error) {
 }
 
 // DeleteSession revokes a token.
-func (s *Store) DeleteSession(ctx context.Context, token string) error {
+func (s *MongoStore) DeleteSession(ctx context.Context, token string) error {
 	_, err := s.sessions().DeleteOne(ctx, bson.M{"token": token})
 	return err
 }
@@ -160,5 +160,5 @@ func normalizeEmail(email string) string {
 	return strings.ToLower(strings.TrimSpace(email))
 }
 
-func (s *Store) users() *mongo.Collection    { return s.database.Collection("users") }
-func (s *Store) sessions() *mongo.Collection { return s.database.Collection("sessions") }
+func (s *MongoStore) users() *mongo.Collection    { return s.database.Collection("users") }
+func (s *MongoStore) sessions() *mongo.Collection { return s.database.Collection("sessions") }

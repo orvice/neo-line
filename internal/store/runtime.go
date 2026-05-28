@@ -10,7 +10,7 @@ import (
 
 // ListEnabledMonitors returns every enabled monitor that belongs to an enabled
 // server. The scheduler uses this as the authoritative set of work to run.
-func (s *Store) ListEnabledMonitors(ctx context.Context) ([]Monitor, error) {
+func (s *MongoStore) ListEnabledMonitors(ctx context.Context) ([]Monitor, error) {
 	cursor, err := s.servers().Find(ctx, bson.M{"enabled": true})
 	if err != nil {
 		return nil, err
@@ -47,7 +47,7 @@ func (s *Store) ListEnabledMonitors(ctx context.Context) ([]Monitor, error) {
 
 // SaveCheckResult persists a single probe outcome, updates the owning monitor's
 // current status and timestamps, and recomputes the server's aggregated health.
-func (s *Store) SaveCheckResult(ctx context.Context, result CheckResult) error {
+func (s *MongoStore) SaveCheckResult(ctx context.Context, result CheckResult) error {
 	if result.ID == "" {
 		result.ID = "res_" + uuid.NewString()
 	}

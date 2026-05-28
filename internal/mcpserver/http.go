@@ -13,7 +13,7 @@ import (
 // Register mounts the MCP streamable HTTP endpoint on the gin engine at /mcp.
 // When MCP_AUTH_TOKEN is set, requests must present it via the Authorization
 // bearer header or the X-MCP-Token header.
-func Register(r *gin.Engine, st *store.Store) {
+func Register(r *gin.Engine, st store.Store) {
 	server := NewServer(st)
 	handler := mcp.NewStreamableHTTPHandler(func(*http.Request) *mcp.Server {
 		return server

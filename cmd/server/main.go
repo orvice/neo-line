@@ -70,7 +70,7 @@ func main() {
 // ADMIN_PASSWORD is required to (re)set the admin credentials; ADMIN_EMAIL is
 // optional and defaults to admin@neo-line.local. When ADMIN_PASSWORD is unset
 // the admin account is left untouched.
-func bootstrapAdmin(ctx context.Context, st *store.Store) error {
+func bootstrapAdmin(ctx context.Context, st store.Store) error {
 	password := os.Getenv("ADMIN_PASSWORD")
 	if password == "" {
 		log.Println("ADMIN_PASSWORD not set, skipping admin user initialization")

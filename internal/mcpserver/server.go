@@ -13,7 +13,7 @@ import (
 )
 
 // NewServer builds an MCP server with read-only monitoring tools.
-func NewServer(st *store.Store) *mcp.Server {
+func NewServer(st store.Store) *mcp.Server {
 	srv := mcp.NewServer(&mcp.Implementation{Name: "neo-line", Version: "v1.0.0"}, nil)
 	t := &tools{store: st}
 
@@ -56,7 +56,7 @@ func NewServer(st *store.Store) *mcp.Server {
 }
 
 type tools struct {
-	store *store.Store
+	store store.Store
 }
 
 type pageInput struct {

@@ -11,10 +11,10 @@ import (
 )
 
 type API struct {
-	store *store.Store
+	store store.Store
 }
 
-func Register(r *gin.Engine, st *store.Store) {
+func Register(r *gin.Engine, st store.Store) {
 	api := &API{store: st}
 	v1 := r.Group("/v1")
 	{
