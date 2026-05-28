@@ -1,0 +1,11 @@
+node_modules
+dist
+dist-ssr
+.vite
+node_modules/.tmp
+*.local
+.git
+.gitignore
+README.md
+Dockerfile
+.dockerignore
