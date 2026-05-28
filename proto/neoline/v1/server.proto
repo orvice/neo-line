@@ -1,0 +1,142 @@
+syntax = "proto3";
+
+package neoline.v1;
+
+import "google/api/annotations.proto";
+import "google/protobuf/timestamp.proto";
+import "neoline/v1/common.proto";
+
+option go_package = "github.com/orvice/neo-line/pkg/proto/neoline/v1;neolinev1";
+
+// Server is a monitored host with one or more attached monitors.
+message Server {
+  string id = 1;
+  string name = 2;
+  string host = 3;
+  string environment = 4;
+  string region = 5;
+  repeated string tags = 6;
+  bool enabled = 7;
+  HealthStatus health_status = 8;
+  google.protobuf.Timestamp last_status_change_at = 9;
+  google.protobuf.Timestamp last_check_at = 10;
+  google.protobuf.Timestamp created_at = 11;
+  google.protobuf.Timestamp updated_at = 12;
+}
+
+// ServerEvent records a server health-status transition.
+message ServerEvent {
+  string id = 1;
+  string server_id = 2;
+  HealthStatus previous_status = 3;
+  HealthStatus current_status = 4;
+  string reason = 5;
+  google.protobuf.Timestamp occurred_at = 6;
+}
+
+// ServerHealth is the aggregated health view of a server.
+message ServerHealth {
+  string server_id = 1;
+  HealthStatus status = 2;
+  google.protobuf.Timestamp last_status_change_at = 3;
+  google.protobuf.Timestamp last_check_at = 4;
+  uint32 total_monitors = 5;
+  uint32 healthy_monitors = 6;
+  uint32 warning_monitors = 7;
+  uint32 critical_monitors = 8;
+  uint32 down_monitors = 9;
+  uint32 unknown_monitors = 10;
+}
+
+message ListServersRequest {
+  uint32 page_size = 1;
+  string page_token = 2;
+  string environment = 3;
+  repeated string tags = 4;
+}
+
+message ListServersResponse {
+  repeated Server servers = 1;
+  string next_page_token = 2;
+}
+
+message CreateServerRequest {
+  Server server = 1;
+}
+
+message CreateServerResponse {
+  Server server = 1;
+}
+
+message GetServerRequest {
+  string id = 1;
+}
+
+message GetServerResponse {
+  Server server = 1;
+}
+
+message UpdateServerRequest {
+  string id = 1;
+  Server server = 2;
+}
+
+message UpdateServerResponse {
+  Server server = 1;
+}
+
+message DeleteServerRequest {
+  string id = 1;
+}
+
+message DeleteServerResponse {}
+
+message GetServerHealthRequest {
+  string id = 1;
+}
+
+message GetServerHealthResponse {
+  ServerHealth health = 1;
+}
+
+message ListServerEventsRequest {
+  string id = 1;
+  uint32 page_size = 2;
+  string page_token = 3;
+}
+
+message ListServerEventsResponse {
+  repeated ServerEvent events = 1;
+  string next_page_token = 2;
+}
+
+// ServerService manages servers and exposes their aggregated health.
+service ServerService {
+  rpc ListServers(ListServersRequest) returns (ListServersResponse) {
+    option (google.api.http) = {get: "/v1/servers"};
+  }
+  rpc CreateServer(CreateServerRequest) returns (CreateServerResponse) {
+    option (google.api.http) = {
+      post: "/v1/servers"
+      body: "server"
+    };
+  }
+  rpc GetServer(GetServerRequest) returns (GetServerResponse) {
+    option (google.api.http) = {get: "/v1/servers/{id}"};
+  }
+  rpc UpdateServer(UpdateServerRequest) returns (UpdateServerResponse) {
+    option (google.api.http) = {
+      put: "/v1/servers/{id}"
+      body: "server"
+    };
+  }
+  rpc DeleteServer(DeleteServerRequest) returns (DeleteServerResponse) {
+    option (google.api.http) = {delete: "/v1/servers/{id}"};
+  }
+  rpc GetServerHealth(GetServerHealthRequest) returns (GetServerHealthResponse) {
+    option (google.api.http) = {get: "/v1/servers/{id}/health"};
+  }
+  rpc ListServerEvents(ListServerEventsRequest) returns (ListServerEventsResponse) {
+    option (google.api.http) = {get: "/v1/servers/{id}/events"};
+  }
+}

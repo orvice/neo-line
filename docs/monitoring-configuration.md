@@ -1,0 +1,347 @@
+# 监控配置
+
+本文档描述 neo-line 规划中的监控配置模型。
+
+目标是允许用户为一台 server 绑定一个或多个 monitor。每个 monitor 描述一个具体的网络检查，例如 TCP 端口探测、URL 探测或 TLS Port 探测。
+
+所有监控业务配置都从 MongoDB 读取。本文档中的 YAML 片段用于表达字段结构，不代表本地配置文件格式。
+
+## 配置来源
+
+MongoDB 是 neo-line 监控业务配置的唯一权威来源。
+
+配置读写规则：
+
+- Server、monitor、阈值、启停状态和探测参数都存储在 MongoDB。
+- API 创建、更新或删除配置时，写入 MongoDB。
+- 调度器从 MongoDB 读取启用状态为 `true` 的 server 和 monitor。
+- 探测 worker 执行时使用 MongoDB 中当前有效的 monitor 配置。
+- 探测结果、当前状态、状态变化事件和证书信息写回 MongoDB。
+- 本地文件不作为 server / monitor 配置来源。
+
+初始 collection 建议：
+
+- `servers`
+- `monitors`
+- `monitor_results`
+- `server_events`
+- `tls_certificates`
+- `alert_events`
+
+## Server
+
+Server 是主要的被监控资源。
+
+MongoDB document 字段示例：
+
+```yaml
+id: srv_01
+name: production-api-01
+host: 10.0.0.10
+environment: production
+region: ap-east-1
+tags:
+  - api
+  - production
+enabled: true
+```
+
+字段说明：
+
+- `id`：server 唯一标识
+- `name`：显示名称
+- `host`：默认 host，可以是 hostname 或 IP
+- `environment`：环境，例如 production、staging
+- `region`：区域或数据中心
+- `tags`：标签
+- `enabled`：是否启用该 server 的监控
+
+## Monitor 通用字段
+
+所有 monitor 类型应共享一组基础配置字段。
+
+Monitor 存储在 MongoDB `monitors` collection 中，通过 `server_id` 关联到 `servers` collection。
+
+```yaml
+id: mon_01
+server_id: srv_01
+name: api-url
+kind: url
+enabled: true
+interval_seconds: 60
+timeout_seconds: 5
+retries: 3
+```
+
+字段说明：
+
+- `id`：monitor 唯一标识
+- `server_id`：关联的 server ID
+- `name`：monitor 显示名称
+- `kind`：monitor 类型，可选值为 `tcp`、`url`、`tls_port`
+- `enabled`：是否启用该 monitor
+- `interval_seconds`：检查间隔
+- `timeout_seconds`：单次检查超时时间
+- `retries`：标记为异常前允许的重试次数
+
+## TCP 端口探测
+
+TCP 端口探测用于检查目标端口是否接受 TCP 连接。
+
+MongoDB document 字段示例：
+
+```yaml
+kind: tcp
+host: 10.0.0.10
+port: 22
+timeout_seconds: 3
+```
+
+字段说明：
+
+- `host`：目标 hostname 或 IP
+- `port`：目标 TCP 端口
+- `timeout_seconds`：连接超时时间
+
+健康条件：
+
+- 在超时时间内成功建立 TCP 连接。
+
+异常条件：
+
+- 连接被拒绝
+- 连接超时
+- DNS 解析失败
+- 网络不可达
+
+检查结果需要记录：
+
+- 成功或失败
+- 连接延迟
+- 错误信息
+- 检查时间
+
+## URL 探测
+
+URL 探测用于向指定 HTTP 或 HTTPS URL 发送请求，并判断响应是否符合预期。
+
+HTTP 和 HTTPS 不拆分为两个 monitor 类型，统一使用 `kind: url`，由 `url` 字段中的 scheme 决定协议。
+
+MongoDB document 字段示例：
+
+```yaml
+kind: url
+url: https://api.example.com/health
+method: GET
+headers:
+  User-Agent: neo-line-monitor
+expected_status_codes:
+  - 200
+timeout_seconds: 5
+tls_verify: true
+sni_name: api.example.com
+```
+
+字段说明：
+
+- `url`：目标 URL，scheme 支持 `http` 和 `https`
+- `method`：HTTP method，默认 `GET`
+- `headers`：请求 headers
+- `expected_status_codes`：期望状态码列表，默认 `[200]`
+- `timeout_seconds`：请求超时时间
+- `tls_verify`：是否校验证书，仅适用于 `https` URL
+- `sni_name`：自定义 TLS server name，仅适用于 `https` URL
+
+健康条件：
+
+- DNS 解析成功。
+- TCP 连接成功。
+- 如果 URL scheme 是 `https`，TLS 握手成功。
+- 如果 URL scheme 是 `https` 且 `tls_verify` 开启，证书校验成功。
+- 请求在超时时间内完成。
+- 响应状态码匹配 `expected_status_codes`。
+
+异常条件：
+
+- DNS 解析失败
+- TCP 连接失败
+- TLS 握手失败
+- 证书校验失败
+- 请求超时
+- HTTP 状态码不符合预期
+- 响应无效
+
+检查结果需要记录：
+
+- 成功或失败
+- HTTP 状态码
+- DNS / TCP / TLS / 总请求延迟
+- 错误阶段
+- 错误信息
+- 检查时间
+
+## TLS Port 探测
+
+TLS Port 探测用于检查目标端口是否可以完成 TLS 握手，并记录证书状态。
+
+该探测不发送 HTTP 请求，也不判断 HTTP 状态码。它适用于 HTTPS 端口、TLS 代理、LDAPS、SMTPS 或其他基于 TLS 的自定义服务。
+
+MongoDB document 字段示例：
+
+```yaml
+kind: tls_port
+host: 203.0.113.10
+port: 443
+sni_name: api.example.com
+tls_verify: true
+warning_days: 30
+critical_days: 7
+timeout_seconds: 5
+```
+
+字段说明：
+
+- `host`：目标 hostname 或 IP
+- `port`：目标 TLS 端口，默认 `443`
+- `sni_name`：自定义 TLS server name
+- `tls_verify`：是否校验证书
+- `warning_days`：证书剩余有效期低于该天数时进入 Warning
+- `critical_days`：证书剩余有效期低于该天数时进入 Critical
+- `timeout_seconds`：连接和 TLS 握手超时时间
+
+健康条件：
+
+- DNS 解析成功。
+- TCP 连接成功。
+- TLS 握手成功。
+- 当 `tls_verify` 开启时，证书校验成功。
+- 证书有效，且过期时间大于 `warning_days`。
+
+异常条件：
+
+- DNS 解析失败
+- TCP 连接失败
+- TLS 握手失败
+- 证书校验失败
+- 证书已过期
+- 证书尚未生效
+- 证书将在阈值时间内过期
+
+检查结果需要记录：
+
+- 成功或失败
+- DNS / TCP / TLS 延迟
+- TLS 版本
+- Cipher suite
+- 证书元数据
+- 证书剩余有效天数
+- 错误阶段
+- 错误信息
+- 检查时间
+
+## 自定义 SNI Name
+
+URL 探测和 TLS Port 探测都可以配置 `sni_name`。
+
+SNI，全称 Server Name Indication，会在 TLS 握手阶段发送给服务端。部分服务会根据 SNI 返回不同证书，或者将请求路由到不同后端。
+
+行为规则：
+
+- 如果设置了 `sni_name`，neo-line 应使用该值作为 TLS server name。
+- 如果未设置 `sni_name`，且目标 host 是域名，neo-line 应默认使用 host 作为 TLS server name。
+- 如果未设置 `sni_name`，且目标 host 是 IP 地址，TLS hostname 校验可能失败，除非证书包含该 IP 或关闭 TLS 校验。
+
+典型 MongoDB document 字段：
+
+```yaml
+kind: tls_port
+host: 203.0.113.10
+port: 443
+sni_name: api.example.com
+tls_verify: true
+```
+
+该配置表示：连接目标是 `203.0.113.10:443`，但 TLS 握手时发送的 SNI name 是 `api.example.com`。
+
+## TLS 证书状态
+
+TLS 证书状态主要由 `tls_port` monitor 负责记录。HTTPS URL 探测也可以记录证书状态，但不应替代 TLS Port 探测的证书模型。
+
+需要记录的证书字段：
+
+- Subject
+- Issuer
+- DNS names
+- Serial number
+- Not before
+- Not after
+- Days remaining
+
+默认阈值建议：
+
+```yaml
+warning_days: 30
+critical_days: 7
+```
+
+状态规则：
+
+- **Healthy** — 证书有效，且过期时间大于 `warning_days`。
+- **Warning** — 证书将在 `warning_days` 天内过期。
+- **Critical** — 证书将在 `critical_days` 天内过期。
+- **Down** — 证书已过期、尚未生效，或 TLS 握手失败。
+
+## 完整配置示例
+
+以下示例展示 MongoDB 中 server document 与 monitor documents 的逻辑关系。
+
+```yaml
+servers:
+  - id: srv_01
+    name: production-api-01
+    host: 203.0.113.10
+    environment: production
+    enabled: true
+
+monitors:
+  - id: mon_ssh
+    server_id: srv_01
+    name: ssh-port
+    kind: tcp
+    host: 203.0.113.10
+    port: 22
+    interval_seconds: 60
+    timeout_seconds: 3
+    retries: 3
+    enabled: true
+
+  - id: mon_url
+    server_id: srv_01
+    name: api-url-health
+    kind: url
+    url: https://api.example.com/health
+    method: GET
+    headers:
+      User-Agent: neo-line-monitor
+    tls_verify: true
+    expected_status_codes:
+      - 200
+    interval_seconds: 60
+    timeout_seconds: 5
+    retries: 3
+    enabled: true
+
+  - id: mon_tls
+    server_id: srv_01
+    name: api-tls-port
+    kind: tls_port
+    host: 203.0.113.10
+    port: 443
+    sni_name: api.example.com
+    tls_verify: true
+    warning_days: 30
+    critical_days: 7
+    interval_seconds: 3600
+    timeout_seconds: 5
+    enabled: true
+```

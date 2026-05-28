@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package neoline.v1;
+
+option go_package = "github.com/orvice/neo-line/pkg/proto/neoline/v1;neolinev1";
+
+// HealthStatus describes the aggregated health of a server or monitor.
+// Severity order: DOWN > CRITICAL > WARNING > UNKNOWN > HEALTHY.
+enum HealthStatus {
+  HEALTH_STATUS_UNSPECIFIED = 0;
+  HEALTH_STATUS_HEALTHY = 1;
+  HEALTH_STATUS_WARNING = 2;
+  HEALTH_STATUS_CRITICAL = 3;
+  HEALTH_STATUS_DOWN = 4;
+  HEALTH_STATUS_UNKNOWN = 5;
+}
+
+// MonitorKind enumerates the supported check types.
+enum MonitorKind {
+  MONITOR_KIND_UNSPECIFIED = 0;
+  MONITOR_KIND_TCP = 1;
+  MONITOR_KIND_HTTP = 2;
+  MONITOR_KIND_HTTPS = 3;
+  MONITOR_KIND_TLS_CERTIFICATE = 4;
+}
+
+// ErrorStage records which layer a probe failed at.
+enum ErrorStage {
+  ERROR_STAGE_UNSPECIFIED = 0;
+  ERROR_STAGE_NONE = 1;
+  ERROR_STAGE_DNS = 2;
+  ERROR_STAGE_TCP = 3;
+  ERROR_STAGE_TLS = 4;
+  ERROR_STAGE_HTTP = 5;
+  ERROR_STAGE_TIMEOUT = 6;
+}
