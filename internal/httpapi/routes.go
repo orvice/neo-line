@@ -18,20 +18,33 @@ func Register(r *gin.Engine, st *store.Store) {
 	api := &API{store: st}
 	v1 := r.Group("/v1")
 	{
+		// Public authentication endpoint.
+		v1.POST("/auth/login", api.login)
+
+		// Public read endpoints.
 		v1.GET("/servers", api.listServers)
-		v1.POST("/servers", api.createServer)
 		v1.GET("/servers/:id", api.getServer)
-		v1.PUT("/servers/:id", api.updateServer)
-		v1.DELETE("/servers/:id", api.deleteServer)
 		v1.GET("/servers/:id/health", api.getServerHealth)
 		v1.GET("/servers/:id/events", api.listServerEvents)
-
 		v1.GET("/servers/:id/monitors", api.listMonitors)
-		v1.POST("/servers/:id/monitors", api.createMonitor)
 		v1.GET("/servers/:id/monitors/:monitor_id", api.getMonitor)
-		v1.PUT("/servers/:id/monitors/:monitor_id", api.updateMonitor)
-		v1.DELETE("/servers/:id/monitors/:monitor_id", api.deleteMonitor)
 		v1.GET("/servers/:id/monitors/:monitor_id/results", api.listCheckResults)
+
+		// Admin endpoints require authentication.
+		admin := v1.Group("")
+		admin.Use(api.authRequired())
+		{
+			admin.GET("/auth/me", api.currentUser)
+			admin.POST("/auth/logout", api.logout)
+
+			admin.POST("/servers", api.createServer)
+			admin.PUT("/servers/:id", api.updateServer)
+			admin.DELETE("/servers/:id", api.deleteServer)
+
+			admin.POST("/servers/:id/monitors", api.createMonitor)
+			admin.PUT("/servers/:id/monitors/:monitor_id", api.updateMonitor)
+			admin.DELETE("/servers/:id/monitors/:monitor_id", api.deleteMonitor)
+		}
 	}
 }
 

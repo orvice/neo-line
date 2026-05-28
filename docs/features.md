@@ -406,6 +406,8 @@ GET /v1/servers/:id/health
 GET /v1/servers/:id/events
 ```
 
+其中 `POST` / `PUT` / `DELETE` 为 Admin 写操作，需携带 Bearer token；`GET` 查询接口保持公开。
+
 支持的查询参数：
 
 - `GET /v1/servers`：`page_size`、`page_token`、`environment`、`tags`（逗号分隔）
@@ -426,10 +428,77 @@ DELETE /v1/servers/:id/monitors/:monitor_id
 GET /v1/servers/:id/monitors/:monitor_id/results
 ```
 
+其中 `POST` / `PUT` / `DELETE` 为 Admin 写操作，需携带 Bearer token；`GET` 查询接口保持公开。
+
 支持的查询参数：
 
 - monitor 列表：`page_size`、`page_token`
 - result 列表：`page_size`、`page_token`、`start_time`、`end_time`，时间格式为 RFC3339。
+
+## 用户与鉴权
+
+**状态：** 已实现
+
+neo-line 提供基于 email + password 的用户系统，用于保护 Admin 相关接口。
+
+用户与会话信息存储在 MongoDB：
+
+- `users`：账户信息，包含 `id`、`email`、`password_hash`、`role`、`created_at`、`updated_at`。密码使用 bcrypt 哈希存储，明文密码不会落库。
+- `sessions`：登录后签发的 Bearer token，包含 `token`、`user_id`、`email`、`role`、`created_at`、`expires_at`。`expires_at` 上建立 TTL 索引，过期会话自动清理。
+
+运行行为：
+
+- `email` 建立唯一索引，账户创建保持幂等。
+- 登录成功后签发一个随机 token，默认有效期 `24h`。
+- 请求 Admin 接口时在 `Authorization: Bearer <token>` 头中携带 token。
+- token 缺失、无效或过期时返回 `401`。
+
+### Admin 账户初始化
+
+**状态：** 已实现
+
+Admin 账户从运行环境初始化，环境是 admin 密码的权威来源：
+
+- `ADMIN_PASSWORD`：必填。设置后服务启动时会创建或更新 admin 账户的密码哈希，因此修改该值即可轮换密码。未设置时跳过 admin 初始化，不改动已有账户。
+- `ADMIN_EMAIL`：可选，默认 `admin@neo-line.local`。
+
+该初始化逻辑在服务启动连接 MongoDB 后执行，同时确保 `users` 和 `sessions` 的索引存在。
+
+### 认证 API
+
+**状态：** 已实现
+
+```http
+POST   /v1/auth/login    # 公开，email + password 登录，返回 token
+GET    /v1/auth/me       # 需鉴权，返回当前用户信息
+POST   /v1/auth/logout   # 需鉴权，吊销当前 token
+```
+
+登录请求体：
+
+```json
+{
+  "email": "admin@neo-line.local",
+  "password": "your-password"
+}
+```
+
+登录成功响应：
+
+```json
+{
+  "token": "<bearer-token>",
+  "expires_at": "2026-05-30T01:00:00Z",
+  "user": { "id": "usr_...", "email": "admin@neo-line.local", "role": "admin" }
+}
+```
+
+### 接口鉴权范围
+
+**状态：** 已实现
+
+- 公开接口：`GET /ping`、`POST /v1/auth/login`，以及 server / monitor 的只读查询（`GET` 接口），方便 dashboard 读取。
+- 需鉴权的 Admin 接口：server 和 monitor 的写操作（`POST` / `PUT` / `DELETE`），以及 `/v1/auth/me`、`/v1/auth/logout`。
 
 ## 告警
 

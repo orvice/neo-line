@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"butterfly.orx.me/core/app"
@@ -20,6 +21,12 @@ func main() {
 	mongoStore, err := store.New(ctx)
 	if err != nil {
 		log.Fatalf("connect MongoDB: %v", err)
+	}
+	if err := mongoStore.EnsureAuthIndexes(ctx); err != nil {
+		log.Fatalf("ensure auth indexes: %v", err)
+	}
+	if err := bootstrapAdmin(ctx, mongoStore); err != nil {
+		log.Fatalf("bootstrap admin user: %v", err)
 	}
 	defer func() {
 		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -55,4 +62,25 @@ func main() {
 
 	application := app.New(config)
 	application.Run()
+}
+
+// bootstrapAdmin initializes the admin account from the environment.
+// ADMIN_PASSWORD is required to (re)set the admin credentials; ADMIN_EMAIL is
+// optional and defaults to admin@neo-line.local. When ADMIN_PASSWORD is unset
+// the admin account is left untouched.
+func bootstrapAdmin(ctx context.Context, st *store.Store) error {
+	password := os.Getenv("ADMIN_PASSWORD")
+	if password == "" {
+		log.Println("ADMIN_PASSWORD not set, skipping admin user initialization")
+		return nil
+	}
+	email := os.Getenv("ADMIN_EMAIL")
+	if email == "" {
+		email = "admin@neo-line.local"
+	}
+	if err := st.EnsureAdminUser(ctx, email, password); err != nil {
+		return err
+	}
+	log.Printf("admin user ensured: %s", email)
+	return nil
 }
