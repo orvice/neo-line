@@ -43,6 +43,8 @@ jobs:
 
       - name: Set up Buf
         uses: bufbuild/buf-setup-action@v1
+        with:
+          github_token: ${{ github.token }}
 
       - name: Lint protobuf
         run: buf lint
@@ -78,6 +80,8 @@ jobs:
 
       - name: Set up pnpm
         uses: pnpm/action-setup@v4
+        with:
+          package_json_file: front/package.json
 
       - name: Set up Node
         uses: actions/setup-node@v4
