@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query"
 import { ArrowLeft } from "lucide-react"
 
 import { api, ApiError } from "@/lib/api"
-import type { CheckResult } from "@/lib/types"
+import type { CheckResult, UptimeWindow } from "@/lib/types"
 import {
   formatDuration,
   formatRelative,
@@ -11,6 +11,7 @@ import {
   monitorKindLabels,
 } from "@/lib/format"
 import { StatusBadge } from "@/components/status-badge"
+import { HeartbeatBar } from "@/components/heartbeat-bar"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -40,9 +41,15 @@ export function MonitorDetailPage() {
     queryFn: () => api.listCheckResults(serverId, monitorId, { page_size: 100 }),
     refetchInterval: 30_000,
   })
+  const uptimeQuery = useQuery({
+    queryKey: ["uptime", serverId, monitorId],
+    queryFn: () => api.getMonitorUptime(serverId, monitorId),
+    refetchInterval: 30_000,
+  })
 
   const monitor = monitorQuery.data?.monitor
   const results = resultsQuery.data?.results ?? []
+  const uptime = uptimeQuery.data?.uptime
 
   if (monitorQuery.isLoading) {
     return <div className="text-muted-foreground py-10 text-center">加载中…</div>
@@ -76,6 +83,24 @@ export function MonitorDetailPage() {
         </Badge>
         {!monitor.enabled && <Badge variant="outline">已停用</Badge>}
       </div>
+
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle>可用率</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <div className="flex flex-wrap gap-x-10 gap-y-3">
+            <UptimeStat label="最近 1 小时" window={uptime?.windows?.["1h"]} />
+            <UptimeStat label="最近 24 小时" window={uptime?.windows?.["24h"]} />
+          </div>
+          <div>
+            <div className="text-muted-foreground mb-1.5 text-xs">
+              最近心跳
+            </div>
+            <HeartbeatBar beats={uptime?.heartbeats ?? []} />
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
@@ -221,6 +246,40 @@ function ResultRow({ result }: { result: CheckResult }) {
           : result.remote_address || "正常"}
       </TableCell>
     </TableRow>
+  )
+}
+
+function UptimeStat({
+  label,
+  window,
+}: {
+  label: string
+  window?: UptimeWindow
+}) {
+  const hasData = window && window.total > 0
+  const pct = hasData ? (window.uptime * 100).toFixed(2) : "—"
+  const color = !hasData
+    ? "text-muted-foreground"
+    : window.uptime >= 0.99
+      ? "text-emerald-400"
+      : window.uptime >= 0.95
+        ? "text-amber-400"
+        : "text-red-400"
+  return (
+    <div className="flex flex-col gap-0.5">
+      <span className="text-muted-foreground text-xs">{label}</span>
+      <span className={`text-2xl font-semibold ${color}`}>
+        {pct}
+        {hasData && <span className="text-base font-normal">%</span>}
+      </span>
+      {hasData && (
+        <span className="text-muted-foreground text-xs">
+          {window.total} 次检查 · {window.down} 次失败
+          {window.avg_latency_ms > 0 &&
+            ` · 平均 ${Math.round(window.avg_latency_ms)} ms`}
+        </span>
+      )}
+    </div>
   )
 }
 

@@ -2,6 +2,7 @@ import type {
   CheckResult,
   LoginResponse,
   Monitor,
+  MonitorUptime,
   Server,
   ServerEvent,
   ServerHealth,
@@ -121,6 +122,12 @@ export const api = {
     request<{ monitor: Monitor }>(`/servers/${serverId}/monitors/${monitorId}`, { method: "PUT", body }),
   deleteMonitor: (serverId: string, monitorId: string) =>
     request<void>(`/servers/${serverId}/monitors/${monitorId}`, { method: "DELETE" }),
+
+  getMonitorUptime: (serverId: string, monitorId: string) =>
+    request<{ uptime: MonitorUptime }>(
+      `/servers/${serverId}/monitors/${monitorId}/uptime`,
+      { auth: false }
+    ),
 
   // Check results
   listCheckResults: (

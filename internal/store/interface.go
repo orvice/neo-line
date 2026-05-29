@@ -27,6 +27,7 @@ type Store interface {
 
 	ListCheckResults(ctx context.Context, serverID, monitorID string, limit int64, pageToken string, start, end *time.Time) ([]CheckResult, string, error)
 	SaveCheckResult(ctx context.Context, result CheckResult) error
+	GetMonitorUptime(ctx context.Context, serverID, monitorID string) (MonitorUptime, error)
 
 	EnsureAuthIndexes(ctx context.Context) error
 	EnsureAdminUser(ctx context.Context, email, password string) error

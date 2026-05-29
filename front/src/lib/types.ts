@@ -109,6 +109,26 @@ export interface ServerHealth {
   unknown_monitors: number
 }
 
+export interface UptimeWindow {
+  window_seconds: number
+  total: number
+  up: number
+  down: number
+  uptime: number
+  avg_latency_ms: number
+}
+
+export interface Heartbeat {
+  status: HealthStatus
+  started_at: string
+  duration_ms: number
+}
+
+export interface MonitorUptime {
+  windows: Record<string, UptimeWindow>
+  heartbeats: Heartbeat[]
+}
+
 export interface Paged<T> {
   items: T[]
   next_page_token: string

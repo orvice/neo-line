@@ -29,6 +29,7 @@ func Register(r *gin.Engine, st store.Store) {
 		v1.GET("/servers/:id/monitors", api.listMonitors)
 		v1.GET("/servers/:id/monitors/:monitor_id", api.getMonitor)
 		v1.GET("/servers/:id/monitors/:monitor_id/results", api.listCheckResults)
+		v1.GET("/servers/:id/monitors/:monitor_id/uptime", api.getMonitorUptime)
 
 		// Admin endpoints require authentication.
 		admin := v1.Group("")
@@ -185,6 +186,15 @@ func (api *API) listCheckResults(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"results": results, "next_page_token": next})
+}
+
+func (api *API) getMonitorUptime(c *gin.Context) {
+	uptime, err := api.store.GetMonitorUptime(c.Request.Context(), c.Param("id"), c.Param("monitor_id"))
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"uptime": uptime})
 }
 
 func bindJSON(c *gin.Context, dst any) bool {
