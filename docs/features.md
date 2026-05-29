@@ -616,6 +616,37 @@ MongoDB 是 neo-line 监控业务配置和运行结果的主要存储。
 - API 查询当前状态时应读取 MongoDB 中的最新状态字段或最近结果。
 - 探测完成后应将结果、状态变化和证书信息写回 MongoDB。
 
+## S3 历史归档
+
+**状态：** 已实现（可选）
+
+除了写入 MongoDB，探测结果还可以**额外**归档到 S3 或任意 S3 兼容对象存储（如 MinIO），用于长期历史记录。MongoDB 仍是唯一权威来源，S3 归档是尽力而为的旁路副本。
+
+运行行为：
+
+- 仅当设置了 `ARCHIVE_S3_BUCKET` 时启用；未设置时为 no-op，行为与之前完全一致。
+- 调度器在结果成功写入 MongoDB 后，再把该结果交给归档器，**不会**因为 S3 慢或不可用而阻塞、失败主写入路径。
+- 结果在内存中缓冲并按批刷写为 NDJSON（每行一条结果）对象，避免每次探测都产生一个小对象。
+- 刷写触发：攒够 `ARCHIVE_S3_BATCH_SIZE` 条，或经过 `ARCHIVE_S3_FLUSH_SECONDS` 秒，二者先到先刷；进程退出时排空缓冲并执行最后一次刷写。
+- 内存缓冲有上限（10000 条）。当 S3 持续不可用导致缓冲写满时，丢弃最旧的结果并记录告警，保证内存不会无限增长。
+- 刷写失败只记录日志，下一周期继续尝试。
+
+对象布局（按 UTC 时间分区）：
+
+```text
+<prefix>/YYYY/MM/DD/HH/<unix_millis>-<count>-<rand>.jsonl
+```
+
+环境变量：
+
+- `ARCHIVE_S3_BUCKET`：归档桶名。设置后启用归档，必填。
+- `ARCHIVE_S3_PREFIX`：对象前缀，默认 `monitor_results`。
+- `ARCHIVE_S3_REGION`：区域，默认取 `AWS_REGION`，再默认 `us-east-1`。
+- `ARCHIVE_S3_ENDPOINT`：自定义 endpoint（用于 MinIO 等 S3 兼容存储）。设置后启用 path-style 寻址。
+- `ARCHIVE_S3_ACCESS_KEY` / `ARCHIVE_S3_SECRET_KEY`：静态凭证。未设置时回退到 AWS 默认凭证链（环境变量、共享配置、IAM role 等）。
+- `ARCHIVE_S3_BATCH_SIZE`：单批最大结果数，默认 `100`。
+- `ARCHIVE_S3_FLUSH_SECONDS`：刷写间隔秒数，默认 `60`。
+
 ## 未来增强
 
 ### Dashboard 支持

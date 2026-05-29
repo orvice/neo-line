@@ -3,12 +3,14 @@ package main
 import (
 	"context"
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"time"
 
 	"butterfly.orx.me/core/app"
 	"github.com/gin-gonic/gin"
+	"github.com/orvice/neo-line/internal/archive"
 	"github.com/orvice/neo-line/internal/httpapi"
 	"github.com/orvice/neo-line/internal/mcpserver"
 	"github.com/orvice/neo-line/internal/scheduler"
@@ -37,7 +39,16 @@ func main() {
 		}
 	}()
 
+	archiver, archiveEnabled, err := archive.New(ctx, slog.Default())
+	if err != nil {
+		log.Fatalf("init archive: %v", err)
+	}
+	if archiveEnabled {
+		log.Println("S3 check-result archiving enabled")
+	}
+
 	schedCtx, cancelSched := context.WithCancel(context.Background())
+	archiveDone := make(chan struct{})
 
 	config := &app.Config{
 		Service: "neo-line",
@@ -50,13 +61,24 @@ func main() {
 		},
 		InitFunc: []func() error{
 			func() error {
-				go scheduler.New(mongoStore).Start(schedCtx)
+				go func() {
+					archiver.Run(schedCtx)
+					close(archiveDone)
+				}()
+				go scheduler.New(mongoStore, archiver).Start(schedCtx)
 				return nil
 			},
 		},
 		TeardownFunc: []func() error{
 			func() error {
 				cancelSched()
+				// Wait for the archiver to drain and flush any buffered
+				// results before the process exits.
+				select {
+				case <-archiveDone:
+				case <-time.After(35 * time.Second):
+					log.Println("archive flush timed out on shutdown")
+				}
 				return nil
 			},
 		},

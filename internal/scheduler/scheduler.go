@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/orvice/neo-line/internal/archive"
 	"github.com/orvice/neo-line/internal/probe"
 	"github.com/orvice/neo-line/internal/store"
 )
@@ -23,8 +24,9 @@ const (
 
 // Scheduler drives periodic execution of monitors.
 type Scheduler struct {
-	store  store.Store
-	logger *slog.Logger
+	store    store.Store
+	archiver archive.Archiver
+	logger   *slog.Logger
 
 	mu       sync.Mutex
 	lastRun  map[string]time.Time
@@ -32,10 +34,17 @@ type Scheduler struct {
 	sem      chan struct{}
 }
 
-// New builds a Scheduler backed by the given store.
-func New(st store.Store) *Scheduler {
+// New builds a Scheduler backed by the given store. An optional archiver
+// receives a copy of every persisted result; when omitted, results are not
+// archived.
+func New(st store.Store, archiver ...archive.Archiver) *Scheduler {
+	var arch archive.Archiver = archive.Noop{}
+	if len(archiver) > 0 && archiver[0] != nil {
+		arch = archiver[0]
+	}
 	return &Scheduler{
 		store:    st,
+		archiver: arch,
 		lastRun:  make(map[string]time.Time),
 		inFlight: make(map[string]bool),
 		sem:      make(chan struct{}, maxConcurrentProbes),
@@ -117,6 +126,7 @@ func (s *Scheduler) dispatch(ctx context.Context, m store.Monitor) {
 			s.logger.Error("failed to save check result", "monitor_id", m.ID, "error", err.Error())
 			return
 		}
+		s.archiver.Enqueue(result)
 		s.logger.Debug("probe completed",
 			"monitor_id", m.ID,
 			"server_id", m.ServerID,
