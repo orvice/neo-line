@@ -62,11 +62,30 @@ Down > Critical > Warning > Unknown > Healthy
 
 ## 启动后端
 
-先准备 MongoDB，然后设置最小运行环境：
+先准备 MongoDB，再创建 Butterfly 配置文件，例如 `config.yaml`：
+
+```yaml
+store:
+  mongo:
+    primary:
+      uri: "mongodb://localhost:27017"
+
+mongo:
+  # 对应上面的 store.mongo.primary；未配置时默认使用 primary
+  client_key: "primary"
+  # neo-line 业务 collections 所在数据库；未配置时默认使用 neo_line
+  database: "neo_line"
+
+log:
+  level: "info"
+  format: "text"
+```
+
+然后通过 Butterfly 的配置环境变量启动：
 
 ```bash
-export MONGODB_URI=mongodb://localhost:27017
-export MONGODB_DATABASE=neo_line
+export BUTTERFLY_CONFIG_TYPE=file
+export BUTTERFLY_CONFIG_FILE_PATH=$PWD/config.yaml
 export ADMIN_EMAIL=admin@neo-line.local
 export ADMIN_PASSWORD=change-me
 go run ./cmd/server
@@ -103,15 +122,39 @@ cd front
 pnpm build
 ```
 
-## 主要环境变量
+## 主要环境变量与配置项
+
+Butterfly 框架通过 `BUTTERFLY_` 前缀环境变量加载配置：
 
 | 变量 | 默认值 | 说明 |
 | --- | --- | --- |
-| `MONGODB_URI` | `mongodb://localhost:27017` | MongoDB 连接字符串 |
-| `MONGODB_DATABASE` | `neo_line` | MongoDB 数据库名 |
+| `BUTTERFLY_CONFIG_TYPE` | `consul` | 配置来源；本地运行通常设为 `file` |
+| `BUTTERFLY_CONFIG_FILE_PATH` | 无 | `BUTTERFLY_CONFIG_TYPE=file` 时的 YAML 配置文件路径 |
+| `BUTTERFLY_CONFIG_CONSUL_ADDRESS` | `consul:8500` | `BUTTERFLY_CONFIG_TYPE=consul` 时的 Consul 地址 |
+| `BUTTERFLY_CONFIG_CONSUL_NAMESPACE` | 无 | Consul KV namespace；最终 key 为 `<namespace>/neo-line` |
 | `ADMIN_EMAIL` | `admin@neo-line.local` | 管理员账号邮箱 |
 | `ADMIN_PASSWORD` | 无 | 管理员密码；设置后启动时会创建或轮换管理员密码 |
 | `MCP_AUTH_TOKEN` | 无 | `/mcp` 静态鉴权 token；为空时 MCP 端点不额外校验 |
+
+MongoDB 连接不再由 `MONGODB_URI` 直接读取，而是放在 Butterfly 核心配置中：
+
+```yaml
+store:
+  mongo:
+    primary:
+      uri: "mongodb://localhost:27017"
+
+mongo:
+  client_key: "primary"
+  database: "neo_line"
+```
+
+`store.mongo.primary` 由 Butterfly 初始化为 Mongo client；应用侧的 `mongo.client_key` 选择该 client，`mongo.database` 选择 neo-line 使用的数据库。
+
+其他环境变量：
+
+| 变量 | 默认值 | 说明 |
+| --- | --- | --- |
 | `ARCHIVE_S3_BUCKET` | 无 | 设置后启用检查结果 S3 归档 |
 | `ARCHIVE_S3_PREFIX` | `monitor_results` | S3 归档对象前缀 |
 | `ARCHIVE_S3_REGION` | `AWS_REGION` 或 `us-east-1` | S3 区域 |
@@ -302,10 +345,12 @@ services:
     depends_on:
       - mongodb
     environment:
-      MONGODB_URI: mongodb://mongodb:27017
-      MONGODB_DATABASE: neo_line
+      BUTTERFLY_CONFIG_TYPE: file
+      BUTTERFLY_CONFIG_FILE_PATH: /etc/neo-line/config.yaml
       ADMIN_EMAIL: admin@neo-line.local
       ADMIN_PASSWORD: change-me
+    volumes:
+      - ./config.yaml:/etc/neo-line/config.yaml:ro
     ports:
       - "8080:8080"
 

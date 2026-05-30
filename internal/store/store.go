@@ -4,11 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
 	"time"
 
+	bfmongo "butterfly.orx.me/core/store/mongo"
 	"github.com/google/uuid"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
@@ -152,17 +152,20 @@ type MongoStore struct {
 	database *mongo.Database
 }
 
-func New(ctx context.Context) (*MongoStore, error) {
-	uri := env("MONGODB_URI", "mongodb://localhost:27017")
-	database := env("MONGODB_DATABASE", "neo_line")
-	client, err := mongo.Connect(options.Client().ApplyURI(uri))
-	if err != nil {
-		return nil, err
+func New(ctx context.Context, clientKey, database string) (*MongoStore, error) {
+	if clientKey == "" {
+		clientKey = "primary"
+	}
+	if database == "" {
+		database = "neo_line"
+	}
+	client := bfmongo.GetClient(clientKey)
+	if client == nil {
+		return nil, fmt.Errorf("mongodb client %q is not configured; set store.mongo.%s.uri in Butterfly configuration", clientKey, clientKey)
 	}
 	pingCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	if err := client.Ping(pingCtx, nil); err != nil {
-		_ = client.Disconnect(context.Background())
 		return nil, err
 	}
 	return &MongoStore{client: client, database: client.Database(database)}, nil
@@ -483,13 +486,6 @@ func parsePageToken(token string) (int64, error) {
 
 func valueOr(value, fallback string) string {
 	if value != "" {
-		return value
-	}
-	return fallback
-}
-
-func env(key, fallback string) string {
-	if value := os.Getenv(key); value != "" {
 		return value
 	}
 	return fallback

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"log/slog"
 	"net/http"
@@ -18,44 +19,34 @@ import (
 	"github.com/orvice/neo-line/internal/store"
 )
 
+type runtimeConfig struct {
+	Mongo mongoConfig `yaml:"mongo"`
+}
+
+type mongoConfig struct {
+	// ClientKey selects the Butterfly Mongo client configured at store.mongo.<key>.
+	ClientKey string `yaml:"client_key"`
+	// Database is the MongoDB database used by neo-line collections.
+	Database string `yaml:"database"`
+}
+
+func (c *runtimeConfig) Print() {}
+
 func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	mongoStore, err := store.New(ctx)
-	if err != nil {
-		log.Fatalf("connect MongoDB: %v", err)
-	}
-	if err := mongoStore.EnsureAuthIndexes(ctx); err != nil {
-		log.Fatalf("ensure auth indexes: %v", err)
-	}
-	if err := mongoStore.EnsureGroupIndexes(ctx); err != nil {
-		log.Fatalf("ensure group indexes: %v", err)
-	}
-	if err := bootstrapAdmin(ctx, mongoStore); err != nil {
-		log.Fatalf("bootstrap admin user: %v", err)
-	}
-	defer func() {
-		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer shutdownCancel()
-		if err := mongoStore.Close(shutdownCtx); err != nil {
-			log.Printf("close MongoDB: %v", err)
-		}
-	}()
-
-	archiver, archiveEnabled, err := archive.New(ctx, slog.Default())
-	if err != nil {
-		log.Fatalf("init archive: %v", err)
-	}
-	if archiveEnabled {
-		log.Println("S3 check-result archiving enabled")
-	}
+	var mongoStore *store.MongoStore
+	var archiver archive.Archiver = archive.Noop{}
+	archiveEnabled := false
+	appCfg := &runtimeConfig{}
 
 	schedCtx, cancelSched := context.WithCancel(context.Background())
 	archiveDone := make(chan struct{})
 
 	config := &app.Config{
 		Service: "neo-line",
+		Config:  appCfg,
 		Router: func(r *gin.Engine) {
 			r.GET("/ping", func(c *gin.Context) {
 				c.JSON(http.StatusOK, gin.H{"message": "pong"})
@@ -64,6 +55,31 @@ func main() {
 			mcpserver.Register(r, mongoStore)
 		},
 		InitFunc: []func() error{
+			func() error {
+				var err error
+				mongoStore, err = store.New(ctx, appCfg.Mongo.ClientKey, appCfg.Mongo.Database)
+				if err != nil {
+					return fmt.Errorf("connect MongoDB: %w", err)
+				}
+				if err := mongoStore.EnsureAuthIndexes(ctx); err != nil {
+					return fmt.Errorf("ensure auth indexes: %w", err)
+				}
+				if err := mongoStore.EnsureGroupIndexes(ctx); err != nil {
+					return fmt.Errorf("ensure group indexes: %w", err)
+				}
+				if err := bootstrapAdmin(ctx, mongoStore); err != nil {
+					return fmt.Errorf("bootstrap admin user: %w", err)
+				}
+
+				archiver, archiveEnabled, err = archive.New(ctx, slog.Default())
+				if err != nil {
+					return fmt.Errorf("init archive: %w", err)
+				}
+				if archiveEnabled {
+					log.Println("S3 check-result archiving enabled")
+				}
+				return nil
+			},
 			func() error {
 				go func() {
 					archiver.Run(schedCtx)
@@ -83,6 +99,13 @@ func main() {
 				case <-archiveDone:
 				case <-time.After(35 * time.Second):
 					log.Println("archive flush timed out on shutdown")
+				}
+				if mongoStore != nil {
+					shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
+					defer shutdownCancel()
+					if err := mongoStore.Close(shutdownCtx); err != nil {
+						log.Printf("close MongoDB: %v", err)
+					}
 				}
 				return nil
 			},

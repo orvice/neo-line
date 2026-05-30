@@ -10,10 +10,22 @@
 
 MongoDB 是 neo-line 监控业务配置的唯一权威来源。
 
-当前服务启动参数：
+当前服务启动配置通过 Butterfly 统一加载，MongoDB 连接放在 `store.mongo` 下：
 
-- `MONGODB_URI`：MongoDB 连接字符串，默认 `mongodb://localhost:27017`
-- `MONGODB_DATABASE`：MongoDB 数据库名，默认 `neo_line`
+```yaml
+store:
+  mongo:
+    primary:
+      uri: "mongodb://localhost:27017"
+
+mongo:
+  client_key: "primary"
+  database: "neo_line"
+```
+
+- `store.mongo.<key>.uri`：Butterfly MongoDB store 配置，框架会按 key 初始化 client。
+- `mongo.client_key`：neo-line 使用的 Butterfly Mongo client key，默认 `primary`。
+- `mongo.database`：MongoDB 数据库名，默认 `neo_line`。
 
 配置读写规则：
 
