@@ -6,7 +6,7 @@ import { CheckCircle2, AlertTriangle, XCircle, RefreshCw } from "lucide-react"
 import { api } from "@/lib/api"
 import type { HealthStatus, Monitor, MonitorUptime, Server } from "@/lib/types"
 import { useSettings } from "@/lib/settings"
-import { formatRelative } from "@/lib/format"
+import { formatCertExpiry, formatRelative } from "@/lib/format"
 import { StatusDot } from "@/components/status-badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -306,10 +306,14 @@ function MonitorChip({
   uptime?: MonitorUptime
 }) {
   const status = normalizeStatus(monitor.status)
+  const certPart =
+    monitor.kind === "tls_port" && monitor.certificate
+      ? ` · 证书 ${formatCertExpiry(monitor.certificate)}`
+      : ""
   return (
     <Link
       to={`/servers/${monitor.server_id}/monitors/${monitor.id}`}
-      title={`${monitor.kind} · ${monitor.status} · 24h ${uptimePct(uptime)}`}
+      title={`${monitor.kind} · ${monitor.status} · 24h ${uptimePct(uptime)}${certPart}`}
       className={cn(
         "inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium transition-opacity hover:opacity-80",
         CHIP_STYLES[status]
