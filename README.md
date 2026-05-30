@@ -2,20 +2,24 @@
 
 neo-line 是一个基于 Go 和 Butterfly 应用框架构建的服务器监控服务，用于管理服务器监控配置，并持续检查服务器暴露的网络服务状态。
 
-项目当前以 MongoDB 作为监控业务配置和运行状态的唯一数据源，已覆盖 TCP 端口探测、HTTP/HTTPS URL 探测、TLS Port 握手与证书状态探测，以及服务器健康状态聚合。
+项目当前以 MongoDB 作为监控业务配置和运行状态的唯一数据源，已覆盖 TCP 端口探测、HTTP/HTTPS URL 探测、TLS Port 握手与证书状态探测、Monitor 分组、分组级 webhook 告警、公开状态页，以及服务器健康状态聚合。
 
 ## 当前开发进度
 
 ### 后端服务
 
 - 已接入 Butterfly 应用框架和 Gin HTTP Router。
-- 已接入 MongoDB，当前代码读写 `servers`、`monitors`、`monitor_results`、`server_events`、`users`、`sessions` collections。
+- 已接入 MongoDB，当前代码读写 `servers`、`monitors`、`monitor_groups`、`monitor_results`、`server_events`、`settings`、`users`、`sessions` collections。
 - 已提供 `/ping` 存活检查接口。
 - 已实现管理员账号初始化、登录、Bearer Token 会话和登出。
 - 已实现 Server CRUD、Monitor CRUD、健康状态查询、状态事件查询、检查结果查询和 uptime 汇总查询。
+- 已实现 Monitor Group CRUD，monitor 可通过 `group_ids` 加入零个或多个分组。
+- 已实现站点设置 API，用于配置状态页标题和站点名称。
 - 已实现后台调度器，每 `5s` 从 MongoDB 重新读取已启用的 server / monitor，并按 monitor 的 `interval_seconds` 调度探测。
 - 已实现探测并持久化结果：`tcp`、`url`、`tls_port`。
-- 已实现 MCP Streamable HTTP 只读工具端点 `/mcp`，可查询 server、monitor、健康状态、事件和检查结果。
+- 已实现分组级 webhook 告警：monitor 状态变化时按所属分组的 `alert_policy` 尽力派发通知。
+- 已实现可选 S3 / S3 兼容对象存储归档，将已写入 MongoDB 的检查结果按批写为 NDJSON。
+- 已实现 MCP Streamable HTTP 只读工具端点 `/mcp`，可查询 server、monitor、monitor group、健康状态、事件和检查结果。
 
 ### 探测能力
 
@@ -33,11 +37,14 @@ Down > Critical > Warning > Unknown > Healthy
 
 `front/` 目录已包含 React + Vite + Tailwind v4 + shadcn/ui 管理界面：
 
+- 公开状态页，按 monitor 分组展示整体状态、最近心跳和 24 小时可用率。
 - 邮箱 / 密码登录。
 - 服务器列表、搜索、增删改。
 - 服务器详情、健康概览、状态变更事件。
 - 监控项管理。
 - 监控项详情、TLS 证书信息、检查历史和 uptime heartbeat。
+- Monitor 分组管理，以及分组级 webhook 告警策略表单。
+- 站点设置页面，可配置状态页标题和站点名称。
 - 支持 `tcp`、`url`、`tls_port` 三种监控类型的动态表单。
 
 ### Protobuf
@@ -105,6 +112,13 @@ pnpm build
 | `ADMIN_EMAIL` | `admin@neo-line.local` | 管理员账号邮箱 |
 | `ADMIN_PASSWORD` | 无 | 管理员密码；设置后启动时会创建或轮换管理员密码 |
 | `MCP_AUTH_TOKEN` | 无 | `/mcp` 静态鉴权 token；为空时 MCP 端点不额外校验 |
+| `ARCHIVE_S3_BUCKET` | 无 | 设置后启用检查结果 S3 归档 |
+| `ARCHIVE_S3_PREFIX` | `monitor_results` | S3 归档对象前缀 |
+| `ARCHIVE_S3_REGION` | `AWS_REGION` 或 `us-east-1` | S3 区域 |
+| `ARCHIVE_S3_ENDPOINT` | 无 | S3 兼容存储 endpoint；设置后使用 path-style |
+| `ARCHIVE_S3_ACCESS_KEY` / `ARCHIVE_S3_SECRET_KEY` | 无 | S3 静态凭证；为空时使用 AWS 默认凭证链 |
+| `ARCHIVE_S3_BATCH_SIZE` | `100` | 单批归档结果数量 |
+| `ARCHIVE_S3_FLUSH_SECONDS` | `60` | 归档刷写间隔秒数 |
 
 ## 主要 HTTP 接口
 
@@ -121,6 +135,9 @@ pnpm build
 - `GET /api/v1/servers/:id/monitors/:monitor_id`
 - `GET /api/v1/servers/:id/monitors/:monitor_id/results`
 - `GET /api/v1/servers/:id/monitors/:monitor_id/uptime`
+- `GET /api/v1/monitor-groups`
+- `GET /api/v1/monitor-groups/:group_id`
+- `GET /api/v1/monitor-groups/:group_id/monitors`
 
 需要 Bearer Token 的管理接口：
 
@@ -133,6 +150,9 @@ pnpm build
 - `POST /api/v1/servers/:id/monitors`
 - `PUT /api/v1/servers/:id/monitors/:monitor_id`
 - `DELETE /api/v1/servers/:id/monitors/:monitor_id`
+- `POST /api/v1/monitor-groups`
+- `PUT /api/v1/monitor-groups/:group_id`
+- `DELETE /api/v1/monitor-groups/:group_id`
 
 登录示例：
 
@@ -164,6 +184,7 @@ curl -s http://localhost:8080/api/v1/auth/login \
   "name": "api-health",
   "kind": "url",
   "enabled": true,
+  "group_ids": ["grp_production"],
   "url": "https://api.example.com/health",
   "method": "GET",
   "expected_status_codes": "200-299,301,302",
@@ -172,6 +193,33 @@ curl -s http://localhost:8080/api/v1/auth/login \
   "retries": 3,
   "tls_verify": true,
   "sni_name": "api.example.com"
+}
+```
+
+创建 Monitor Group，并配置 webhook 告警策略：
+
+```json
+{
+  "id": "grp_production",
+  "name": "production",
+  "description": "Production services",
+  "alert_policy": {
+    "enabled": true,
+    "on_down": true,
+    "on_recover": true,
+    "on_warning": true,
+    "on_critical": true,
+    "min_interval_seconds": 300,
+    "channels": [
+      {
+        "type": "webhook",
+        "target": "https://hooks.example.com/neo-line",
+        "extra": {
+          "X-Alert-Source": "neo-line"
+        }
+      }
+    ]
+  }
 }
 ```
 
