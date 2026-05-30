@@ -21,6 +21,7 @@ import (
 
 type runtimeConfig struct {
 	Mongo mongoConfig `yaml:"mongo"`
+	Redis redisConfig `yaml:"redis"`
 }
 
 type mongoConfig struct {
@@ -28,6 +29,11 @@ type mongoConfig struct {
 	ClientKey string `yaml:"client_key"`
 	// Database is the MongoDB database used by neo-line collections.
 	Database string `yaml:"database"`
+}
+
+type redisConfig struct {
+	// SessionClientKey selects the Butterfly Redis client configured at store.redis.<key>.
+	SessionClientKey string `yaml:"session_client_key"`
 }
 
 func (c *runtimeConfig) Print() {}
@@ -57,7 +63,7 @@ func main() {
 		InitFunc: []func() error{
 			func() error {
 				var err error
-				mongoStore, err = store.New(ctx, appCfg.Mongo.ClientKey, appCfg.Mongo.Database)
+				mongoStore, err = store.New(ctx, appCfg.Mongo.ClientKey, appCfg.Mongo.Database, appCfg.Redis.SessionClientKey)
 				if err != nil {
 					return fmt.Errorf("connect MongoDB: %w", err)
 				}

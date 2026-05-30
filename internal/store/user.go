@@ -4,11 +4,13 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/redis/go-redis/v9"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
@@ -20,6 +22,8 @@ const (
 
 	// SessionTTL is how long an issued login token stays valid.
 	SessionTTL = 24 * time.Hour
+
+	sessionKeyPrefix = "neo-line:session:"
 )
 
 // ErrInvalidCredentials is returned when an email/password pair does not match.
@@ -46,22 +50,14 @@ type Session struct {
 }
 
 // EnsureAuthIndexes creates the indexes the user system relies on. The unique
-// email index keeps account creation idempotent and the TTL index expires
-// sessions automatically once they pass ExpiresAt.
+// email index keeps account creation idempotent. Login sessions are stored in
+// Redis with per-token TTLs, so no MongoDB session indexes are required.
 func (s *MongoStore) EnsureAuthIndexes(ctx context.Context) error {
-	if _, err := s.users().Indexes().CreateOne(ctx, mongo.IndexModel{
+	_, err := s.users().Indexes().CreateOne(ctx, mongo.IndexModel{
 		Keys:    bson.D{{Key: "email", Value: 1}},
 		Options: options.Index().SetUnique(true),
-	}); err != nil {
-		return err
-	}
-	if _, err := s.sessions().Indexes().CreateMany(ctx, []mongo.IndexModel{
-		{Keys: bson.D{{Key: "token", Value: 1}}, Options: options.Index().SetUnique(true)},
-		{Keys: bson.D{{Key: "expires_at", Value: 1}}, Options: options.Index().SetExpireAfterSeconds(0)},
-	}); err != nil {
-		return err
-	}
-	return nil
+	})
+	return err
 }
 
 // EnsureAdminUser makes the configured admin account match the supplied
@@ -114,7 +110,7 @@ func (s *MongoStore) Authenticate(ctx context.Context, email, password string) (
 	return user, nil
 }
 
-// CreateSession issues a bearer token for a user.
+// CreateSession issues a bearer token for a user and stores it in Redis.
 func (s *MongoStore) CreateSession(ctx context.Context, user User) (Session, error) {
 	tokenBytes := make([]byte, 32)
 	if _, err := rand.Read(tokenBytes); err != nil {
@@ -129,22 +125,32 @@ func (s *MongoStore) CreateSession(ctx context.Context, user User) (Session, err
 		CreatedAt: now,
 		ExpiresAt: now.Add(SessionTTL),
 	}
-	if _, err := s.sessions().InsertOne(ctx, session); err != nil {
+	data, err := json.Marshal(session)
+	if err != nil {
+		return Session{}, err
+	}
+	if err := s.sessionClient.Set(ctx, sessionKey(session.Token), data, SessionTTL).Err(); err != nil {
 		return Session{}, err
 	}
 	return session, nil
 }
 
-// GetSession returns a valid session for a token. Expired sessions are treated
-// as not found and removed.
+// GetSession returns a valid session for a token. Redis expires tokens by TTL;
+// the ExpiresAt check is retained to reject stale values defensively.
 func (s *MongoStore) GetSession(ctx context.Context, token string) (Session, error) {
-	var session Session
-	err := s.sessions().FindOne(ctx, bson.M{"token": token}).Decode(&session)
+	data, err := s.sessionClient.Get(ctx, sessionKey(token)).Bytes()
+	if errors.Is(err, redis.Nil) {
+		return Session{}, mongo.ErrNoDocuments
+	}
 	if err != nil {
 		return Session{}, err
 	}
+	var session Session
+	if err := json.Unmarshal(data, &session); err != nil {
+		return Session{}, err
+	}
 	if time.Now().UTC().After(session.ExpiresAt) {
-		_, _ = s.sessions().DeleteOne(ctx, bson.M{"token": token})
+		_, _ = s.sessionClient.Del(ctx, sessionKey(token)).Result()
 		return Session{}, mongo.ErrNoDocuments
 	}
 	return session, nil
@@ -152,13 +158,15 @@ func (s *MongoStore) GetSession(ctx context.Context, token string) (Session, err
 
 // DeleteSession revokes a token.
 func (s *MongoStore) DeleteSession(ctx context.Context, token string) error {
-	_, err := s.sessions().DeleteOne(ctx, bson.M{"token": token})
-	return err
+	return s.sessionClient.Del(ctx, sessionKey(token)).Err()
+}
+
+func sessionKey(token string) string {
+	return sessionKeyPrefix + token
 }
 
 func normalizeEmail(email string) string {
 	return strings.ToLower(strings.TrimSpace(email))
 }
 
-func (s *MongoStore) users() *mongo.Collection    { return s.database.Collection("users") }
-func (s *MongoStore) sessions() *mongo.Collection { return s.database.Collection("sessions") }
+func (s *MongoStore) users() *mongo.Collection { return s.database.Collection("users") }

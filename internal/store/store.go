@@ -9,6 +9,7 @@ import (
 	"time"
 
 	bfmongo "butterfly.orx.me/core/store/mongo"
+	bfredis "butterfly.orx.me/core/store/redis"
 	"github.com/google/uuid"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
@@ -148,34 +149,54 @@ type MonitorGroup struct {
 }
 
 type MongoStore struct {
-	client   *mongo.Client
-	database *mongo.Database
+	client        *mongo.Client
+	database      *mongo.Database
+	sessionClient *bfredis.Client
 }
 
-func New(ctx context.Context, clientKey, database string) (*MongoStore, error) {
+func New(ctx context.Context, clientKey, database, sessionClientKey string) (*MongoStore, error) {
 	if clientKey == "" {
 		clientKey = "primary"
 	}
 	if database == "" {
 		database = "neo_line"
 	}
+	if sessionClientKey == "" {
+		sessionClientKey = "session"
+	}
 	client := bfmongo.GetClient(clientKey)
 	if client == nil {
 		return nil, fmt.Errorf("mongodb client %q is not configured; set store.mongo.%s.uri in Butterfly configuration", clientKey, clientKey)
+	}
+	sessionClient := bfredis.GetClient(sessionClientKey)
+	if sessionClient == nil {
+		return nil, fmt.Errorf("redis session client %q is not configured; set store.redis.%s in Butterfly configuration", sessionClientKey, sessionClientKey)
 	}
 	pingCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	if err := client.Ping(pingCtx, nil); err != nil {
 		return nil, err
 	}
-	return &MongoStore{client: client, database: client.Database(database)}, nil
+	if err := sessionClient.Ping(pingCtx).Err(); err != nil {
+		return nil, err
+	}
+	return &MongoStore{client: client, database: client.Database(database), sessionClient: sessionClient}, nil
 }
 
 func (s *MongoStore) Close(ctx context.Context) error {
-	if s == nil || s.client == nil {
+	if s == nil {
 		return nil
 	}
-	return s.client.Disconnect(ctx)
+	var err error
+	if s.client != nil {
+		err = s.client.Disconnect(ctx)
+	}
+	if s.sessionClient != nil {
+		if redisErr := s.sessionClient.Close(); err == nil {
+			err = redisErr
+		}
+	}
+	return err
 }
 
 func (s *MongoStore) ListServers(ctx context.Context, environment string, tags []string, limit int64, pageToken string) ([]Server, string, error) {

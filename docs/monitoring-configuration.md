@@ -10,22 +10,32 @@
 
 MongoDB 是 neo-line 监控业务配置的唯一权威来源。
 
-当前服务启动配置通过 Butterfly 统一加载，MongoDB 连接放在 `store.mongo` 下：
+当前服务启动配置通过 Butterfly 统一加载。MongoDB 连接放在 `store.mongo` 下，登录 token 会话使用 `store.redis` 下的 Redis client：
 
 ```yaml
 store:
   mongo:
     primary:
       uri: "mongodb://localhost:27017"
+  redis:
+    session:
+      addr: "localhost:6379"
+      password: ""
+      db: 0
 
 mongo:
   client_key: "primary"
   database: "neo_line"
+
+redis:
+  session_client_key: "session"
 ```
 
 - `store.mongo.<key>.uri`：Butterfly MongoDB store 配置，框架会按 key 初始化 client。
 - `mongo.client_key`：neo-line 使用的 Butterfly Mongo client key，默认 `primary`。
 - `mongo.database`：MongoDB 数据库名，默认 `neo_line`。
+- `store.redis.<key>`：Butterfly Redis store 配置，框架会按 key 初始化 client。
+- `redis.session_client_key`：neo-line 用于存储 Bearer token 的 Redis client key，默认 `session`。
 
 配置读写规则：
 

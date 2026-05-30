@@ -571,10 +571,10 @@ MCP 端点使用简单的 header token 鉴权：
 
 neo-line 提供基于 email + password 的用户系统，用于保护 Admin 相关接口。
 
-用户与会话信息存储在 MongoDB：
+用户信息存储在 MongoDB，登录会话 token 存储在 Redis：
 
-- `users`：账户信息，包含 `id`、`email`、`password_hash`、`role`、`created_at`、`updated_at`。密码使用 bcrypt 哈希存储，明文密码不会落库。
-- `sessions`：登录后签发的 Bearer token，包含 `token`、`user_id`、`email`、`role`、`created_at`、`expires_at`。`expires_at` 上建立 TTL 索引，过期会话自动清理。
+- MongoDB `users`：账户信息，包含 `id`、`email`、`password_hash`、`role`、`created_at`、`updated_at`。密码使用 bcrypt 哈希存储，明文密码不会落库。
+- Redis `neo-line:session:<token>`：登录后签发的 Bearer token 会话 JSON，包含 `token`、`user_id`、`email`、`role`、`created_at`、`expires_at`。Redis key 使用 `24h` TTL 自动过期。
 
 运行行为：
 
@@ -592,7 +592,7 @@ Admin 账户从运行环境初始化，环境是 admin 密码的权威来源：
 - `ADMIN_PASSWORD`：必填。设置后服务启动时会创建或更新 admin 账户的密码哈希，因此修改该值即可轮换密码。未设置时跳过 admin 初始化，不改动已有账户。
 - `ADMIN_EMAIL`：可选，默认 `admin@neo-line.local`。
 
-该初始化逻辑在服务启动连接 MongoDB 后执行，同时确保 `users` 和 `sessions` 的索引存在。
+该初始化逻辑在服务启动连接 MongoDB 和 Redis 后执行，同时确保 `users.email` 唯一索引存在。
 
 ### 认证 API
 
