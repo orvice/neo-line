@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -17,7 +18,7 @@ import (
 // probeURL issues an HTTP/HTTPS request and validates the response status code.
 // For https targets it also performs the TLS handshake and records peer
 // certificate metadata.
-func probeURL(ctx context.Context, m store.Monitor, timeout time.Duration) outcome {
+func probeURL(ctx context.Context, m store.Monitor, timeout time.Duration, logger *slog.Logger) outcome {
 	target := strings.TrimSpace(m.URL)
 	if target == "" {
 		return outcome{status: store.StatusDown, stage: StageHTTP, errMsg: "monitor has no url configured"}
@@ -52,13 +53,16 @@ func probeURL(ctx context.Context, m store.Monitor, timeout time.Duration) outco
 		req.Header.Set(k, v)
 	}
 
+	logger.Debug("http request", "method", method, "url", target, "https", isHTTPS)
 	resp, err := client.Do(req)
 	if err != nil {
 		stage, msg := classifyHTTPError(err, isHTTPS)
+		logger.Debug("http request failed", "stage", stage, "error", msg)
 		return outcome{status: store.StatusDown, stage: stage, errMsg: msg}
 	}
 	defer resp.Body.Close()
 	_, _ = io.Copy(io.Discard, resp.Body)
+	logger.Debug("http response received", "status_code", resp.StatusCode)
 
 	out := outcome{
 		httpCode: uint32(resp.StatusCode),

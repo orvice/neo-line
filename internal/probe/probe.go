@@ -13,7 +13,9 @@ package probe
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"net"
+	"strconv"
 	"time"
 
 	"github.com/orvice/neo-line/internal/store"
@@ -46,23 +48,51 @@ type outcome struct {
 // definitive Warning/Critical/Healthy result short-circuits remaining retries.
 func Run(ctx context.Context, m store.Monitor) store.CheckResult {
 	started := time.Now().UTC()
+	logger := slog.Default().With(
+		"component", "probe",
+		"monitor_id", m.ID,
+		"server_id", m.ServerID,
+		"kind", m.Kind,
+		"target", probeTarget(m),
+	)
 	attempts := int(m.Retries) + 1
 	if attempts < 1 {
 		attempts = 1
 	}
+	logger.Debug("probe started", "attempts", attempts)
 
 	var last outcome
 	for i := 0; i < attempts; i++ {
-		last = runOnce(ctx, m)
+		last = runOnce(ctx, m, logger)
 		if last.status != store.StatusDown {
 			break
 		}
 		if ctx.Err() != nil {
+			logger.Debug("probe aborted, context cancelled", "attempt", i+1, "error", ctx.Err().Error())
 			break
+		}
+		if i < attempts-1 {
+			logger.Debug("probe attempt failed, retrying",
+				"attempt", i+1, "stage", last.stage, "error", last.errMsg)
 		}
 	}
 
 	ended := time.Now().UTC()
+	durationMS := ended.Sub(started).Milliseconds()
+	switch last.status {
+	case store.StatusDown:
+		logger.Warn("probe failed",
+			"status", last.status, "stage", last.stage, "error", last.errMsg,
+			"remote_address", last.remoteAddress, "duration_ms", durationMS)
+	case store.StatusWarning, store.StatusCritical:
+		logger.Info("probe degraded",
+			"status", last.status, "stage", last.stage, "duration_ms", durationMS)
+	default:
+		logger.Debug("probe succeeded",
+			"status", last.status, "http_code", last.httpCode,
+			"remote_address", last.remoteAddress, "duration_ms", durationMS)
+	}
+
 	return store.CheckResult{
 		ServerID:       m.ServerID,
 		MonitorID:      m.ID,
@@ -79,7 +109,7 @@ func Run(ctx context.Context, m store.Monitor) store.CheckResult {
 	}
 }
 
-func runOnce(ctx context.Context, m store.Monitor) outcome {
+func runOnce(ctx context.Context, m store.Monitor, logger *slog.Logger) outcome {
 	timeout := time.Duration(m.TimeoutSeconds) * time.Second
 	if timeout <= 0 {
 		timeout = 5 * time.Second
@@ -89,11 +119,22 @@ func runOnce(ctx context.Context, m store.Monitor) outcome {
 
 	switch m.Kind {
 	case "url", "http", "https":
-		return probeURL(attemptCtx, m, timeout)
+		return probeURL(attemptCtx, m, timeout, logger)
 	case "tls_port", "tls_certificate":
-		return probeTLSPort(attemptCtx, m, timeout)
+		return probeTLSPort(attemptCtx, m, timeout, logger)
 	default: // "tcp" and unknown kinds fall back to TCP reachability.
-		return probeTCP(attemptCtx, m, timeout)
+		return probeTCP(attemptCtx, m, timeout, logger)
+	}
+}
+
+// probeTarget renders a human-readable target for logging, matching the field
+// set each probe kind actually dials.
+func probeTarget(m store.Monitor) string {
+	switch m.Kind {
+	case "url", "http", "https":
+		return m.URL
+	default:
+		return net.JoinHostPort(m.Host, strconv.FormatUint(uint64(m.Port), 10))
 	}
 }
 

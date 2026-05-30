@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"log/slog"
 	"net"
 	"strconv"
 	"strings"
@@ -15,13 +16,15 @@ import (
 // probeTLSPort opens a TCP connection, performs a TLS handshake without sending
 // any application data, and evaluates the peer certificate's validity window
 // against the monitor's warning/critical day thresholds.
-func probeTLSPort(ctx context.Context, m store.Monitor, _ time.Duration) outcome {
+func probeTLSPort(ctx context.Context, m store.Monitor, _ time.Duration, logger *slog.Logger) outcome {
 	address := net.JoinHostPort(m.Host, strconv.FormatUint(uint64(m.Port), 10))
+	logger.Debug("tls dial", "address", address)
 
 	var dialer net.Dialer
 	rawConn, err := dialer.DialContext(ctx, "tcp", address)
 	if err != nil {
 		stage, msg := classifyStage(err)
+		logger.Debug("tls dial failed", "address", address, "stage", stage, "error", msg)
 		return outcome{status: store.StatusDown, stage: stage, errMsg: msg, port: m.Port}
 	}
 	defer rawConn.Close()
@@ -40,8 +43,10 @@ func probeTLSPort(ctx context.Context, m store.Monitor, _ time.Duration) outcome
 		InsecureSkipVerify: !m.TLSVerify,
 	}
 
+	logger.Debug("tls handshake", "remote_address", remote, "server_name", serverName, "verify", m.TLSVerify)
 	tlsConn := tls.Client(rawConn, tlsConfig)
 	if err := tlsConn.HandshakeContext(ctx); err != nil {
+		logger.Debug("tls handshake failed", "remote_address", remote, "error", err.Error())
 		return outcome{status: store.StatusDown, stage: StageTLS, errMsg: err.Error(), remoteAddress: remote, port: m.Port}
 	}
 
@@ -51,6 +56,8 @@ func probeTLSPort(ctx context.Context, m store.Monitor, _ time.Duration) outcome
 	}
 	leaf := certs[0]
 	info := certificateInfo(leaf)
+	logger.Debug("tls certificate read",
+		"subject", info.Subject, "issuer", info.Issuer, "days_remaining", info.DaysRemaining)
 
 	out := outcome{
 		remoteAddress: remote,

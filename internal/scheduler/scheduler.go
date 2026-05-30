@@ -94,12 +94,15 @@ func (s *Scheduler) reconcile(ctx context.Context) {
 	}
 
 	now := time.Now()
+	due := 0
 	for _, m := range monitors {
 		if !s.due(m, now) {
 			continue
 		}
+		due++
 		s.dispatch(ctx, m)
 	}
+	s.logger.Debug("reconcile tick", "enabled_monitors", len(monitors), "dispatched", due)
 }
 
 func (s *Scheduler) due(m store.Monitor, now time.Time) bool {
@@ -142,6 +145,15 @@ func (s *Scheduler) dispatch(ctx context.Context, m store.Monitor) {
 			return
 		}
 		s.archiver.Enqueue(result)
+		if prevStatus != "" && prevStatus != result.Status {
+			s.logger.Info("monitor status changed",
+				"monitor_id", m.ID,
+				"server_id", m.ServerID,
+				"kind", m.Kind,
+				"prev_status", prevStatus,
+				"status", result.Status,
+			)
+		}
 		if s.alerter != nil {
 			s.alerter.OnMonitorStatusChange(ctx, m, prevStatus, result.Status, result.EndedAt)
 		}
