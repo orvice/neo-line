@@ -170,6 +170,7 @@ export interface MonitorGroup {
   id: string
   name: string
   description?: string
+  sort_order: number
   alert_policy: AlertPolicy
   created_at: string
   updated_at: string

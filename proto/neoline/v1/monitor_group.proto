@@ -33,6 +33,8 @@ message MonitorGroup {
   AlertPolicy alert_policy = 4;
   google.protobuf.Timestamp created_at = 5;
   google.protobuf.Timestamp updated_at = 6;
+  // sort_order controls display order. Smaller values are listed first.
+  uint32 sort_order = 7;
 }
 
 message ListMonitorGroupsRequest {

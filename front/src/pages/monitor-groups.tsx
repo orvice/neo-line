@@ -102,7 +102,7 @@ export function MonitorGroupsPage() {
       <Card className="py-0">
         <CardContent className="px-0">
           {isLoading ? (
-            <TableSkeleton rows={5} columns={user ? 5 : 4} />
+            <TableSkeleton rows={5} columns={user ? 6 : 5} />
           ) : isError ? (
             <div className="text-destructive p-8 text-center">
               {error instanceof ApiError ? error.message : "加载失败"}
@@ -118,6 +118,7 @@ export function MonitorGroupsPage() {
                 <TableRow>
                   <TableHead>名称</TableHead>
                   <TableHead>描述</TableHead>
+                  <TableHead>排序</TableHead>
                   <TableHead>告警</TableHead>
                   <TableHead>通知组</TableHead>
                   {user && <TableHead className="text-right">操作</TableHead>}
@@ -136,6 +137,9 @@ export function MonitorGroupsPage() {
                     </TableCell>
                     <TableCell className="text-muted-foreground text-sm">
                       {g.description || "-"}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-sm tabular-nums">
+                      {g.sort_order ?? 0}
                     </TableCell>
                     <TableCell>
                       {g.alert_policy?.enabled ? (

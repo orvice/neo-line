@@ -23,9 +23,24 @@ var ErrInvalidGroupIDs = errors.New("one or more group_ids do not exist")
 // EnsureGroupIndexes creates the indexes used by the monitor_groups collection
 // and the group_ids field on monitors.
 func (s *MongoStore) EnsureGroupIndexes(ctx context.Context) error {
+	if _, err := s.groups().UpdateMany(ctx,
+		bson.M{"sort_order": bson.M{"$exists": false}},
+		bson.M{"$set": bson.M{"sort_order": 0}},
+	); err != nil {
+		return err
+	}
 	if _, err := s.groups().Indexes().CreateOne(ctx, mongo.IndexModel{
 		Keys:    bson.D{{Key: "name", Value: 1}},
 		Options: options.Index().SetUnique(true).SetName("uniq_name"),
+	}); err != nil {
+		return err
+	}
+	if _, err := s.groups().Indexes().CreateOne(ctx, mongo.IndexModel{
+		Keys: bson.D{
+			{Key: "sort_order", Value: 1},
+			{Key: "created_at", Value: -1},
+		},
+		Options: options.Index().SetName("by_sort_order_created_at"),
 	}); err != nil {
 		return err
 	}
@@ -39,7 +54,7 @@ func (s *MongoStore) EnsureGroupIndexes(ctx context.Context) error {
 }
 
 func (s *MongoStore) ListMonitorGroups(ctx context.Context, limit int64, pageToken string) ([]MonitorGroup, string, error) {
-	return findPage[MonitorGroup](ctx, s.groups(), bson.M{}, limit, pageToken, bson.D{{Key: "created_at", Value: -1}})
+	return findPage[MonitorGroup](ctx, s.groups(), bson.M{}, limit, pageToken, bson.D{{Key: "sort_order", Value: 1}, {Key: "created_at", Value: -1}})
 }
 
 func (s *MongoStore) CreateMonitorGroup(ctx context.Context, group MonitorGroup) (MonitorGroup, error) {

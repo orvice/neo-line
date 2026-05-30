@@ -156,6 +156,7 @@ type MonitorGroup struct {
 	ID          string      `bson:"id" json:"id"`
 	Name        string      `bson:"name" json:"name"`
 	Description string      `bson:"description,omitempty" json:"description,omitempty"`
+	SortOrder   uint32      `bson:"sort_order" json:"sort_order"`
 	AlertPolicy AlertPolicy `bson:"alert_policy" json:"alert_policy"`
 	CreatedAt   time.Time   `bson:"created_at" json:"created_at"`
 	UpdatedAt   time.Time   `bson:"updated_at" json:"updated_at"`

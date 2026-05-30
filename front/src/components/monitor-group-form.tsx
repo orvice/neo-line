@@ -27,6 +27,7 @@ interface MonitorGroupFormProps {
 interface FormState {
   name: string
   description: string
+  sortOrder: string
   enabled: boolean
   onDown: boolean
   onRecover: boolean
@@ -41,6 +42,8 @@ function toFormState(group?: MonitorGroup): FormState {
   return {
     name: group?.name ?? "",
     description: group?.description ?? "",
+    sortOrder:
+      group?.sort_order !== undefined ? String(group.sort_order) : "0",
     enabled: policy?.enabled ?? false,
     onDown: policy?.on_down ?? true,
     onRecover: policy?.on_recover ?? true,
@@ -78,6 +81,7 @@ export function MonitorGroupForm({
       const body: Partial<MonitorGroup> = {
         name: form.name.trim(),
         description: form.description.trim() || undefined,
+        sort_order: form.sortOrder ? Number(form.sortOrder) : 0,
         alert_policy: {
           enabled: form.enabled,
           on_down: form.onDown,
@@ -148,6 +152,20 @@ export function MonitorGroupForm({
               onChange={(e) =>
                 setForm({ ...form, description: e.target.value })
               }
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="g-sort">排序值（越小越靠前）</Label>
+            <Input
+              id="g-sort"
+              type="number"
+              min="0"
+              step="1"
+              value={form.sortOrder}
+              onChange={(e) =>
+                setForm({ ...form, sortOrder: e.target.value })
+              }
+              placeholder="0"
             />
           </div>
 

@@ -124,13 +124,15 @@ func (x *AlertPolicy) GetMinIntervalSeconds() uint32 {
 // MonitorGroup is a flat, named bucket of monitors. A monitor may belong to
 // multiple groups, and each group carries its own alert policy.
 type MonitorGroup struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Description   string                 `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
-	AlertPolicy   *AlertPolicy           `protobuf:"bytes,4,opt,name=alert_policy,json=alertPolicy,proto3" json:"alert_policy,omitempty"`
-	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	Id          string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name        string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Description string                 `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
+	AlertPolicy *AlertPolicy           `protobuf:"bytes,4,opt,name=alert_policy,json=alertPolicy,proto3" json:"alert_policy,omitempty"`
+	CreatedAt   *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt   *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	// sort_order controls display order. Smaller values are listed first.
+	SortOrder     uint32 `protobuf:"varint,7,opt,name=sort_order,json=sortOrder,proto3" json:"sort_order,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -205,6 +207,13 @@ func (x *MonitorGroup) GetUpdatedAt() *timestamppb.Timestamp {
 		return x.UpdatedAt
 	}
 	return nil
+}
+
+func (x *MonitorGroup) GetSortOrder() uint32 {
+	if x != nil {
+		return x.SortOrder
+	}
+	return 0
 }
 
 type ListMonitorGroupsRequest struct {
@@ -791,7 +800,7 @@ const file_neoline_v1_monitor_group_proto_rawDesc = "" +
 	"on_warning\x18\x05 \x01(\bR\tonWarning\x12\x1f\n" +
 	"\von_critical\x18\x06 \x01(\bR\n" +
 	"onCritical\x120\n" +
-	"\x14min_interval_seconds\x18\a \x01(\rR\x12minIntervalSeconds\"\x86\x02\n" +
+	"\x14min_interval_seconds\x18\a \x01(\rR\x12minIntervalSeconds\"\xa5\x02\n" +
 	"\fMonitorGroup\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12 \n" +
@@ -800,7 +809,9 @@ const file_neoline_v1_monitor_group_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"V\n" +
+	"updated_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x1d\n" +
+	"\n" +
+	"sort_order\x18\a \x01(\rR\tsortOrder\"V\n" +
 	"\x18ListMonitorGroupsRequest\x12\x1b\n" +
 	"\tpage_size\x18\x01 \x01(\rR\bpageSize\x12\x1d\n" +
 	"\n" +
