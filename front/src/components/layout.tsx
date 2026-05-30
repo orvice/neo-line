@@ -3,6 +3,7 @@ import { Link, NavLink, Outlet, useLocation } from "react-router-dom"
 import {
   Activity,
   FolderTree,
+  LayoutDashboard,
   LogOut,
   Monitor,
   Moon,
@@ -71,43 +72,54 @@ export function Layout() {
               <Activity className="size-4" />
               状态
             </NavLink>
-            <NavLink
-              to="/servers"
-              className={({ isActive }) =>
-                "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm transition " +
-                (isActive
-                  ? "bg-accent text-accent-foreground"
-                  : "text-muted-foreground hover:bg-accent")
-              }
-            >
-              <Server className="size-4" />
-              服务器
-            </NavLink>
-            <NavLink
-              to="/monitor-groups"
-              className={({ isActive }) =>
-                "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm transition " +
-                (isActive
-                  ? "bg-accent text-accent-foreground"
-                  : "text-muted-foreground hover:bg-accent")
-              }
-            >
-              <FolderTree className="size-4" />
-              分组
-            </NavLink>
-            {user && (
-              <NavLink
-                to="/settings"
-                className={({ isActive }) =>
-                  "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm transition " +
-                  (isActive
-                    ? "bg-accent text-accent-foreground"
-                    : "text-muted-foreground hover:bg-accent")
-                }
+            {user ? (
+              <>
+                <NavLink
+                  to="/servers"
+                  className={({ isActive }) =>
+                    "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm transition " +
+                    (isActive
+                      ? "bg-accent text-accent-foreground"
+                      : "text-muted-foreground hover:bg-accent")
+                  }
+                >
+                  <Server className="size-4" />
+                  服务器
+                </NavLink>
+                <NavLink
+                  to="/monitor-groups"
+                  className={({ isActive }) =>
+                    "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm transition " +
+                    (isActive
+                      ? "bg-accent text-accent-foreground"
+                      : "text-muted-foreground hover:bg-accent")
+                  }
+                >
+                  <FolderTree className="size-4" />
+                  分组
+                </NavLink>
+                <NavLink
+                  to="/settings"
+                  className={({ isActive }) =>
+                    "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm transition " +
+                    (isActive
+                      ? "bg-accent text-accent-foreground"
+                      : "text-muted-foreground hover:bg-accent")
+                  }
+                >
+                  <SettingsIcon className="size-4" />
+                  设置
+                </NavLink>
+              </>
+            ) : (
+              <Link
+                to="/login"
+                state={{ from: location.pathname }}
+                className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-muted-foreground transition hover:bg-accent"
               >
-                <SettingsIcon className="size-4" />
-                设置
-              </NavLink>
+                <LayoutDashboard className="size-4" />
+                管理
+              </Link>
             )}
           </nav>
           <div className="flex items-center gap-2">

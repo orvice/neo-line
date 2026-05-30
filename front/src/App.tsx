@@ -1,4 +1,5 @@
-import { Navigate, Route, Routes } from "react-router-dom"
+import { Navigate, Route, Routes, useLocation } from "react-router-dom"
+import type { ReactElement } from "react"
 
 import { useAuth } from "./lib/auth"
 import { Layout } from "./components/layout"
@@ -19,6 +20,15 @@ function LoadingScreen() {
   )
 }
 
+function RequireAuth({ children }: { children: ReactElement }) {
+  const { user } = useAuth()
+  const location = useLocation()
+  if (!user) {
+    return <Navigate to="/login" replace state={{ from: location.pathname }} />
+  }
+  return children
+}
+
 export function App() {
   const { loading } = useAuth()
   if (loading) return <LoadingScreen />
@@ -28,18 +38,54 @@ export function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route element={<Layout />}>
         <Route path="/" element={<StatusPage />} />
-        <Route path="/servers" element={<ServersPage />} />
-        <Route path="/servers/:serverId" element={<ServerDetailPage />} />
+        <Route
+          path="/servers"
+          element={
+            <RequireAuth>
+              <ServersPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/servers/:serverId"
+          element={
+            <RequireAuth>
+              <ServerDetailPage />
+            </RequireAuth>
+          }
+        />
         <Route
           path="/servers/:serverId/monitors/:monitorId"
-          element={<MonitorDetailPage />}
+          element={
+            <RequireAuth>
+              <MonitorDetailPage />
+            </RequireAuth>
+          }
         />
-        <Route path="/monitor-groups" element={<MonitorGroupsPage />} />
+        <Route
+          path="/monitor-groups"
+          element={
+            <RequireAuth>
+              <MonitorGroupsPage />
+            </RequireAuth>
+          }
+        />
         <Route
           path="/monitor-groups/:groupId"
-          element={<MonitorGroupDetailPage />}
+          element={
+            <RequireAuth>
+              <MonitorGroupDetailPage />
+            </RequireAuth>
+          }
         />
-        <Route path="/settings" element={<SettingsPage />} />
+        <Route
+          path="/settings"
+          element={
+            <RequireAuth>
+              <SettingsPage />
+            </RequireAuth>
+          }
+        />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
