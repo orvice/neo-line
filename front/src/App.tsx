@@ -10,6 +10,7 @@ import { ServerDetailPage } from "./pages/server-detail"
 import { MonitorDetailPage } from "./pages/monitor-detail"
 import { MonitorGroupsPage } from "./pages/monitor-groups"
 import { MonitorGroupDetailPage } from "./pages/monitor-group-detail"
+import { NotifyGroupsPage } from "./pages/notify-groups"
 import { SettingsPage } from "./pages/settings"
 import { McpPage } from "./pages/mcp"
 
@@ -76,6 +77,14 @@ export function App() {
           element={
             <RequireAuth>
               <MonitorGroupDetailPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/notify-groups"
+          element={
+            <RequireAuth>
+              <NotifyGroupsPage />
             </RequireAuth>
           }
         />

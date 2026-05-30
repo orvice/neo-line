@@ -1,21 +1,14 @@
 import { useEffect, useState } from "react"
-import { useMutation, useQueryClient } from "@tanstack/react-query"
-import { Plus, Trash2 } from "lucide-react"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { Link } from "react-router-dom"
 import { toast } from "sonner"
 
 import { api, ApiError } from "@/lib/api"
-import type { AlertChannel, MonitorGroup } from "@/lib/types"
+import type { MonitorGroup } from "@/lib/types"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import {
   Dialog,
   DialogContent,
@@ -40,30 +33,7 @@ interface FormState {
   onWarning: boolean
   onCritical: boolean
   minIntervalSeconds: string
-  channels: AlertChannel[]
-}
-
-type ChannelType = "webhook" | "telegram" | "discord" | "mastodon"
-
-const CHANNEL_TYPES: { value: ChannelType; label: string }[] = [
-  { value: "webhook", label: "Webhook" },
-  { value: "telegram", label: "Telegram" },
-  { value: "discord", label: "Discord" },
-  { value: "mastodon", label: "Mastodon" },
-]
-
-// channelComplete reports whether a channel has all the fields its type needs.
-function channelComplete(c: AlertChannel): boolean {
-  const target = c.target?.trim() ?? ""
-  if (target === "") return false
-  switch (c.type) {
-    case "telegram":
-      return Boolean(c.extra?.bot_token?.trim())
-    case "mastodon":
-      return Boolean(c.extra?.access_token?.trim())
-    default:
-      return true
-  }
+  notifyGroupIds: string[]
 }
 
 function toFormState(group?: MonitorGroup): FormState {
@@ -79,7 +49,7 @@ function toFormState(group?: MonitorGroup): FormState {
     minIntervalSeconds: policy?.min_interval_seconds
       ? String(policy.min_interval_seconds)
       : "",
-    channels: policy?.channels?.map((c) => ({ ...c })) ?? [],
+    notifyGroupIds: policy?.notify_group_ids ? [...policy.notify_group_ids] : [],
   }
 }
 
@@ -96,6 +66,13 @@ export function MonitorGroupForm({
     if (open) setForm(toFormState(group))
   }, [open, group])
 
+  const { data: notifyData } = useQuery({
+    queryKey: ["notify-groups"],
+    queryFn: () => api.listNotifyGroups({ page_size: 200 }),
+    enabled: open,
+  })
+  const notifyGroups = notifyData?.groups ?? []
+
   const mutation = useMutation({
     mutationFn: async () => {
       const body: Partial<MonitorGroup> = {
@@ -110,11 +87,7 @@ export function MonitorGroupForm({
           min_interval_seconds: form.minIntervalSeconds
             ? Number(form.minIntervalSeconds)
             : undefined,
-          channels: form.channels.filter(channelComplete).map((c) => ({
-            type: c.type || "webhook",
-            target: c.target.trim(),
-            extra: c.extra,
-          })),
+          notify_group_ids: form.notifyGroupIds,
         },
       }
       return isEdit
@@ -133,36 +106,12 @@ export function MonitorGroupForm({
     },
   })
 
-  const updateChannel = (index: number, patch: Partial<AlertChannel>) => {
-    setForm((prev) => {
-      const channels = [...prev.channels]
-      channels[index] = { ...channels[index], ...patch }
-      return { ...prev, channels }
-    })
-  }
-
-  const updateExtra = (index: number, key: string, value: string) => {
-    setForm((prev) => {
-      const channels = [...prev.channels]
-      channels[index] = {
-        ...channels[index],
-        extra: { ...channels[index].extra, [key]: value },
-      }
-      return { ...prev, channels }
-    })
-  }
-
-  const addChannel = () => {
+  const toggleNotifyGroup = (id: string) => {
     setForm((prev) => ({
       ...prev,
-      channels: [...prev.channels, { type: "webhook", target: "" }],
-    }))
-  }
-
-  const removeChannel = (index: number) => {
-    setForm((prev) => ({
-      ...prev,
-      channels: prev.channels.filter((_, i) => i !== index),
+      notifyGroupIds: prev.notifyGroupIds.includes(id)
+        ? prev.notifyGroupIds.filter((x) => x !== id)
+        : [...prev.notifyGroupIds, id],
     }))
   }
 
@@ -172,7 +121,7 @@ export function MonitorGroupForm({
         <DialogHeader>
           <DialogTitle>{isEdit ? "编辑分组" : "新增分组"}</DialogTitle>
           <DialogDescription>
-            分组用于聚合监控项并配置共享的告警策略，支持 Webhook、Telegram、Discord、Mastodon 通道。
+            分组用于聚合监控项并配置共享的告警策略，告警通过引用通知组派发。
           </DialogDescription>
         </DialogHeader>
         <form
@@ -257,39 +206,35 @@ export function MonitorGroupForm({
             </div>
 
             <div className="flex flex-col gap-2">
-              <div className="flex items-center justify-between">
-                <Label>通知通道</Label>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={addChannel}
-                >
-                  <Plus className="size-4" />
-                  新增
-                </Button>
-              </div>
-              {form.channels.length === 0 ? (
+              <Label>通知组</Label>
+              {notifyGroups.length === 0 ? (
                 <p className="text-muted-foreground text-xs">
-                  尚未配置任何通道，启用告警后请至少添加一个通知通道。
+                  尚无通知组，请先到{" "}
+                  <Link to="/notify-groups" className="underline">
+                    通知组
+                  </Link>{" "}
+                  页面创建。
                 </p>
               ) : (
-                form.channels.map((channel, index) => (
-                  <ChannelEditor
-                    key={index}
-                    channel={channel}
-                    onTypeChange={(type) =>
-                      updateChannel(index, { type, extra: {} })
-                    }
-                    onTargetChange={(target) =>
-                      updateChannel(index, { target })
-                    }
-                    onExtraChange={(key, value) =>
-                      updateExtra(index, key, value)
-                    }
-                    onRemove={() => removeChannel(index)}
-                  />
-                ))
+                <div className="flex flex-col gap-1">
+                  {notifyGroups.map((ng) => (
+                    <label
+                      key={ng.id}
+                      className="flex items-center gap-2 rounded-md border p-2 text-sm"
+                    >
+                      <input
+                        type="checkbox"
+                        className="size-4"
+                        checked={form.notifyGroupIds.includes(ng.id)}
+                        onChange={() => toggleNotifyGroup(ng.id)}
+                      />
+                      <span className="font-medium">{ng.name}</span>
+                      <span className="text-muted-foreground">
+                        {ng.channels?.length ?? 0} 个通道
+                      </span>
+                    </label>
+                  ))}
+                </div>
               )}
             </div>
           </div>
@@ -309,106 +254,5 @@ export function MonitorGroupForm({
         </form>
       </DialogContent>
     </Dialog>
-  )
-}
-
-interface ChannelEditorProps {
-  channel: AlertChannel
-  onTypeChange: (type: ChannelType) => void
-  onTargetChange: (target: string) => void
-  onExtraChange: (key: string, value: string) => void
-  onRemove: () => void
-}
-
-function targetPlaceholder(type: string): string {
-  switch (type) {
-    case "telegram":
-      return "Chat ID，如 -1001234567890"
-    case "discord":
-      return "https://discord.com/api/webhooks/..."
-    case "mastodon":
-      return "实例地址，如 https://mastodon.social"
-    default:
-      return "https://hooks.example.com/..."
-  }
-}
-
-function targetLabel(type: string): string {
-  switch (type) {
-    case "telegram":
-      return "Chat ID"
-    case "mastodon":
-      return "实例地址"
-    default:
-      return "Webhook 地址"
-  }
-}
-
-function ChannelEditor({
-  channel,
-  onTypeChange,
-  onTargetChange,
-  onExtraChange,
-  onRemove,
-}: ChannelEditorProps) {
-  const type = (channel.type || "webhook") as ChannelType
-  return (
-    <div className="flex flex-col gap-2 rounded-md border p-3">
-      <div className="flex items-center gap-2">
-        <Select
-          value={type}
-          onValueChange={(v) => onTypeChange(v as ChannelType)}
-        >
-          <SelectTrigger className="w-36">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {CHANNEL_TYPES.map((t) => (
-              <SelectItem key={t.value} value={t.value}>
-                {t.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="ml-auto"
-          onClick={onRemove}
-          title="移除"
-        >
-          <Trash2 className="text-destructive size-4" />
-        </Button>
-      </div>
-      <div className="flex flex-col gap-1">
-        <Label className="text-xs">{targetLabel(type)}</Label>
-        <Input
-          value={channel.target}
-          onChange={(e) => onTargetChange(e.target.value)}
-          placeholder={targetPlaceholder(type)}
-        />
-      </div>
-      {type === "telegram" && (
-        <div className="flex flex-col gap-1">
-          <Label className="text-xs">Bot Token</Label>
-          <Input
-            value={channel.extra?.bot_token ?? ""}
-            onChange={(e) => onExtraChange("bot_token", e.target.value)}
-            placeholder="123456:ABC-DEF..."
-          />
-        </div>
-      )}
-      {type === "mastodon" && (
-        <div className="flex flex-col gap-1">
-          <Label className="text-xs">Access Token</Label>
-          <Input
-            value={channel.extra?.access_token ?? ""}
-            onChange={(e) => onExtraChange("access_token", e.target.value)}
-            placeholder="应用访问令牌"
-          />
-        </div>
-      )}
-    </div>
   )
 }

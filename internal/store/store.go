@@ -117,24 +117,37 @@ type ServerHealth struct {
 	UnknownMonitors    uint32    `json:"unknown_monitors"`
 }
 
-// AlertChannel is one delivery target for an AlertPolicy. The initial
-// supported Type is "webhook", which POSTs the alert payload to Target.
+// AlertChannel is one delivery target inside a NotifyGroup. Supported Types are
+// "webhook", "telegram", "discord", and "mastodon"; the meaning of Target and
+// Extra depends on the type.
 type AlertChannel struct {
 	Type   string            `bson:"type" json:"type"`
 	Target string            `bson:"target" json:"target"`
 	Extra  map[string]string `bson:"extra,omitempty" json:"extra,omitempty"`
 }
 
+// NotifyGroup is a reusable, named bucket of delivery channels. A MonitorGroup's
+// AlertPolicy references NotifyGroups by ID; dispatch fans out to every channel
+// of every referenced group.
+type NotifyGroup struct {
+	ID          string         `bson:"id" json:"id"`
+	Name        string         `bson:"name" json:"name"`
+	Description string         `bson:"description,omitempty" json:"description,omitempty"`
+	Channels    []AlertChannel `bson:"channels,omitempty" json:"channels,omitempty"`
+	CreatedAt   time.Time      `bson:"created_at" json:"created_at"`
+	UpdatedAt   time.Time      `bson:"updated_at" json:"updated_at"`
+}
+
 // AlertPolicy holds the group-level alert configuration applied to every
 // monitor in the group.
 type AlertPolicy struct {
-	Enabled            bool           `bson:"enabled" json:"enabled"`
-	Channels           []AlertChannel `bson:"channels,omitempty" json:"channels,omitempty"`
-	OnDown             bool           `bson:"on_down" json:"on_down"`
-	OnRecover          bool           `bson:"on_recover" json:"on_recover"`
-	OnWarning          bool           `bson:"on_warning" json:"on_warning"`
-	OnCritical         bool           `bson:"on_critical" json:"on_critical"`
-	MinIntervalSeconds uint32         `bson:"min_interval_seconds,omitempty" json:"min_interval_seconds,omitempty"`
+	Enabled            bool     `bson:"enabled" json:"enabled"`
+	NotifyGroupIDs     []string `bson:"notify_group_ids,omitempty" json:"notify_group_ids,omitempty"`
+	OnDown             bool     `bson:"on_down" json:"on_down"`
+	OnRecover          bool     `bson:"on_recover" json:"on_recover"`
+	OnWarning          bool     `bson:"on_warning" json:"on_warning"`
+	OnCritical         bool     `bson:"on_critical" json:"on_critical"`
+	MinIntervalSeconds uint32   `bson:"min_interval_seconds,omitempty" json:"min_interval_seconds,omitempty"`
 }
 
 // MonitorGroup is a named, flat bucket of monitors. Monitors may belong to

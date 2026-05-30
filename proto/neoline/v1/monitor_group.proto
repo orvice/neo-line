@@ -8,19 +8,13 @@ import "neoline/v1/monitor.proto";
 
 option go_package = "github.com/orvice/neo-line/pkg/proto/neoline/v1;neolinev1";
 
-// AlertChannel describes a single delivery target for an AlertPolicy. The
-// initial supported type is "webhook", which POSTs a JSON payload to target.
-message AlertChannel {
-  string type = 1;
-  string target = 2;
-  map<string, string> extra = 3;
-}
-
 // AlertPolicy is the group-level configuration that drives alert dispatch when
 // any monitor in the group transitions between health states.
 message AlertPolicy {
   bool enabled = 1;
-  repeated AlertChannel channels = 2;
+  // notify_group_ids references the NotifyGroups whose channels receive the
+  // alert. Dispatch fans out to every channel of every referenced group.
+  repeated string notify_group_ids = 2;
   bool on_down = 3;
   bool on_recover = 4;
   bool on_warning = 5;

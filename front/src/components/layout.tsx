@@ -2,6 +2,7 @@ import { useEffect } from "react"
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom"
 import {
   Activity,
+  BellRing,
   FolderTree,
   LogOut,
   Monitor,
@@ -97,6 +98,18 @@ export function Layout() {
                 >
                   <FolderTree className="size-4" />
                   分组
+                </NavLink>
+                <NavLink
+                  to="/notify-groups"
+                  className={({ isActive }) =>
+                    "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm transition " +
+                    (isActive
+                      ? "bg-accent text-accent-foreground"
+                      : "text-muted-foreground hover:bg-accent")
+                  }
+                >
+                  <BellRing className="size-4" />
+                  通知组
                 </NavLink>
                 <NavLink
                   to="/mcp"

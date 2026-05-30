@@ -23,78 +23,18 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// AlertChannel describes a single delivery target for an AlertPolicy. The
-// initial supported type is "webhook", which POSTs a JSON payload to target.
-type AlertChannel struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Type          string                 `protobuf:"bytes,1,opt,name=type,proto3" json:"type,omitempty"`
-	Target        string                 `protobuf:"bytes,2,opt,name=target,proto3" json:"target,omitempty"`
-	Extra         map[string]string      `protobuf:"bytes,3,rep,name=extra,proto3" json:"extra,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *AlertChannel) Reset() {
-	*x = AlertChannel{}
-	mi := &file_neoline_v1_monitor_group_proto_msgTypes[0]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *AlertChannel) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*AlertChannel) ProtoMessage() {}
-
-func (x *AlertChannel) ProtoReflect() protoreflect.Message {
-	mi := &file_neoline_v1_monitor_group_proto_msgTypes[0]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use AlertChannel.ProtoReflect.Descriptor instead.
-func (*AlertChannel) Descriptor() ([]byte, []int) {
-	return file_neoline_v1_monitor_group_proto_rawDescGZIP(), []int{0}
-}
-
-func (x *AlertChannel) GetType() string {
-	if x != nil {
-		return x.Type
-	}
-	return ""
-}
-
-func (x *AlertChannel) GetTarget() string {
-	if x != nil {
-		return x.Target
-	}
-	return ""
-}
-
-func (x *AlertChannel) GetExtra() map[string]string {
-	if x != nil {
-		return x.Extra
-	}
-	return nil
-}
-
 // AlertPolicy is the group-level configuration that drives alert dispatch when
 // any monitor in the group transitions between health states.
 type AlertPolicy struct {
-	state      protoimpl.MessageState `protogen:"open.v1"`
-	Enabled    bool                   `protobuf:"varint,1,opt,name=enabled,proto3" json:"enabled,omitempty"`
-	Channels   []*AlertChannel        `protobuf:"bytes,2,rep,name=channels,proto3" json:"channels,omitempty"`
-	OnDown     bool                   `protobuf:"varint,3,opt,name=on_down,json=onDown,proto3" json:"on_down,omitempty"`
-	OnRecover  bool                   `protobuf:"varint,4,opt,name=on_recover,json=onRecover,proto3" json:"on_recover,omitempty"`
-	OnWarning  bool                   `protobuf:"varint,5,opt,name=on_warning,json=onWarning,proto3" json:"on_warning,omitempty"`
-	OnCritical bool                   `protobuf:"varint,6,opt,name=on_critical,json=onCritical,proto3" json:"on_critical,omitempty"`
+	state   protoimpl.MessageState `protogen:"open.v1"`
+	Enabled bool                   `protobuf:"varint,1,opt,name=enabled,proto3" json:"enabled,omitempty"`
+	// notify_group_ids references the NotifyGroups whose channels receive the
+	// alert. Dispatch fans out to every channel of every referenced group.
+	NotifyGroupIds []string `protobuf:"bytes,2,rep,name=notify_group_ids,json=notifyGroupIds,proto3" json:"notify_group_ids,omitempty"`
+	OnDown         bool     `protobuf:"varint,3,opt,name=on_down,json=onDown,proto3" json:"on_down,omitempty"`
+	OnRecover      bool     `protobuf:"varint,4,opt,name=on_recover,json=onRecover,proto3" json:"on_recover,omitempty"`
+	OnWarning      bool     `protobuf:"varint,5,opt,name=on_warning,json=onWarning,proto3" json:"on_warning,omitempty"`
+	OnCritical     bool     `protobuf:"varint,6,opt,name=on_critical,json=onCritical,proto3" json:"on_critical,omitempty"`
 	// min_interval_seconds throttles alerts so the same (group, monitor) pair
 	// does not fire more often than this window. Zero disables throttling.
 	MinIntervalSeconds uint32 `protobuf:"varint,7,opt,name=min_interval_seconds,json=minIntervalSeconds,proto3" json:"min_interval_seconds,omitempty"`
@@ -104,7 +44,7 @@ type AlertPolicy struct {
 
 func (x *AlertPolicy) Reset() {
 	*x = AlertPolicy{}
-	mi := &file_neoline_v1_monitor_group_proto_msgTypes[1]
+	mi := &file_neoline_v1_monitor_group_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -116,7 +56,7 @@ func (x *AlertPolicy) String() string {
 func (*AlertPolicy) ProtoMessage() {}
 
 func (x *AlertPolicy) ProtoReflect() protoreflect.Message {
-	mi := &file_neoline_v1_monitor_group_proto_msgTypes[1]
+	mi := &file_neoline_v1_monitor_group_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -129,7 +69,7 @@ func (x *AlertPolicy) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AlertPolicy.ProtoReflect.Descriptor instead.
 func (*AlertPolicy) Descriptor() ([]byte, []int) {
-	return file_neoline_v1_monitor_group_proto_rawDescGZIP(), []int{1}
+	return file_neoline_v1_monitor_group_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *AlertPolicy) GetEnabled() bool {
@@ -139,9 +79,9 @@ func (x *AlertPolicy) GetEnabled() bool {
 	return false
 }
 
-func (x *AlertPolicy) GetChannels() []*AlertChannel {
+func (x *AlertPolicy) GetNotifyGroupIds() []string {
 	if x != nil {
-		return x.Channels
+		return x.NotifyGroupIds
 	}
 	return nil
 }
@@ -197,7 +137,7 @@ type MonitorGroup struct {
 
 func (x *MonitorGroup) Reset() {
 	*x = MonitorGroup{}
-	mi := &file_neoline_v1_monitor_group_proto_msgTypes[2]
+	mi := &file_neoline_v1_monitor_group_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -209,7 +149,7 @@ func (x *MonitorGroup) String() string {
 func (*MonitorGroup) ProtoMessage() {}
 
 func (x *MonitorGroup) ProtoReflect() protoreflect.Message {
-	mi := &file_neoline_v1_monitor_group_proto_msgTypes[2]
+	mi := &file_neoline_v1_monitor_group_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -222,7 +162,7 @@ func (x *MonitorGroup) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MonitorGroup.ProtoReflect.Descriptor instead.
 func (*MonitorGroup) Descriptor() ([]byte, []int) {
-	return file_neoline_v1_monitor_group_proto_rawDescGZIP(), []int{2}
+	return file_neoline_v1_monitor_group_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *MonitorGroup) GetId() string {
@@ -277,7 +217,7 @@ type ListMonitorGroupsRequest struct {
 
 func (x *ListMonitorGroupsRequest) Reset() {
 	*x = ListMonitorGroupsRequest{}
-	mi := &file_neoline_v1_monitor_group_proto_msgTypes[3]
+	mi := &file_neoline_v1_monitor_group_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -289,7 +229,7 @@ func (x *ListMonitorGroupsRequest) String() string {
 func (*ListMonitorGroupsRequest) ProtoMessage() {}
 
 func (x *ListMonitorGroupsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_neoline_v1_monitor_group_proto_msgTypes[3]
+	mi := &file_neoline_v1_monitor_group_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -302,7 +242,7 @@ func (x *ListMonitorGroupsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListMonitorGroupsRequest.ProtoReflect.Descriptor instead.
 func (*ListMonitorGroupsRequest) Descriptor() ([]byte, []int) {
-	return file_neoline_v1_monitor_group_proto_rawDescGZIP(), []int{3}
+	return file_neoline_v1_monitor_group_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *ListMonitorGroupsRequest) GetPageSize() uint32 {
@@ -329,7 +269,7 @@ type ListMonitorGroupsResponse struct {
 
 func (x *ListMonitorGroupsResponse) Reset() {
 	*x = ListMonitorGroupsResponse{}
-	mi := &file_neoline_v1_monitor_group_proto_msgTypes[4]
+	mi := &file_neoline_v1_monitor_group_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -341,7 +281,7 @@ func (x *ListMonitorGroupsResponse) String() string {
 func (*ListMonitorGroupsResponse) ProtoMessage() {}
 
 func (x *ListMonitorGroupsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_neoline_v1_monitor_group_proto_msgTypes[4]
+	mi := &file_neoline_v1_monitor_group_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -354,7 +294,7 @@ func (x *ListMonitorGroupsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListMonitorGroupsResponse.ProtoReflect.Descriptor instead.
 func (*ListMonitorGroupsResponse) Descriptor() ([]byte, []int) {
-	return file_neoline_v1_monitor_group_proto_rawDescGZIP(), []int{4}
+	return file_neoline_v1_monitor_group_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *ListMonitorGroupsResponse) GetGroups() []*MonitorGroup {
@@ -380,7 +320,7 @@ type CreateMonitorGroupRequest struct {
 
 func (x *CreateMonitorGroupRequest) Reset() {
 	*x = CreateMonitorGroupRequest{}
-	mi := &file_neoline_v1_monitor_group_proto_msgTypes[5]
+	mi := &file_neoline_v1_monitor_group_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -392,7 +332,7 @@ func (x *CreateMonitorGroupRequest) String() string {
 func (*CreateMonitorGroupRequest) ProtoMessage() {}
 
 func (x *CreateMonitorGroupRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_neoline_v1_monitor_group_proto_msgTypes[5]
+	mi := &file_neoline_v1_monitor_group_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -405,7 +345,7 @@ func (x *CreateMonitorGroupRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateMonitorGroupRequest.ProtoReflect.Descriptor instead.
 func (*CreateMonitorGroupRequest) Descriptor() ([]byte, []int) {
-	return file_neoline_v1_monitor_group_proto_rawDescGZIP(), []int{5}
+	return file_neoline_v1_monitor_group_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *CreateMonitorGroupRequest) GetGroup() *MonitorGroup {
@@ -424,7 +364,7 @@ type CreateMonitorGroupResponse struct {
 
 func (x *CreateMonitorGroupResponse) Reset() {
 	*x = CreateMonitorGroupResponse{}
-	mi := &file_neoline_v1_monitor_group_proto_msgTypes[6]
+	mi := &file_neoline_v1_monitor_group_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -436,7 +376,7 @@ func (x *CreateMonitorGroupResponse) String() string {
 func (*CreateMonitorGroupResponse) ProtoMessage() {}
 
 func (x *CreateMonitorGroupResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_neoline_v1_monitor_group_proto_msgTypes[6]
+	mi := &file_neoline_v1_monitor_group_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -449,7 +389,7 @@ func (x *CreateMonitorGroupResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateMonitorGroupResponse.ProtoReflect.Descriptor instead.
 func (*CreateMonitorGroupResponse) Descriptor() ([]byte, []int) {
-	return file_neoline_v1_monitor_group_proto_rawDescGZIP(), []int{6}
+	return file_neoline_v1_monitor_group_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *CreateMonitorGroupResponse) GetGroup() *MonitorGroup {
@@ -468,7 +408,7 @@ type GetMonitorGroupRequest struct {
 
 func (x *GetMonitorGroupRequest) Reset() {
 	*x = GetMonitorGroupRequest{}
-	mi := &file_neoline_v1_monitor_group_proto_msgTypes[7]
+	mi := &file_neoline_v1_monitor_group_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -480,7 +420,7 @@ func (x *GetMonitorGroupRequest) String() string {
 func (*GetMonitorGroupRequest) ProtoMessage() {}
 
 func (x *GetMonitorGroupRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_neoline_v1_monitor_group_proto_msgTypes[7]
+	mi := &file_neoline_v1_monitor_group_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -493,7 +433,7 @@ func (x *GetMonitorGroupRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetMonitorGroupRequest.ProtoReflect.Descriptor instead.
 func (*GetMonitorGroupRequest) Descriptor() ([]byte, []int) {
-	return file_neoline_v1_monitor_group_proto_rawDescGZIP(), []int{7}
+	return file_neoline_v1_monitor_group_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *GetMonitorGroupRequest) GetGroupId() string {
@@ -512,7 +452,7 @@ type GetMonitorGroupResponse struct {
 
 func (x *GetMonitorGroupResponse) Reset() {
 	*x = GetMonitorGroupResponse{}
-	mi := &file_neoline_v1_monitor_group_proto_msgTypes[8]
+	mi := &file_neoline_v1_monitor_group_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -524,7 +464,7 @@ func (x *GetMonitorGroupResponse) String() string {
 func (*GetMonitorGroupResponse) ProtoMessage() {}
 
 func (x *GetMonitorGroupResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_neoline_v1_monitor_group_proto_msgTypes[8]
+	mi := &file_neoline_v1_monitor_group_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -537,7 +477,7 @@ func (x *GetMonitorGroupResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetMonitorGroupResponse.ProtoReflect.Descriptor instead.
 func (*GetMonitorGroupResponse) Descriptor() ([]byte, []int) {
-	return file_neoline_v1_monitor_group_proto_rawDescGZIP(), []int{8}
+	return file_neoline_v1_monitor_group_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *GetMonitorGroupResponse) GetGroup() *MonitorGroup {
@@ -557,7 +497,7 @@ type UpdateMonitorGroupRequest struct {
 
 func (x *UpdateMonitorGroupRequest) Reset() {
 	*x = UpdateMonitorGroupRequest{}
-	mi := &file_neoline_v1_monitor_group_proto_msgTypes[9]
+	mi := &file_neoline_v1_monitor_group_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -569,7 +509,7 @@ func (x *UpdateMonitorGroupRequest) String() string {
 func (*UpdateMonitorGroupRequest) ProtoMessage() {}
 
 func (x *UpdateMonitorGroupRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_neoline_v1_monitor_group_proto_msgTypes[9]
+	mi := &file_neoline_v1_monitor_group_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -582,7 +522,7 @@ func (x *UpdateMonitorGroupRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateMonitorGroupRequest.ProtoReflect.Descriptor instead.
 func (*UpdateMonitorGroupRequest) Descriptor() ([]byte, []int) {
-	return file_neoline_v1_monitor_group_proto_rawDescGZIP(), []int{9}
+	return file_neoline_v1_monitor_group_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *UpdateMonitorGroupRequest) GetGroupId() string {
@@ -608,7 +548,7 @@ type UpdateMonitorGroupResponse struct {
 
 func (x *UpdateMonitorGroupResponse) Reset() {
 	*x = UpdateMonitorGroupResponse{}
-	mi := &file_neoline_v1_monitor_group_proto_msgTypes[10]
+	mi := &file_neoline_v1_monitor_group_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -620,7 +560,7 @@ func (x *UpdateMonitorGroupResponse) String() string {
 func (*UpdateMonitorGroupResponse) ProtoMessage() {}
 
 func (x *UpdateMonitorGroupResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_neoline_v1_monitor_group_proto_msgTypes[10]
+	mi := &file_neoline_v1_monitor_group_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -633,7 +573,7 @@ func (x *UpdateMonitorGroupResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateMonitorGroupResponse.ProtoReflect.Descriptor instead.
 func (*UpdateMonitorGroupResponse) Descriptor() ([]byte, []int) {
-	return file_neoline_v1_monitor_group_proto_rawDescGZIP(), []int{10}
+	return file_neoline_v1_monitor_group_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *UpdateMonitorGroupResponse) GetGroup() *MonitorGroup {
@@ -652,7 +592,7 @@ type DeleteMonitorGroupRequest struct {
 
 func (x *DeleteMonitorGroupRequest) Reset() {
 	*x = DeleteMonitorGroupRequest{}
-	mi := &file_neoline_v1_monitor_group_proto_msgTypes[11]
+	mi := &file_neoline_v1_monitor_group_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -664,7 +604,7 @@ func (x *DeleteMonitorGroupRequest) String() string {
 func (*DeleteMonitorGroupRequest) ProtoMessage() {}
 
 func (x *DeleteMonitorGroupRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_neoline_v1_monitor_group_proto_msgTypes[11]
+	mi := &file_neoline_v1_monitor_group_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -677,7 +617,7 @@ func (x *DeleteMonitorGroupRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteMonitorGroupRequest.ProtoReflect.Descriptor instead.
 func (*DeleteMonitorGroupRequest) Descriptor() ([]byte, []int) {
-	return file_neoline_v1_monitor_group_proto_rawDescGZIP(), []int{11}
+	return file_neoline_v1_monitor_group_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *DeleteMonitorGroupRequest) GetGroupId() string {
@@ -695,7 +635,7 @@ type DeleteMonitorGroupResponse struct {
 
 func (x *DeleteMonitorGroupResponse) Reset() {
 	*x = DeleteMonitorGroupResponse{}
-	mi := &file_neoline_v1_monitor_group_proto_msgTypes[12]
+	mi := &file_neoline_v1_monitor_group_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -707,7 +647,7 @@ func (x *DeleteMonitorGroupResponse) String() string {
 func (*DeleteMonitorGroupResponse) ProtoMessage() {}
 
 func (x *DeleteMonitorGroupResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_neoline_v1_monitor_group_proto_msgTypes[12]
+	mi := &file_neoline_v1_monitor_group_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -720,7 +660,7 @@ func (x *DeleteMonitorGroupResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteMonitorGroupResponse.ProtoReflect.Descriptor instead.
 func (*DeleteMonitorGroupResponse) Descriptor() ([]byte, []int) {
-	return file_neoline_v1_monitor_group_proto_rawDescGZIP(), []int{12}
+	return file_neoline_v1_monitor_group_proto_rawDescGZIP(), []int{11}
 }
 
 type ListMonitorsByGroupRequest struct {
@@ -734,7 +674,7 @@ type ListMonitorsByGroupRequest struct {
 
 func (x *ListMonitorsByGroupRequest) Reset() {
 	*x = ListMonitorsByGroupRequest{}
-	mi := &file_neoline_v1_monitor_group_proto_msgTypes[13]
+	mi := &file_neoline_v1_monitor_group_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -746,7 +686,7 @@ func (x *ListMonitorsByGroupRequest) String() string {
 func (*ListMonitorsByGroupRequest) ProtoMessage() {}
 
 func (x *ListMonitorsByGroupRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_neoline_v1_monitor_group_proto_msgTypes[13]
+	mi := &file_neoline_v1_monitor_group_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -759,7 +699,7 @@ func (x *ListMonitorsByGroupRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListMonitorsByGroupRequest.ProtoReflect.Descriptor instead.
 func (*ListMonitorsByGroupRequest) Descriptor() ([]byte, []int) {
-	return file_neoline_v1_monitor_group_proto_rawDescGZIP(), []int{13}
+	return file_neoline_v1_monitor_group_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *ListMonitorsByGroupRequest) GetGroupId() string {
@@ -793,7 +733,7 @@ type ListMonitorsByGroupResponse struct {
 
 func (x *ListMonitorsByGroupResponse) Reset() {
 	*x = ListMonitorsByGroupResponse{}
-	mi := &file_neoline_v1_monitor_group_proto_msgTypes[14]
+	mi := &file_neoline_v1_monitor_group_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -805,7 +745,7 @@ func (x *ListMonitorsByGroupResponse) String() string {
 func (*ListMonitorsByGroupResponse) ProtoMessage() {}
 
 func (x *ListMonitorsByGroupResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_neoline_v1_monitor_group_proto_msgTypes[14]
+	mi := &file_neoline_v1_monitor_group_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -818,7 +758,7 @@ func (x *ListMonitorsByGroupResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListMonitorsByGroupResponse.ProtoReflect.Descriptor instead.
 func (*ListMonitorsByGroupResponse) Descriptor() ([]byte, []int) {
-	return file_neoline_v1_monitor_group_proto_rawDescGZIP(), []int{14}
+	return file_neoline_v1_monitor_group_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *ListMonitorsByGroupResponse) GetMonitors() []*Monitor {
@@ -840,18 +780,10 @@ var File_neoline_v1_monitor_group_proto protoreflect.FileDescriptor
 const file_neoline_v1_monitor_group_proto_rawDesc = "" +
 	"\n" +
 	"\x1eneoline/v1/monitor_group.proto\x12\n" +
-	"neoline.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x18neoline/v1/monitor.proto\"\xaf\x01\n" +
-	"\fAlertChannel\x12\x12\n" +
-	"\x04type\x18\x01 \x01(\tR\x04type\x12\x16\n" +
-	"\x06target\x18\x02 \x01(\tR\x06target\x129\n" +
-	"\x05extra\x18\x03 \x03(\v2#.neoline.v1.AlertChannel.ExtraEntryR\x05extra\x1a8\n" +
-	"\n" +
-	"ExtraEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x87\x02\n" +
+	"neoline.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x18neoline/v1/monitor.proto\"\xfb\x01\n" +
 	"\vAlertPolicy\x12\x18\n" +
-	"\aenabled\x18\x01 \x01(\bR\aenabled\x124\n" +
-	"\bchannels\x18\x02 \x03(\v2\x18.neoline.v1.AlertChannelR\bchannels\x12\x17\n" +
+	"\aenabled\x18\x01 \x01(\bR\aenabled\x12(\n" +
+	"\x10notify_group_ids\x18\x02 \x03(\tR\x0enotifyGroupIds\x12\x17\n" +
 	"\aon_down\x18\x03 \x01(\bR\x06onDown\x12\x1d\n" +
 	"\n" +
 	"on_recover\x18\x04 \x01(\bR\tonRecover\x12\x1d\n" +
@@ -920,57 +852,53 @@ func file_neoline_v1_monitor_group_proto_rawDescGZIP() []byte {
 	return file_neoline_v1_monitor_group_proto_rawDescData
 }
 
-var file_neoline_v1_monitor_group_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
+var file_neoline_v1_monitor_group_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
 var file_neoline_v1_monitor_group_proto_goTypes = []any{
-	(*AlertChannel)(nil),                // 0: neoline.v1.AlertChannel
-	(*AlertPolicy)(nil),                 // 1: neoline.v1.AlertPolicy
-	(*MonitorGroup)(nil),                // 2: neoline.v1.MonitorGroup
-	(*ListMonitorGroupsRequest)(nil),    // 3: neoline.v1.ListMonitorGroupsRequest
-	(*ListMonitorGroupsResponse)(nil),   // 4: neoline.v1.ListMonitorGroupsResponse
-	(*CreateMonitorGroupRequest)(nil),   // 5: neoline.v1.CreateMonitorGroupRequest
-	(*CreateMonitorGroupResponse)(nil),  // 6: neoline.v1.CreateMonitorGroupResponse
-	(*GetMonitorGroupRequest)(nil),      // 7: neoline.v1.GetMonitorGroupRequest
-	(*GetMonitorGroupResponse)(nil),     // 8: neoline.v1.GetMonitorGroupResponse
-	(*UpdateMonitorGroupRequest)(nil),   // 9: neoline.v1.UpdateMonitorGroupRequest
-	(*UpdateMonitorGroupResponse)(nil),  // 10: neoline.v1.UpdateMonitorGroupResponse
-	(*DeleteMonitorGroupRequest)(nil),   // 11: neoline.v1.DeleteMonitorGroupRequest
-	(*DeleteMonitorGroupResponse)(nil),  // 12: neoline.v1.DeleteMonitorGroupResponse
-	(*ListMonitorsByGroupRequest)(nil),  // 13: neoline.v1.ListMonitorsByGroupRequest
-	(*ListMonitorsByGroupResponse)(nil), // 14: neoline.v1.ListMonitorsByGroupResponse
-	nil,                                 // 15: neoline.v1.AlertChannel.ExtraEntry
-	(*timestamppb.Timestamp)(nil),       // 16: google.protobuf.Timestamp
-	(*Monitor)(nil),                     // 17: neoline.v1.Monitor
+	(*AlertPolicy)(nil),                 // 0: neoline.v1.AlertPolicy
+	(*MonitorGroup)(nil),                // 1: neoline.v1.MonitorGroup
+	(*ListMonitorGroupsRequest)(nil),    // 2: neoline.v1.ListMonitorGroupsRequest
+	(*ListMonitorGroupsResponse)(nil),   // 3: neoline.v1.ListMonitorGroupsResponse
+	(*CreateMonitorGroupRequest)(nil),   // 4: neoline.v1.CreateMonitorGroupRequest
+	(*CreateMonitorGroupResponse)(nil),  // 5: neoline.v1.CreateMonitorGroupResponse
+	(*GetMonitorGroupRequest)(nil),      // 6: neoline.v1.GetMonitorGroupRequest
+	(*GetMonitorGroupResponse)(nil),     // 7: neoline.v1.GetMonitorGroupResponse
+	(*UpdateMonitorGroupRequest)(nil),   // 8: neoline.v1.UpdateMonitorGroupRequest
+	(*UpdateMonitorGroupResponse)(nil),  // 9: neoline.v1.UpdateMonitorGroupResponse
+	(*DeleteMonitorGroupRequest)(nil),   // 10: neoline.v1.DeleteMonitorGroupRequest
+	(*DeleteMonitorGroupResponse)(nil),  // 11: neoline.v1.DeleteMonitorGroupResponse
+	(*ListMonitorsByGroupRequest)(nil),  // 12: neoline.v1.ListMonitorsByGroupRequest
+	(*ListMonitorsByGroupResponse)(nil), // 13: neoline.v1.ListMonitorsByGroupResponse
+	(*timestamppb.Timestamp)(nil),       // 14: google.protobuf.Timestamp
+	(*Monitor)(nil),                     // 15: neoline.v1.Monitor
 }
 var file_neoline_v1_monitor_group_proto_depIdxs = []int32{
-	15, // 0: neoline.v1.AlertChannel.extra:type_name -> neoline.v1.AlertChannel.ExtraEntry
-	0,  // 1: neoline.v1.AlertPolicy.channels:type_name -> neoline.v1.AlertChannel
-	1,  // 2: neoline.v1.MonitorGroup.alert_policy:type_name -> neoline.v1.AlertPolicy
-	16, // 3: neoline.v1.MonitorGroup.created_at:type_name -> google.protobuf.Timestamp
-	16, // 4: neoline.v1.MonitorGroup.updated_at:type_name -> google.protobuf.Timestamp
-	2,  // 5: neoline.v1.ListMonitorGroupsResponse.groups:type_name -> neoline.v1.MonitorGroup
-	2,  // 6: neoline.v1.CreateMonitorGroupRequest.group:type_name -> neoline.v1.MonitorGroup
-	2,  // 7: neoline.v1.CreateMonitorGroupResponse.group:type_name -> neoline.v1.MonitorGroup
-	2,  // 8: neoline.v1.GetMonitorGroupResponse.group:type_name -> neoline.v1.MonitorGroup
-	2,  // 9: neoline.v1.UpdateMonitorGroupRequest.group:type_name -> neoline.v1.MonitorGroup
-	2,  // 10: neoline.v1.UpdateMonitorGroupResponse.group:type_name -> neoline.v1.MonitorGroup
-	17, // 11: neoline.v1.ListMonitorsByGroupResponse.monitors:type_name -> neoline.v1.Monitor
-	3,  // 12: neoline.v1.MonitorGroupService.ListMonitorGroups:input_type -> neoline.v1.ListMonitorGroupsRequest
-	5,  // 13: neoline.v1.MonitorGroupService.CreateMonitorGroup:input_type -> neoline.v1.CreateMonitorGroupRequest
-	7,  // 14: neoline.v1.MonitorGroupService.GetMonitorGroup:input_type -> neoline.v1.GetMonitorGroupRequest
-	9,  // 15: neoline.v1.MonitorGroupService.UpdateMonitorGroup:input_type -> neoline.v1.UpdateMonitorGroupRequest
-	11, // 16: neoline.v1.MonitorGroupService.DeleteMonitorGroup:input_type -> neoline.v1.DeleteMonitorGroupRequest
-	13, // 17: neoline.v1.MonitorGroupService.ListMonitorsByGroup:input_type -> neoline.v1.ListMonitorsByGroupRequest
-	4,  // 18: neoline.v1.MonitorGroupService.ListMonitorGroups:output_type -> neoline.v1.ListMonitorGroupsResponse
-	6,  // 19: neoline.v1.MonitorGroupService.CreateMonitorGroup:output_type -> neoline.v1.CreateMonitorGroupResponse
-	8,  // 20: neoline.v1.MonitorGroupService.GetMonitorGroup:output_type -> neoline.v1.GetMonitorGroupResponse
-	10, // 21: neoline.v1.MonitorGroupService.UpdateMonitorGroup:output_type -> neoline.v1.UpdateMonitorGroupResponse
-	12, // 22: neoline.v1.MonitorGroupService.DeleteMonitorGroup:output_type -> neoline.v1.DeleteMonitorGroupResponse
-	14, // 23: neoline.v1.MonitorGroupService.ListMonitorsByGroup:output_type -> neoline.v1.ListMonitorsByGroupResponse
-	18, // [18:24] is the sub-list for method output_type
-	12, // [12:18] is the sub-list for method input_type
-	12, // [12:12] is the sub-list for extension type_name
-	12, // [12:12] is the sub-list for extension extendee
-	0,  // [0:12] is the sub-list for field type_name
+	0,  // 0: neoline.v1.MonitorGroup.alert_policy:type_name -> neoline.v1.AlertPolicy
+	14, // 1: neoline.v1.MonitorGroup.created_at:type_name -> google.protobuf.Timestamp
+	14, // 2: neoline.v1.MonitorGroup.updated_at:type_name -> google.protobuf.Timestamp
+	1,  // 3: neoline.v1.ListMonitorGroupsResponse.groups:type_name -> neoline.v1.MonitorGroup
+	1,  // 4: neoline.v1.CreateMonitorGroupRequest.group:type_name -> neoline.v1.MonitorGroup
+	1,  // 5: neoline.v1.CreateMonitorGroupResponse.group:type_name -> neoline.v1.MonitorGroup
+	1,  // 6: neoline.v1.GetMonitorGroupResponse.group:type_name -> neoline.v1.MonitorGroup
+	1,  // 7: neoline.v1.UpdateMonitorGroupRequest.group:type_name -> neoline.v1.MonitorGroup
+	1,  // 8: neoline.v1.UpdateMonitorGroupResponse.group:type_name -> neoline.v1.MonitorGroup
+	15, // 9: neoline.v1.ListMonitorsByGroupResponse.monitors:type_name -> neoline.v1.Monitor
+	2,  // 10: neoline.v1.MonitorGroupService.ListMonitorGroups:input_type -> neoline.v1.ListMonitorGroupsRequest
+	4,  // 11: neoline.v1.MonitorGroupService.CreateMonitorGroup:input_type -> neoline.v1.CreateMonitorGroupRequest
+	6,  // 12: neoline.v1.MonitorGroupService.GetMonitorGroup:input_type -> neoline.v1.GetMonitorGroupRequest
+	8,  // 13: neoline.v1.MonitorGroupService.UpdateMonitorGroup:input_type -> neoline.v1.UpdateMonitorGroupRequest
+	10, // 14: neoline.v1.MonitorGroupService.DeleteMonitorGroup:input_type -> neoline.v1.DeleteMonitorGroupRequest
+	12, // 15: neoline.v1.MonitorGroupService.ListMonitorsByGroup:input_type -> neoline.v1.ListMonitorsByGroupRequest
+	3,  // 16: neoline.v1.MonitorGroupService.ListMonitorGroups:output_type -> neoline.v1.ListMonitorGroupsResponse
+	5,  // 17: neoline.v1.MonitorGroupService.CreateMonitorGroup:output_type -> neoline.v1.CreateMonitorGroupResponse
+	7,  // 18: neoline.v1.MonitorGroupService.GetMonitorGroup:output_type -> neoline.v1.GetMonitorGroupResponse
+	9,  // 19: neoline.v1.MonitorGroupService.UpdateMonitorGroup:output_type -> neoline.v1.UpdateMonitorGroupResponse
+	11, // 20: neoline.v1.MonitorGroupService.DeleteMonitorGroup:output_type -> neoline.v1.DeleteMonitorGroupResponse
+	13, // 21: neoline.v1.MonitorGroupService.ListMonitorsByGroup:output_type -> neoline.v1.ListMonitorsByGroupResponse
+	16, // [16:22] is the sub-list for method output_type
+	10, // [10:16] is the sub-list for method input_type
+	10, // [10:10] is the sub-list for extension type_name
+	10, // [10:10] is the sub-list for extension extendee
+	0,  // [0:10] is the sub-list for field type_name
 }
 
 func init() { file_neoline_v1_monitor_group_proto_init() }
@@ -985,7 +913,7 @@ func file_neoline_v1_monitor_group_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_neoline_v1_monitor_group_proto_rawDesc), len(file_neoline_v1_monitor_group_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   16,
+			NumMessages:   14,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

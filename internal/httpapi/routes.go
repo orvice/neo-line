@@ -38,6 +38,9 @@ func Register(r *gin.Engine, st store.Store) {
 		v1.GET("/monitor-groups/:group_id", api.getMonitorGroup)
 		v1.GET("/monitor-groups/:group_id/monitors", api.listMonitorsByGroup)
 
+		v1.GET("/notify-groups", api.listNotifyGroups)
+		v1.GET("/notify-groups/:notify_group_id", api.getNotifyGroup)
+
 		// Admin endpoints require authentication.
 		admin := v1.Group("")
 		admin.Use(api.authRequired())
@@ -58,6 +61,10 @@ func Register(r *gin.Engine, st store.Store) {
 			admin.POST("/monitor-groups", api.createMonitorGroup)
 			admin.PUT("/monitor-groups/:group_id", api.updateMonitorGroup)
 			admin.DELETE("/monitor-groups/:group_id", api.deleteMonitorGroup)
+
+			admin.POST("/notify-groups", api.createNotifyGroup)
+			admin.PUT("/notify-groups/:notify_group_id", api.updateNotifyGroup)
+			admin.DELETE("/notify-groups/:notify_group_id", api.deleteNotifyGroup)
 
 			admin.GET("/mcp-tokens", api.listMcpTokens)
 			admin.POST("/mcp-tokens", api.createMcpToken)
@@ -305,6 +312,66 @@ func (api *API) listMonitorsByGroup(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"monitors": monitors, "next_page_token": next})
 }
 
+func (api *API) listNotifyGroups(c *gin.Context) {
+	groups, next, err := api.store.ListNotifyGroups(c.Request.Context(), pageSize(c), c.Query("page_token"))
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"groups": groups, "next_page_token": next})
+}
+
+func (api *API) createNotifyGroup(c *gin.Context) {
+	var group store.NotifyGroup
+	if !bindJSON(c, &group) {
+		return
+	}
+	if strings.TrimSpace(group.Name) == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "name is required"})
+		return
+	}
+	created, err := api.store.CreateNotifyGroup(c.Request.Context(), group)
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	c.JSON(http.StatusCreated, gin.H{"group": created})
+}
+
+func (api *API) getNotifyGroup(c *gin.Context) {
+	group, err := api.store.GetNotifyGroup(c.Request.Context(), c.Param("notify_group_id"))
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"group": group})
+}
+
+func (api *API) updateNotifyGroup(c *gin.Context) {
+	var group store.NotifyGroup
+	if !bindJSON(c, &group) {
+		return
+	}
+	if strings.TrimSpace(group.Name) == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "name is required"})
+		return
+	}
+	updated, err := api.store.UpdateNotifyGroup(c.Request.Context(), c.Param("notify_group_id"), group)
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"group": updated})
+}
+
+func (api *API) deleteNotifyGroup(c *gin.Context) {
+	if err := api.store.DeleteNotifyGroup(c.Request.Context(), c.Param("notify_group_id")); err != nil {
+		respondError(c, err)
+		return
+	}
+	c.Status(http.StatusNoContent)
+}
+
 func bindJSON(c *gin.Context, dst any) bool {
 	if err := c.ShouldBindJSON(dst); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid JSON body", "detail": err.Error()})
@@ -318,11 +385,11 @@ func respondError(c *gin.Context, err error) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
 		return
 	}
-	if errors.Is(err, store.ErrGroupNameTaken) {
+	if errors.Is(err, store.ErrGroupNameTaken) || errors.Is(err, store.ErrNotifyGroupNameTaken) {
 		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
 		return
 	}
-	if errors.Is(err, store.ErrInvalidGroupIDs) {
+	if errors.Is(err, store.ErrInvalidGroupIDs) || errors.Is(err, store.ErrInvalidNotifyGroupIDs) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}

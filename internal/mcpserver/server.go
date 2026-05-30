@@ -117,6 +117,31 @@ func NewServer(st store.Store) *mcp.Server {
 		Description: "Delete a monitor group by id.",
 	}, t.deleteMonitorGroup)
 
+	mcp.AddTool(srv, &mcp.Tool{
+		Name:        "list_notify_groups",
+		Description: "List notify groups (reusable buckets of alert delivery channels).",
+	}, t.listNotifyGroups)
+
+	mcp.AddTool(srv, &mcp.Tool{
+		Name:        "get_notify_group",
+		Description: "Get a single notify group by id, including its channels.",
+	}, t.getNotifyGroup)
+
+	mcp.AddTool(srv, &mcp.Tool{
+		Name:        "create_notify_group",
+		Description: "Create a new notify group with its delivery channels (webhook, telegram, discord, mastodon).",
+	}, t.createNotifyGroup)
+
+	mcp.AddTool(srv, &mcp.Tool{
+		Name:        "update_notify_group",
+		Description: "Update an existing notify group by id, including its channels.",
+	}, t.updateNotifyGroup)
+
+	mcp.AddTool(srv, &mcp.Tool{
+		Name:        "delete_notify_group",
+		Description: "Delete a notify group by id. Also removes it from monitor groups that reference it.",
+	}, t.deleteNotifyGroup)
+
 	return srv
 }
 
@@ -409,6 +434,67 @@ func (t *tools) updateMonitorGroup(ctx context.Context, _ *mcp.CallToolRequest, 
 
 func (t *tools) deleteMonitorGroup(ctx context.Context, _ *mcp.CallToolRequest, in monitorGroupIDInput) (*mcp.CallToolResult, deleteOutput, error) {
 	if err := t.store.DeleteMonitorGroup(ctx, in.GroupID); err != nil {
+		return nil, deleteOutput{}, mapErr(err)
+	}
+	return nil, deleteOutput{Deleted: true}, nil
+}
+
+type listNotifyGroupsOutput struct {
+	Groups        []store.NotifyGroup `json:"groups"`
+	NextPageToken string              `json:"next_page_token,omitempty"`
+}
+
+func (t *tools) listNotifyGroups(ctx context.Context, _ *mcp.CallToolRequest, in pageInput) (*mcp.CallToolResult, listNotifyGroupsOutput, error) {
+	groups, next, err := t.store.ListNotifyGroups(ctx, in.PageSize, in.PageToken)
+	if err != nil {
+		return nil, listNotifyGroupsOutput{}, err
+	}
+	return nil, listNotifyGroupsOutput{Groups: groups, NextPageToken: next}, nil
+}
+
+type notifyGroupIDInput struct {
+	NotifyGroupID string `json:"notify_group_id" jsonschema:"the notify group id"`
+}
+
+type notifyGroupOutput struct {
+	Group store.NotifyGroup `json:"group"`
+}
+
+func (t *tools) getNotifyGroup(ctx context.Context, _ *mcp.CallToolRequest, in notifyGroupIDInput) (*mcp.CallToolResult, notifyGroupOutput, error) {
+	group, err := t.store.GetNotifyGroup(ctx, in.NotifyGroupID)
+	if err != nil {
+		return nil, notifyGroupOutput{}, mapErr(err)
+	}
+	return nil, notifyGroupOutput{Group: group}, nil
+}
+
+type createNotifyGroupInput struct {
+	Group store.NotifyGroup `json:"group" jsonschema:"notify group fields; id is optional and will be generated when empty"`
+}
+
+func (t *tools) createNotifyGroup(ctx context.Context, _ *mcp.CallToolRequest, in createNotifyGroupInput) (*mcp.CallToolResult, notifyGroupOutput, error) {
+	created, err := t.store.CreateNotifyGroup(ctx, in.Group)
+	if err != nil {
+		return nil, notifyGroupOutput{}, err
+	}
+	return nil, notifyGroupOutput{Group: created}, nil
+}
+
+type updateNotifyGroupInput struct {
+	NotifyGroupID string            `json:"notify_group_id" jsonschema:"the notify group id"`
+	Group         store.NotifyGroup `json:"group" jsonschema:"updated notify group fields, including channels"`
+}
+
+func (t *tools) updateNotifyGroup(ctx context.Context, _ *mcp.CallToolRequest, in updateNotifyGroupInput) (*mcp.CallToolResult, notifyGroupOutput, error) {
+	updated, err := t.store.UpdateNotifyGroup(ctx, in.NotifyGroupID, in.Group)
+	if err != nil {
+		return nil, notifyGroupOutput{}, mapErr(err)
+	}
+	return nil, notifyGroupOutput{Group: updated}, nil
+}
+
+func (t *tools) deleteNotifyGroup(ctx context.Context, _ *mcp.CallToolRequest, in notifyGroupIDInput) (*mcp.CallToolResult, deleteOutput, error) {
+	if err := t.store.DeleteNotifyGroup(ctx, in.NotifyGroupID); err != nil {
 		return nil, deleteOutput{}, mapErr(err)
 	}
 	return nil, deleteOutput{Deleted: true}, nil

@@ -33,6 +33,12 @@ type Store interface {
 	ListMonitorsByGroup(ctx context.Context, groupID string, limit int64, pageToken string) ([]Monitor, string, error)
 	ListGroupsForMonitor(ctx context.Context, monitorID string) ([]MonitorGroup, error)
 
+	ListNotifyGroups(ctx context.Context, limit int64, pageToken string) ([]NotifyGroup, string, error)
+	CreateNotifyGroup(ctx context.Context, group NotifyGroup) (NotifyGroup, error)
+	GetNotifyGroup(ctx context.Context, id string) (NotifyGroup, error)
+	UpdateNotifyGroup(ctx context.Context, id string, group NotifyGroup) (NotifyGroup, error)
+	DeleteNotifyGroup(ctx context.Context, id string) error
+
 	ListCheckResults(ctx context.Context, serverID, monitorID string, limit int64, pageToken string, start, end *time.Time) ([]CheckResult, string, error)
 	// SaveCheckResult persists a probe result and returns the monitor's prior
 	// status (empty when no prior status existed).
@@ -44,6 +50,7 @@ type Store interface {
 
 	EnsureAuthIndexes(ctx context.Context) error
 	EnsureGroupIndexes(ctx context.Context) error
+	EnsureNotifyGroupIndexes(ctx context.Context) error
 	EnsureMcpTokenIndexes(ctx context.Context) error
 
 	ListMcpTokens(ctx context.Context) ([]McpToken, error)

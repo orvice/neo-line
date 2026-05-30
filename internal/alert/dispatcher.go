@@ -58,9 +58,10 @@ type Payload struct {
 }
 
 // OnMonitorStatusChange evaluates each of the monitor's groups against its
-// AlertPolicy and dispatches webhook notifications for any matching transition.
-// The call returns immediately; webhook deliveries happen in background
-// goroutines so the scheduler is not blocked on slow receivers.
+// AlertPolicy and dispatches notifications to the channels of every referenced
+// NotifyGroup for any matching transition. The call returns immediately;
+// deliveries happen in background goroutines so the scheduler is not blocked on
+// slow receivers.
 func (d *Dispatcher) OnMonitorStatusChange(ctx context.Context, monitor store.Monitor, prev, curr string, occurredAt time.Time) {
 	if d == nil || len(monitor.GroupIDs) == 0 {
 		return
@@ -75,7 +76,7 @@ func (d *Dispatcher) OnMonitorStatusChange(ctx context.Context, monitor store.Mo
 			continue
 		}
 		policy := group.AlertPolicy
-		if !policy.Enabled || len(policy.Channels) == 0 {
+		if !policy.Enabled || len(policy.NotifyGroupIDs) == 0 {
 			continue
 		}
 		if !shouldFire(policy, prev, curr) {
@@ -90,10 +91,17 @@ func (d *Dispatcher) OnMonitorStatusChange(ctx context.Context, monitor store.Mo
 				"min_interval_seconds", policy.MinIntervalSeconds)
 			continue
 		}
+		channels := d.resolveChannels(ctx, policy.NotifyGroupIDs)
+		if len(channels) == 0 {
+			d.logger.Warn("alert has no resolvable channels",
+				"group_id", group.ID, "monitor_id", monitor.ID,
+				"notify_group_ids", policy.NotifyGroupIDs)
+			continue
+		}
 		d.logger.Info("dispatching alert",
 			"group_id", group.ID, "monitor_id", monitor.ID,
 			"prev", normalize(prev), "curr", normalize(curr),
-			"channels", len(policy.Channels))
+			"channels", len(channels))
 		payload := Payload{
 			MonitorID:      monitor.ID,
 			MonitorName:    monitor.Name,
@@ -104,11 +112,26 @@ func (d *Dispatcher) OnMonitorStatusChange(ctx context.Context, monitor store.Mo
 			GroupID:        group.ID,
 			GroupName:      group.Name,
 		}
-		for _, channel := range policy.Channels {
+		for _, channel := range channels {
 			ch := channel
 			go d.deliver(ch, payload)
 		}
 	}
+}
+
+// resolveChannels loads the referenced NotifyGroups and flattens their channels
+// into a single slice. Missing groups are logged and skipped.
+func (d *Dispatcher) resolveChannels(ctx context.Context, notifyGroupIDs []string) []store.AlertChannel {
+	var channels []store.AlertChannel
+	for _, id := range notifyGroupIDs {
+		ng, err := d.store.GetNotifyGroup(ctx, id)
+		if err != nil {
+			d.logger.Warn("load notify group for alert", "notify_group_id", id, "error", err.Error())
+			continue
+		}
+		channels = append(channels, ng.Channels...)
+	}
+	return channels
 }
 
 func shouldFire(policy store.AlertPolicy, prev, curr string) bool {

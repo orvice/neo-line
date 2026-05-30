@@ -6,6 +6,7 @@ import type {
   Monitor,
   MonitorGroup,
   MonitorUptime,
+  NotifyGroup,
   Server,
   ServerEvent,
   ServerHealth,
@@ -152,6 +153,18 @@ export const api = {
     request<void>(`/monitor-groups/${groupId}`, { method: "DELETE" }),
   listMonitorsByGroup: (groupId: string, query?: { page_token?: string; page_size?: number }) =>
     request<ListResponse & { monitors: Monitor[] }>(`/monitor-groups/${groupId}/monitors`, { query, auth: false }),
+
+  // Notify groups
+  listNotifyGroups: (query?: { page_token?: string; page_size?: number }) =>
+    request<ListResponse & { groups: NotifyGroup[] }>("/notify-groups", { query, auth: false }),
+  getNotifyGroup: (id: string) =>
+    request<{ group: NotifyGroup }>(`/notify-groups/${id}`, { auth: false }),
+  createNotifyGroup: (body: Partial<NotifyGroup>) =>
+    request<{ group: NotifyGroup }>("/notify-groups", { method: "POST", body }),
+  updateNotifyGroup: (id: string, body: Partial<NotifyGroup>) =>
+    request<{ group: NotifyGroup }>(`/notify-groups/${id}`, { method: "PUT", body }),
+  deleteNotifyGroup: (id: string) =>
+    request<void>(`/notify-groups/${id}`, { method: "DELETE" }),
 
   // MCP tokens
   listMcpTokens: () => request<{ tokens: McpToken[] }>("/mcp-tokens"),

@@ -31,9 +31,18 @@ export function MonitorGroupDetailPage() {
     queryFn: () => api.listMonitorsByGroup(id, { page_size: 200 }),
     enabled: Boolean(id),
   })
+  const notifyQuery = useQuery({
+    queryKey: ["notify-groups"],
+    queryFn: () => api.listNotifyGroups({ page_size: 200 }),
+    enabled: Boolean(id),
+  })
 
   const group = groupQuery.data?.group
   const monitors = monitorsQuery.data?.monitors ?? []
+  const notifyGroups = notifyQuery.data?.groups ?? []
+  const referencedNotifyGroups = (group?.alert_policy?.notify_group_ids ?? [])
+    .map((nid) => notifyGroups.find((ng) => ng.id === nid))
+    .filter((ng): ng is NonNullable<typeof ng> => Boolean(ng))
 
   return (
     <div className="animate-enter flex flex-col gap-6">
@@ -88,8 +97,23 @@ export function MonitorGroupDetailPage() {
                     ? `${group.alert_policy.min_interval_seconds} 秒`
                     : "不节流"}
                 </li>
-                <li>
-                  通道：{group.alert_policy.channels?.length ?? 0} 个 webhook
+                <li className="flex flex-wrap items-center gap-1">
+                  <span>通知组：</span>
+                  {referencedNotifyGroups.length ? (
+                    referencedNotifyGroups.map((ng, i) => (
+                      <span key={ng.id}>
+                        <Link
+                          to="/notify-groups"
+                          className="text-foreground hover:underline"
+                        >
+                          {ng.name}
+                        </Link>
+                        {i < referencedNotifyGroups.length - 1 ? "、" : ""}
+                      </span>
+                    ))
+                  ) : (
+                    <span>（未引用任何通知组）</span>
+                  )}
                 </li>
               </ul>
             ) : (

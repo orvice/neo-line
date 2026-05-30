@@ -141,9 +141,18 @@ export interface AlertChannel {
   extra?: Record<string, string>
 }
 
+export interface NotifyGroup {
+  id: string
+  name: string
+  description?: string
+  channels?: AlertChannel[]
+  created_at: string
+  updated_at: string
+}
+
 export interface AlertPolicy {
   enabled: boolean
-  channels?: AlertChannel[]
+  notify_group_ids?: string[]
   on_down: boolean
   on_recover: boolean
   on_warning: boolean

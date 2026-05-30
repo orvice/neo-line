@@ -11,7 +11,7 @@ MongoDB 是监控业务配置和运行状态的主要数据源；Redis 用于登
 - URL 和 TLS Port 探测支持 TLS 校验配置与自定义 SNI
 - Monitor 与 Server 健康状态聚合：`Down > Critical > Warning > Unknown > Healthy`
 - 公开状态页、管理后台、站点展示设置
-- 分组级 webhook 告警策略
+- 可复用通知组（webhook / Telegram / Discord / Mastodon）与分组级告警策略引用
 - 可选 S3 / S3 兼容对象存储归档检查结果
 - MCP Streamable HTTP 端点：`/api/mcp`
 

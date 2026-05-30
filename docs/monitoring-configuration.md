@@ -347,22 +347,9 @@ alert_policy:
   on_warning: false
   on_critical: true
   min_interval_seconds: 300
-  channels:
-    - type: webhook
-      target: https://hooks.example.com/neo-line
-      extra:
-        X-Source: neo-line
-    - type: telegram
-      target: "-1001234567890" # Chat ID
-      extra:
-        bot_token: "123456:ABC-DEF..."
-    - type: discord
-      target: https://discord.com/api/webhooks/xxx/yyy
-    - type: mastodon
-      target: https://mastodon.social
-      extra:
-        access_token: "应用访问令牌"
-        visibility: unlisted # 可选，默认 unlisted
+  notify_group_ids:
+    - ntf_01
+    - ntf_02
 ```
 
 字段说明：
@@ -381,6 +368,43 @@ alert_policy:
 - `on_warning`：monitor 状态变为 `Warning` 时派发
 - `on_critical`：monitor 状态变为 `Critical` 时派发
 - `min_interval_seconds`：同 `(group, monitor)` 维度的派发节流窗口；`0` 或未填表示不节流
+- `notify_group_ids`：引用的通知组 ID 列表；派发时解析这些通知组并汇总它们的全部通道。为空时不派发
+
+### 通知组（NotifyGroup）
+
+通知组是一组可复用的通知通道，独立于 monitor 分组存在，多个分组可以共享同一个通知组。
+
+MongoDB collection：`notify_groups`。`name` 上建立唯一索引。删除通知组会从所有分组的 `alert_policy.notify_group_ids` 中 `$pull` 掉该 ID。创建或更新 monitor 分组时校验 `notify_group_ids` 中的每个 ID 是否存在，不存在返回 `400`。
+
+MongoDB document 字段示例：
+
+```yaml
+id: ntf_01
+name: prod-oncall
+description: 生产值班通道
+channels:
+  - type: webhook
+    target: https://hooks.example.com/neo-line
+    extra:
+      X-Source: neo-line
+  - type: telegram
+    target: "-1001234567890" # Chat ID
+    extra:
+      bot_token: "123456:ABC-DEF..."
+  - type: discord
+    target: https://discord.com/api/webhooks/xxx/yyy
+  - type: mastodon
+    target: https://mastodon.social
+    extra:
+      access_token: "应用访问令牌"
+      visibility: unlisted # 可选，默认 unlisted
+```
+
+字段说明：
+
+- `id`：通知组唯一标识；创建时如果未提供，会自动生成 `ntf_<uuid>`
+- `name`：通知组名称，全局唯一（重复会返回 `409 Conflict`）
+- `description`：可选描述
 - `channels[].type`：通道类型，支持 `webhook`、`telegram`、`discord`、`mastodon`
 - `channels[].target`：通道目标，含义随类型而定（见下表）
 - `channels[].extra`：附加参数，含义随类型而定（见下表）

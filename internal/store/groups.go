@@ -43,6 +43,9 @@ func (s *MongoStore) ListMonitorGroups(ctx context.Context, limit int64, pageTok
 }
 
 func (s *MongoStore) CreateMonitorGroup(ctx context.Context, group MonitorGroup) (MonitorGroup, error) {
+	if err := s.validateNotifyGroupIDs(ctx, group.AlertPolicy.NotifyGroupIDs); err != nil {
+		return MonitorGroup{}, err
+	}
 	now := time.Now().UTC()
 	if group.ID == "" {
 		group.ID = "grp_" + uuid.NewString()
@@ -65,6 +68,9 @@ func (s *MongoStore) GetMonitorGroup(ctx context.Context, id string) (MonitorGro
 }
 
 func (s *MongoStore) UpdateMonitorGroup(ctx context.Context, id string, group MonitorGroup) (MonitorGroup, error) {
+	if err := s.validateNotifyGroupIDs(ctx, group.AlertPolicy.NotifyGroupIDs); err != nil {
+		return MonitorGroup{}, err
+	}
 	existing, err := s.GetMonitorGroup(ctx, id)
 	if err != nil {
 		return MonitorGroup{}, err
