@@ -20,7 +20,7 @@ FROM nginx:${NGINX_VERSION}-alpine
 COPY --from=build /src/dist /usr/share/nginx/html
 COPY nginx.conf.template /etc/nginx/templates/default.conf.template
 
-# Backend upstream for the /v1 and /ping reverse proxy. Override at runtime.
+# Backend upstream for the /api and /ping reverse proxy. Override at runtime.
 ENV BACKEND_URL=http://neo-line:8080
 
 EXPOSE 80

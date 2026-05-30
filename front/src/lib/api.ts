@@ -39,7 +39,7 @@ interface RequestOptions {
 
 async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
   const { method = "GET", body, query, auth = true } = opts
-  const url = new URL(`/v1${path}`, window.location.origin)
+  const url = new URL(`/api/v1${path}`, window.location.origin)
   if (query) {
     for (const [key, value] of Object.entries(query)) {
       if (value !== undefined && value !== null && value !== "") {

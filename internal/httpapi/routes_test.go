@@ -39,7 +39,7 @@ func TestPageSize(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ctx := testContext("GET", "/v1/servers"+tt.query)
+			ctx := testContext("GET", "/api/v1/servers"+tt.query)
 			if got := pageSize(ctx); got != tt.want {
 				t.Fatalf("pageSize() = %d, want %d", got, tt.want)
 			}
@@ -49,7 +49,7 @@ func TestPageSize(t *testing.T) {
 
 func TestParseOptionalTime(t *testing.T) {
 	t.Run("empty", func(t *testing.T) {
-		ctx := testContext("GET", "/v1/results")
+		ctx := testContext("GET", "/api/v1/results")
 		got, ok := parseOptionalTime(ctx, "start_time")
 		if !ok {
 			t.Fatal("parseOptionalTime() ok = false, want true")
@@ -60,7 +60,7 @@ func TestParseOptionalTime(t *testing.T) {
 	})
 
 	t.Run("valid RFC3339", func(t *testing.T) {
-		ctx := testContext("GET", "/v1/results?start_time=2026-05-29T01:22:00%2B08:00")
+		ctx := testContext("GET", "/api/v1/results?start_time=2026-05-29T01:22:00%2B08:00")
 		got, ok := parseOptionalTime(ctx, "start_time")
 		if !ok {
 			t.Fatal("parseOptionalTime() ok = false, want true")
@@ -72,7 +72,7 @@ func TestParseOptionalTime(t *testing.T) {
 	})
 
 	t.Run("invalid", func(t *testing.T) {
-		ctx := testContext("GET", "/v1/results?start_time=not-a-time")
+		ctx := testContext("GET", "/api/v1/results?start_time=not-a-time")
 		got, ok := parseOptionalTime(ctx, "start_time")
 		if ok {
 			t.Fatal("parseOptionalTime() ok = true, want false")
@@ -101,7 +101,7 @@ func TestBearerToken(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ctx := testContext("GET", "/v1/auth/me")
+			ctx := testContext("GET", "/api/v1/auth/me")
 			if tt.header != "" {
 				ctx.Request.Header.Set("Authorization", tt.header)
 			}

@@ -87,7 +87,7 @@ pnpm install
 VITE_API_TARGET=http://localhost:8080 pnpm dev
 ```
 
-前端开发服务器默认运行在 `http://localhost:5173`，并把 `/v1` 与 `/ping` 代理到后端。
+前端开发服务器默认运行在 `http://localhost:5173`，并把 `/api/v1` 与 `/ping` 代理到后端。
 
 生产构建：
 
@@ -111,31 +111,31 @@ pnpm build
 公开读接口：
 
 - `GET /ping`
-- `POST /v1/auth/login`
-- `GET /v1/servers`
-- `GET /v1/servers/:id`
-- `GET /v1/servers/:id/health`
-- `GET /v1/servers/:id/events`
-- `GET /v1/servers/:id/monitors`
-- `GET /v1/servers/:id/monitors/:monitor_id`
-- `GET /v1/servers/:id/monitors/:monitor_id/results`
-- `GET /v1/servers/:id/monitors/:monitor_id/uptime`
+- `POST /api/v1/auth/login`
+- `GET /api/v1/servers`
+- `GET /api/v1/servers/:id`
+- `GET /api/v1/servers/:id/health`
+- `GET /api/v1/servers/:id/events`
+- `GET /api/v1/servers/:id/monitors`
+- `GET /api/v1/servers/:id/monitors/:monitor_id`
+- `GET /api/v1/servers/:id/monitors/:monitor_id/results`
+- `GET /api/v1/servers/:id/monitors/:monitor_id/uptime`
 
 需要 Bearer Token 的管理接口：
 
-- `GET /v1/auth/me`
-- `POST /v1/auth/logout`
-- `POST /v1/servers`
-- `PUT /v1/servers/:id`
-- `DELETE /v1/servers/:id`
-- `POST /v1/servers/:id/monitors`
-- `PUT /v1/servers/:id/monitors/:monitor_id`
-- `DELETE /v1/servers/:id/monitors/:monitor_id`
+- `GET /api/v1/auth/me`
+- `POST /api/v1/auth/logout`
+- `POST /api/v1/servers`
+- `PUT /api/v1/servers/:id`
+- `DELETE /api/v1/servers/:id`
+- `POST /api/v1/servers/:id/monitors`
+- `PUT /api/v1/servers/:id/monitors/:monitor_id`
+- `DELETE /api/v1/servers/:id/monitors/:monitor_id`
 
 登录示例：
 
 ```bash
-curl -s http://localhost:8080/v1/auth/login \
+curl -s http://localhost:8080/api/v1/auth/login \
   -H 'Content-Type: application/json' \
   -d '{"email":"admin@neo-line.local","password":"change-me"}'
 ```
@@ -230,7 +230,7 @@ docker build -t neo-line .
 docker build -t neo-line-front ./front
 ```
 
-前端镜像通过 Nginx 提供静态资源，并把 `/v1`、`/ping` 反向代理到后端。运行时可用 `BACKEND_URL` 覆盖默认后端地址：
+前端镜像通过 Nginx 提供静态资源，并把 `/api/v1`、`/ping` 反向代理到后端。运行时可用 `BACKEND_URL` 覆盖默认后端地址：
 
 ```bash
 docker run -e BACKEND_URL=http://neo-line:8080 -p 8081:80 neo-line-front
