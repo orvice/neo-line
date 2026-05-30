@@ -53,6 +53,11 @@ func NewServer(st store.Store) *mcp.Server {
 	}, t.listCheckResults)
 
 	mcp.AddTool(srv, &mcp.Tool{
+		Name:        "get_monitor_uptime",
+		Description: "Get Kuma-style rolling uptime windows for a monitor by server id and monitor id.",
+	}, t.getMonitorUptime)
+
+	mcp.AddTool(srv, &mcp.Tool{
 		Name:        "list_monitor_groups",
 		Description: "List monitor groups (flat) with their alert policies.",
 	}, t.listMonitorGroups)
@@ -177,6 +182,18 @@ func (t *tools) getMonitor(ctx context.Context, _ *mcp.CallToolRequest, in getMo
 		return nil, monitorOutput{}, mapErr(err)
 	}
 	return nil, monitorOutput{Monitor: monitor}, nil
+}
+
+type monitorUptimeOutput struct {
+	Uptime store.MonitorUptime `json:"uptime"`
+}
+
+func (t *tools) getMonitorUptime(ctx context.Context, _ *mcp.CallToolRequest, in getMonitorInput) (*mcp.CallToolResult, monitorUptimeOutput, error) {
+	uptime, err := t.store.GetMonitorUptime(ctx, in.ServerID, in.MonitorID)
+	if err != nil {
+		return nil, monitorUptimeOutput{}, mapErr(err)
+	}
+	return nil, monitorUptimeOutput{Uptime: uptime}, nil
 }
 
 type listCheckResultsInput struct {
