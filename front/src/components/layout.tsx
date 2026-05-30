@@ -1,8 +1,19 @@
+import { useEffect } from "react"
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom"
-import { Activity, FolderTree, LogOut, Monitor, Moon, Server, Sun } from "lucide-react"
+import {
+  Activity,
+  FolderTree,
+  LogOut,
+  Monitor,
+  Moon,
+  Server,
+  Settings as SettingsIcon,
+  Sun,
+} from "lucide-react"
 
 import { useAuth } from "@/lib/auth"
 import { useTheme } from "@/lib/theme"
+import { useSettings } from "@/lib/settings"
 import { Button } from "@/components/ui/button"
 
 const themeOrder = ["light", "dark", "system"] as const
@@ -29,6 +40,11 @@ function ThemeToggle() {
 export function Layout() {
   const { user, logout } = useAuth()
   const location = useLocation()
+  const settings = useSettings()
+
+  useEffect(() => {
+    document.title = settings.site_name
+  }, [settings.site_name])
 
   return (
     <div className="min-h-[100dvh] bg-background">
@@ -36,7 +52,7 @@ export function Layout() {
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
           <Link to="/" className="flex items-center gap-2 font-semibold">
             <Activity className="size-5 text-emerald-600 dark:text-emerald-400" />
-            <span>neo-line</span>
+            <span>{settings.site_name}</span>
             <span className="text-muted-foreground text-sm font-normal">
               监控面板
             </span>
@@ -79,6 +95,20 @@ export function Layout() {
               <FolderTree className="size-4" />
               分组
             </NavLink>
+            {user && (
+              <NavLink
+                to="/settings"
+                className={({ isActive }) =>
+                  "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm transition " +
+                  (isActive
+                    ? "bg-accent text-accent-foreground"
+                    : "text-muted-foreground hover:bg-accent")
+                }
+              >
+                <SettingsIcon className="size-4" />
+                设置
+              </NavLink>
+            )}
           </nav>
           <div className="flex items-center gap-2">
             <ThemeToggle />

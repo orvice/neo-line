@@ -503,3 +503,6 @@ func (s *MongoStore) servers() *mongo.Collection  { return s.database.Collection
 func (s *MongoStore) monitors() *mongo.Collection { return s.database.Collection("monitors") }
 func (s *MongoStore) results() *mongo.Collection  { return s.database.Collection("monitor_results") }
 func (s *MongoStore) events() *mongo.Collection   { return s.database.Collection("server_events") }
+func (s *MongoStore) settingsColl() *mongo.Collection {
+	return s.database.Collection("settings")
+}

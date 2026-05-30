@@ -7,6 +7,7 @@ import type {
   Server,
   ServerEvent,
   ServerHealth,
+  Settings,
   User,
 } from "./types"
 
@@ -96,6 +97,12 @@ export const api = {
     }),
   me: () => request<{ user: User }>("/auth/me"),
   logout: () => request<void>("/auth/logout", { method: "POST" }),
+
+  // Settings
+  getSettings: () =>
+    request<{ settings: Settings }>("/settings", { auth: false }),
+  updateSettings: (body: Partial<Settings>) =>
+    request<{ settings: Settings }>("/settings", { method: "PUT", body }),
 
   // Servers
   listServers: (query?: { environment?: string; tags?: string; page_token?: string; page_size?: number }) =>

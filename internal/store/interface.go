@@ -39,6 +39,9 @@ type Store interface {
 	SaveCheckResult(ctx context.Context, result CheckResult) (string, error)
 	GetMonitorUptime(ctx context.Context, serverID, monitorID string) (MonitorUptime, error)
 
+	GetSettings(ctx context.Context) (Settings, error)
+	UpdateSettings(ctx context.Context, settings Settings) (Settings, error)
+
 	EnsureAuthIndexes(ctx context.Context) error
 	EnsureGroupIndexes(ctx context.Context) error
 	EnsureAdminUser(ctx context.Context, email, password string) error

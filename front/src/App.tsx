@@ -9,6 +9,7 @@ import { ServerDetailPage } from "./pages/server-detail"
 import { MonitorDetailPage } from "./pages/monitor-detail"
 import { MonitorGroupsPage } from "./pages/monitor-groups"
 import { MonitorGroupDetailPage } from "./pages/monitor-group-detail"
+import { SettingsPage } from "./pages/settings"
 
 function LoadingScreen() {
   return (
@@ -38,6 +39,7 @@ export function App() {
           path="/monitor-groups/:groupId"
           element={<MonitorGroupDetailPage />}
         />
+        <Route path="/settings" element={<SettingsPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

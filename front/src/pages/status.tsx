@@ -5,6 +5,7 @@ import { CheckCircle2, AlertTriangle, XCircle, RefreshCw } from "lucide-react"
 
 import { api } from "@/lib/api"
 import type { HealthStatus, Monitor, MonitorUptime } from "@/lib/types"
+import { useSettings } from "@/lib/settings"
 import { formatRelative } from "@/lib/format"
 import { StatusDot } from "@/components/status-badge"
 import { HeartbeatBar } from "@/components/heartbeat-bar"
@@ -58,6 +59,7 @@ function uptimePct(uptime?: MonitorUptime): string {
 }
 
 export function StatusPage() {
+  const settings = useSettings()
   const groupsQuery = useQuery({
     queryKey: ["status-groups"],
     queryFn: () => api.listMonitorGroups({ page_size: 200 }),
@@ -131,6 +133,10 @@ export function StatusPage() {
 
   return (
     <div className="animate-enter mx-auto flex max-w-3xl flex-col gap-6">
+      <h1 className="text-2xl font-semibold tracking-tight">
+        {settings.status_page_title}
+      </h1>
+
       {loading ? (
         <Skeleton className="h-20 w-full" />
       ) : (

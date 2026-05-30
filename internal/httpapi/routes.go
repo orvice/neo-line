@@ -23,6 +23,8 @@ func Register(r *gin.Engine, st store.Store) {
 		v1.POST("/auth/login", api.login)
 
 		// Public read endpoints.
+		v1.GET("/settings", api.getSettings)
+
 		v1.GET("/servers", api.listServers)
 		v1.GET("/servers/:id", api.getServer)
 		v1.GET("/servers/:id/health", api.getServerHealth)
@@ -43,6 +45,8 @@ func Register(r *gin.Engine, st store.Store) {
 			admin.GET("/auth/me", api.currentUser)
 			admin.POST("/auth/logout", api.logout)
 
+			admin.PUT("/settings", api.updateSettings)
+
 			admin.POST("/servers", api.createServer)
 			admin.PUT("/servers/:id", api.updateServer)
 			admin.DELETE("/servers/:id", api.deleteServer)
@@ -56,6 +60,28 @@ func Register(r *gin.Engine, st store.Store) {
 			admin.DELETE("/monitor-groups/:group_id", api.deleteMonitorGroup)
 		}
 	}
+}
+
+func (api *API) getSettings(c *gin.Context) {
+	settings, err := api.store.GetSettings(c.Request.Context())
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"settings": settings})
+}
+
+func (api *API) updateSettings(c *gin.Context) {
+	var settings store.Settings
+	if !bindJSON(c, &settings) {
+		return
+	}
+	updated, err := api.store.UpdateSettings(c.Request.Context(), settings)
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"settings": updated})
 }
 
 func (api *API) listServers(c *gin.Context) {

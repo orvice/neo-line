@@ -112,6 +112,7 @@ pnpm build
 
 - `GET /ping`
 - `POST /api/v1/auth/login`
+- `GET /api/v1/settings`
 - `GET /api/v1/servers`
 - `GET /api/v1/servers/:id`
 - `GET /api/v1/servers/:id/health`
@@ -125,6 +126,7 @@ pnpm build
 
 - `GET /api/v1/auth/me`
 - `POST /api/v1/auth/logout`
+- `PUT /api/v1/settings`
 - `POST /api/v1/servers`
 - `PUT /api/v1/servers/:id`
 - `DELETE /api/v1/servers/:id`

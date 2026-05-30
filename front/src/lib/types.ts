@@ -151,6 +151,12 @@ export interface AlertPolicy {
   min_interval_seconds?: number
 }
 
+export interface Settings {
+  site_name: string
+  status_page_title: string
+  updated_at?: string
+}
+
 export interface MonitorGroup {
   id: string
   name: string
