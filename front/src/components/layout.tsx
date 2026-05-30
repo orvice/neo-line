@@ -3,7 +3,6 @@ import { Link, NavLink, Outlet, useLocation } from "react-router-dom"
 import {
   Activity,
   FolderTree,
-  LayoutDashboard,
   LogOut,
   Monitor,
   Moon,
@@ -124,16 +123,7 @@ export function Layout() {
                   设置
                 </NavLink>
               </>
-            ) : (
-              <Link
-                to="/login"
-                state={{ from: location.pathname }}
-                className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-muted-foreground transition hover:bg-accent"
-              >
-                <LayoutDashboard className="size-4" />
-                管理
-              </Link>
-            )}
+            ) : null}
           </nav>
           <div className="flex items-center gap-2">
             <ThemeToggle />
