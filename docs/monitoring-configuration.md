@@ -352,6 +352,17 @@ alert_policy:
       target: https://hooks.example.com/neo-line
       extra:
         X-Source: neo-line
+    - type: telegram
+      target: "-1001234567890" # Chat ID
+      extra:
+        bot_token: "123456:ABC-DEF..."
+    - type: discord
+      target: https://discord.com/api/webhooks/xxx/yyy
+    - type: mastodon
+      target: https://mastodon.social
+      extra:
+        access_token: "应用访问令牌"
+        visibility: unlisted # 可选，默认 unlisted
 ```
 
 字段说明：
@@ -370,11 +381,22 @@ alert_policy:
 - `on_warning`：monitor 状态变为 `Warning` 时派发
 - `on_critical`：monitor 状态变为 `Critical` 时派发
 - `min_interval_seconds`：同 `(group, monitor)` 维度的派发节流窗口；`0` 或未填表示不节流
-- `channels[].type`：通道类型，当前仅支持 `webhook`
-- `channels[].target`：webhook URL
-- `channels[].extra`：附加 HTTP header，会写入请求头
+- `channels[].type`：通道类型，支持 `webhook`、`telegram`、`discord`、`mastodon`
+- `channels[].target`：通道目标，含义随类型而定（见下表）
+- `channels[].extra`：附加参数，含义随类型而定（见下表）
 
-派发为 best-effort：webhook 调用失败仅记日志，不阻塞调度器和探测主流程。Payload 字段：
+各通道类型的字段约定：
+
+| type | target | extra |
+| --- | --- | --- |
+| `webhook` | 接收 POST 的 URL | 作为附加 HTTP header 写入请求头 |
+| `telegram` | Chat ID | `bot_token`（必填）Bot 令牌 |
+| `discord` | Discord Webhook URL | 无 |
+| `mastodon` | 实例地址，如 `https://mastodon.social` | `access_token`（必填）；`visibility`（可选，默认 `unlisted`） |
+
+`webhook` 通道发送完整 JSON Payload；`telegram`、`discord`、`mastodon` 发送一条人类可读的文本消息（含 monitor 名称、状态变化、分组、server 和时间）。
+
+派发为 best-effort：通道调用失败仅记日志，不阻塞调度器和探测主流程。`webhook` Payload 字段：
 
 ```json
 {
