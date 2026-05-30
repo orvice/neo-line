@@ -47,27 +47,36 @@ func (s *MongoStore) ListEnabledMonitors(ctx context.Context) ([]Monitor, error)
 
 // SaveCheckResult persists a single probe outcome, updates the owning monitor's
 // current status and timestamps, and recomputes the server's aggregated health.
-func (s *MongoStore) SaveCheckResult(ctx context.Context, result CheckResult) error {
+// It returns the monitor's previous status (before this result), enabling the
+// caller to drive transition-based behavior such as alert dispatch. The
+// returned previous status is empty when no prior status was recorded.
+func (s *MongoStore) SaveCheckResult(ctx context.Context, result CheckResult) (string, error) {
 	if result.ID == "" {
 		result.ID = "res_" + uuid.NewString()
 	}
 	if _, err := s.results().InsertOne(ctx, result); err != nil {
-		return err
+		return "", err
 	}
 
 	now := time.Now().UTC()
 	update := bson.M{"status": result.Status, "last_check_at": result.EndedAt, "updated_at": now}
 
 	var current Monitor
+	var prevStatus string
 	err := s.monitors().FindOne(ctx, bson.M{"id": result.MonitorID}).Decode(&current)
-	if err == nil && normalizeStatus(current.Status) != normalizeStatus(result.Status) {
-		update["last_status_change_at"] = now
+	if err == nil {
+		prevStatus = current.Status
+		if normalizeStatus(current.Status) != normalizeStatus(result.Status) {
+			update["last_status_change_at"] = now
+		}
 	}
 	if _, err := s.monitors().UpdateOne(ctx, bson.M{"id": result.MonitorID}, bson.M{"$set": update}); err != nil {
-		return err
+		return prevStatus, err
 	}
 
 	// Recompute and persist server-level aggregated health.
-	_, err = s.GetServerHealth(ctx, result.ServerID)
-	return err
+	if _, err := s.GetServerHealth(ctx, result.ServerID); err != nil {
+		return prevStatus, err
+	}
+	return prevStatus, nil
 }

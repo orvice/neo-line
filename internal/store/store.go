@@ -43,6 +43,7 @@ type Server struct {
 type Monitor struct {
 	ID                  string            `bson:"id" json:"id"`
 	ServerID            string            `bson:"server_id" json:"server_id"`
+	GroupIDs            []string          `bson:"group_ids,omitempty" json:"group_ids,omitempty"`
 	Name                string            `bson:"name" json:"name"`
 	Kind                string            `bson:"kind" json:"kind"`
 	Enabled             bool              `bson:"enabled" json:"enabled"`
@@ -113,6 +114,37 @@ type ServerHealth struct {
 	CriticalMonitors   uint32    `json:"critical_monitors"`
 	DownMonitors       uint32    `json:"down_monitors"`
 	UnknownMonitors    uint32    `json:"unknown_monitors"`
+}
+
+// AlertChannel is one delivery target for an AlertPolicy. The initial
+// supported Type is "webhook", which POSTs the alert payload to Target.
+type AlertChannel struct {
+	Type   string            `bson:"type" json:"type"`
+	Target string            `bson:"target" json:"target"`
+	Extra  map[string]string `bson:"extra,omitempty" json:"extra,omitempty"`
+}
+
+// AlertPolicy holds the group-level alert configuration applied to every
+// monitor in the group.
+type AlertPolicy struct {
+	Enabled            bool           `bson:"enabled" json:"enabled"`
+	Channels           []AlertChannel `bson:"channels,omitempty" json:"channels,omitempty"`
+	OnDown             bool           `bson:"on_down" json:"on_down"`
+	OnRecover          bool           `bson:"on_recover" json:"on_recover"`
+	OnWarning          bool           `bson:"on_warning" json:"on_warning"`
+	OnCritical         bool           `bson:"on_critical" json:"on_critical"`
+	MinIntervalSeconds uint32         `bson:"min_interval_seconds,omitempty" json:"min_interval_seconds,omitempty"`
+}
+
+// MonitorGroup is a named, flat bucket of monitors. Monitors may belong to
+// multiple groups, and each group carries its own AlertPolicy.
+type MonitorGroup struct {
+	ID          string      `bson:"id" json:"id"`
+	Name        string      `bson:"name" json:"name"`
+	Description string      `bson:"description,omitempty" json:"description,omitempty"`
+	AlertPolicy AlertPolicy `bson:"alert_policy" json:"alert_policy"`
+	CreatedAt   time.Time   `bson:"created_at" json:"created_at"`
+	UpdatedAt   time.Time   `bson:"updated_at" json:"updated_at"`
 }
 
 type MongoStore struct {
@@ -210,6 +242,9 @@ func (s *MongoStore) CreateMonitor(ctx context.Context, serverID string, monitor
 	if _, err := s.GetServer(ctx, serverID); err != nil {
 		return Monitor{}, err
 	}
+	if err := s.validateGroupIDs(ctx, monitor.GroupIDs); err != nil {
+		return Monitor{}, err
+	}
 	now := time.Now().UTC()
 	if monitor.ID == "" {
 		monitor.ID = "mon_" + uuid.NewString()
@@ -232,6 +267,9 @@ func (s *MongoStore) GetMonitor(ctx context.Context, serverID, monitorID string)
 func (s *MongoStore) UpdateMonitor(ctx context.Context, serverID, monitorID string, monitor Monitor) (Monitor, error) {
 	existing, err := s.GetMonitor(ctx, serverID, monitorID)
 	if err != nil {
+		return Monitor{}, err
+	}
+	if err := s.validateGroupIDs(ctx, monitor.GroupIDs); err != nil {
 		return Monitor{}, err
 	}
 	monitor.ID = monitorID

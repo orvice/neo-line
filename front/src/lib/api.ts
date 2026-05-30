@@ -2,6 +2,7 @@ import type {
   CheckResult,
   LoginResponse,
   Monitor,
+  MonitorGroup,
   MonitorUptime,
   Server,
   ServerEvent,
@@ -128,6 +129,20 @@ export const api = {
       `/servers/${serverId}/monitors/${monitorId}/uptime`,
       { auth: false }
     ),
+
+  // Monitor groups
+  listMonitorGroups: (query?: { page_token?: string; page_size?: number }) =>
+    request<ListResponse & { groups: MonitorGroup[] }>("/monitor-groups", { query, auth: false }),
+  getMonitorGroup: (groupId: string) =>
+    request<{ group: MonitorGroup }>(`/monitor-groups/${groupId}`, { auth: false }),
+  createMonitorGroup: (body: Partial<MonitorGroup>) =>
+    request<{ group: MonitorGroup }>("/monitor-groups", { method: "POST", body }),
+  updateMonitorGroup: (groupId: string, body: Partial<MonitorGroup>) =>
+    request<{ group: MonitorGroup }>(`/monitor-groups/${groupId}`, { method: "PUT", body }),
+  deleteMonitorGroup: (groupId: string) =>
+    request<void>(`/monitor-groups/${groupId}`, { method: "DELETE" }),
+  listMonitorsByGroup: (groupId: string, query?: { page_token?: string; page_size?: number }) =>
+    request<ListResponse & { monitors: Monitor[] }>(`/monitor-groups/${groupId}/monitors`, { query, auth: false }),
 
   // Check results
   listCheckResults: (

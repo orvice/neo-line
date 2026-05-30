@@ -25,11 +25,22 @@ type Store interface {
 	DeleteMonitor(ctx context.Context, serverID, monitorID string) error
 	ListEnabledMonitors(ctx context.Context) ([]Monitor, error)
 
+	ListMonitorGroups(ctx context.Context, limit int64, pageToken string) ([]MonitorGroup, string, error)
+	CreateMonitorGroup(ctx context.Context, group MonitorGroup) (MonitorGroup, error)
+	GetMonitorGroup(ctx context.Context, id string) (MonitorGroup, error)
+	UpdateMonitorGroup(ctx context.Context, id string, group MonitorGroup) (MonitorGroup, error)
+	DeleteMonitorGroup(ctx context.Context, id string) error
+	ListMonitorsByGroup(ctx context.Context, groupID string, limit int64, pageToken string) ([]Monitor, string, error)
+	ListGroupsForMonitor(ctx context.Context, monitorID string) ([]MonitorGroup, error)
+
 	ListCheckResults(ctx context.Context, serverID, monitorID string, limit int64, pageToken string, start, end *time.Time) ([]CheckResult, string, error)
-	SaveCheckResult(ctx context.Context, result CheckResult) error
+	// SaveCheckResult persists a probe result and returns the monitor's prior
+	// status (empty when no prior status existed).
+	SaveCheckResult(ctx context.Context, result CheckResult) (string, error)
 	GetMonitorUptime(ctx context.Context, serverID, monitorID string) (MonitorUptime, error)
 
 	EnsureAuthIndexes(ctx context.Context) error
+	EnsureGroupIndexes(ctx context.Context) error
 	EnsureAdminUser(ctx context.Context, email, password string) error
 	Authenticate(ctx context.Context, email, password string) (User, error)
 	CreateSession(ctx context.Context, user User) (Session, error)

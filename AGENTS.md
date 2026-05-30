@@ -54,6 +54,8 @@ The project documentation is written in Chinese. Keep user-facing documentation 
 - Prefer clear domain names:
   - `Server` for monitored server resources
   - `Monitor` for a configured check attached to a server
+  - `MonitorGroup` for a flat, named bucket of monitors (many-to-many with `Monitor`)
+  - `AlertPolicy` for the group-level alert configuration that drives dispatch on monitor status changes
   - `CheckResult` for one execution result of a monitor
   - `HealthStatus` for computed state
 - Initial monitor kinds should align with documentation:
@@ -113,6 +115,15 @@ Default threshold proposal:
 - Warning: certificate expires within 30 days
 - Critical: certificate expires within 7 days
 - Down: certificate is expired, not yet valid, or TLS handshake fails
+
+### Alert Policy
+
+Alerting is driven entirely by `MonitorGroup.AlertPolicy`. A monitor with no `group_ids` will not produce alerts.
+
+- Dispatch is triggered from the scheduler after each probe when the monitor's status differs from the previous status.
+- Per-group `min_interval_seconds` throttles repeated alerts at the `(group_id, monitor_id)` level.
+- Webhook is currently the only channel type. Failures are logged and never block the scheduler or `monitor_results` write path.
+- Recovery semantics: `on_recover` fires only when the prior status was non-Healthy and the current status is Healthy. A monitor's very first probe never counts as a recovery.
 
 ## Protobuf Guidelines
 

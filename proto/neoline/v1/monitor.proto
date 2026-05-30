@@ -64,6 +64,10 @@ message Monitor {
   google.protobuf.Timestamp created_at = 14;
   google.protobuf.Timestamp updated_at = 15;
 
+  // group_ids lists the monitor groups this monitor belongs to. Used for UI
+  // grouping and to drive group-level alert policies.
+  repeated string group_ids = 16;
+
   // Per-kind configuration. The set member should match `kind`.
   oneof config {
     TcpConfig tcp = 20;

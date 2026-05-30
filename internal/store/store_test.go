@@ -180,3 +180,12 @@ func TestNormalizeEmail(t *testing.T) {
 		t.Fatalf("normalizeEmail() = %q, want admin@example.com", got)
 	}
 }
+
+func TestErrInvalidGroupIDsIsExported(t *testing.T) {
+	if ErrInvalidGroupIDs == nil {
+		t.Fatal("ErrInvalidGroupIDs is nil, want non-nil sentinel")
+	}
+	if ErrGroupNameTaken == nil {
+		t.Fatal("ErrGroupNameTaken is nil, want non-nil sentinel")
+	}
+}

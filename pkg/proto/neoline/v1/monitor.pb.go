@@ -310,6 +310,9 @@ type Monitor struct {
 	LastStatusChangeAt *timestamppb.Timestamp `protobuf:"bytes,13,opt,name=last_status_change_at,json=lastStatusChangeAt,proto3" json:"last_status_change_at,omitempty"`
 	CreatedAt          *timestamppb.Timestamp `protobuf:"bytes,14,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt          *timestamppb.Timestamp `protobuf:"bytes,15,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	// group_ids lists the monitor groups this monitor belongs to. Used for UI
+	// grouping and to drive group-level alert policies.
+	GroupIds []string `protobuf:"bytes,16,rep,name=group_ids,json=groupIds,proto3" json:"group_ids,omitempty"`
 	// Per-kind configuration. The set member should match `kind`.
 	//
 	// Types that are valid to be assigned to Config:
@@ -454,6 +457,13 @@ func (x *Monitor) GetCreatedAt() *timestamppb.Timestamp {
 func (x *Monitor) GetUpdatedAt() *timestamppb.Timestamp {
 	if x != nil {
 		return x.UpdatedAt
+	}
+	return nil
+}
+
+func (x *Monitor) GetGroupIds() []string {
+	if x != nil {
+		return x.GroupIds
 	}
 	return nil
 }
@@ -1427,7 +1437,7 @@ const file_neoline_v1_monitor_proto_rawDesc = "" +
 	"\n" +
 	"tls_verify\x18\x02 \x01(\bR\ttlsVerify\x12!\n" +
 	"\fwarning_days\x18\x03 \x01(\rR\vwarningDays\x12#\n" +
-	"\rcritical_days\x18\x04 \x01(\rR\fcriticalDays\"\xbf\x06\n" +
+	"\rcritical_days\x18\x04 \x01(\rR\fcriticalDays\"\xdc\x06\n" +
 	"\aMonitor\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\tserver_id\x18\x02 \x01(\tR\bserverId\x12\x12\n" +
@@ -1446,7 +1456,8 @@ const file_neoline_v1_monitor_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x0e \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\x0f \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12)\n" +
+	"updated_at\x18\x0f \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x1b\n" +
+	"\tgroup_ids\x18\x10 \x03(\tR\bgroupIds\x12)\n" +
 	"\x03tcp\x18\x14 \x01(\v2\x15.neoline.v1.TcpConfigH\x00R\x03tcp\x12,\n" +
 	"\x04http\x18\x15 \x01(\v2\x16.neoline.v1.HttpConfigH\x00R\x04http\x12/\n" +
 	"\x05https\x18\x16 \x01(\v2\x17.neoline.v1.HttpsConfigH\x00R\x05https\x12K\n" +

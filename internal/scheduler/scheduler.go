@@ -15,6 +15,12 @@ import (
 	"github.com/orvice/neo-line/internal/store"
 )
 
+// Alerter consumes monitor status transitions and dispatches notifications.
+// Provided by internal/alert.Dispatcher in production; nil disables alerting.
+type Alerter interface {
+	OnMonitorStatusChange(ctx context.Context, monitor store.Monitor, prev, curr string, occurredAt time.Time)
+}
+
 const (
 	// tickInterval is how often the scheduler re-evaluates which monitors are due.
 	tickInterval = 5 * time.Second
@@ -26,6 +32,7 @@ const (
 type Scheduler struct {
 	store    store.Store
 	archiver archive.Archiver
+	alerter  Alerter
 	logger   *slog.Logger
 
 	mu       sync.Mutex
@@ -49,6 +56,13 @@ func New(st store.Store, archiver ...archive.Archiver) *Scheduler {
 		inFlight: make(map[string]bool),
 		sem:      make(chan struct{}, maxConcurrentProbes),
 	}
+}
+
+// WithAlerter wires an Alerter into the scheduler. Returns the scheduler for
+// chaining at construction time.
+func (s *Scheduler) WithAlerter(a Alerter) *Scheduler {
+	s.alerter = a
+	return s
 }
 
 // Start runs the scheduling loop until ctx is cancelled. It blocks, so callers
@@ -122,11 +136,15 @@ func (s *Scheduler) dispatch(ctx context.Context, m store.Monitor) {
 		}()
 
 		result := probe.Run(ctx, m)
-		if err := s.store.SaveCheckResult(ctx, result); err != nil {
+		prevStatus, err := s.store.SaveCheckResult(ctx, result)
+		if err != nil {
 			s.logger.Error("failed to save check result", "monitor_id", m.ID, "error", err.Error())
 			return
 		}
 		s.archiver.Enqueue(result)
+		if s.alerter != nil {
+			s.alerter.OnMonitorStatusChange(ctx, m, prevStatus, result.Status, result.EndedAt)
+		}
 		s.logger.Debug("probe completed",
 			"monitor_id", m.ID,
 			"server_id", m.ServerID,

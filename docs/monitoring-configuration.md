@@ -28,6 +28,7 @@ MongoDB 是 neo-line 监控业务配置的唯一权威来源。
 
 - `servers`
 - `monitors`
+- `monitor_groups`
 - `monitor_results`
 - `server_events`
 - `tls_certificates`
@@ -86,6 +87,7 @@ retries: 3
 
 - `id`：monitor 唯一标识；创建时如果未提供，会自动生成 `mon_<uuid>`。
 - `server_id`：关联的 server ID，由 URL 路径中的 server ID 写入
+- `group_ids`：所属分组 ID 列表，可选；每个 ID 必须在 `monitor_groups` 中存在，否则写入返回 `400`
 - `name`：monitor 显示名称
 - `kind`：monitor 类型，可选值为 `tcp`、`url`、`tls_port`
 - `enabled`：是否启用该 monitor
@@ -301,6 +303,70 @@ critical_days: 7
 - **Critical** — 证书将在 `critical_days` 天内过期。
 - **Down** — 证书已过期、尚未生效，或 TLS 握手失败。
 
+## Monitor 分组
+
+Monitor 可以归入零个或多个分组（`MonitorGroup`）。分组是扁平结构，不支持嵌套；同一个 monitor 可以同时属于多个分组。分组用于：
+
+- 在 UI 上跨 server 聚合展示监控项
+- 配置分组级别的告警策略，所属任意分组中的策略都会评估
+
+MongoDB collection：`monitor_groups`。`name` 上建立唯一索引；`monitors.group_ids` 上建立多键索引以支持按分组列表 monitor。
+
+MongoDB document 字段示例：
+
+```yaml
+id: grp_01
+name: prod-edge
+description: 生产环境边缘节点
+alert_policy:
+  enabled: true
+  on_down: true
+  on_recover: true
+  on_warning: false
+  on_critical: true
+  min_interval_seconds: 300
+  channels:
+    - type: webhook
+      target: https://hooks.example.com/neo-line
+      extra:
+        X-Source: neo-line
+```
+
+字段说明：
+
+- `id`：分组唯一标识；创建时如果未提供，会自动生成 `grp_<uuid>`。
+- `name`：分组名称，全局唯一（重复会返回 `409 Conflict`）
+- `description`：可选描述
+- `alert_policy`：分组级告警策略，见下文
+- `created_at` / `updated_at`：创建和更新时间
+
+### AlertPolicy 字段
+
+- `enabled`：是否启用告警；为 `false` 时该分组永不派发
+- `on_down`：monitor 状态变为 `Down` 时派发
+- `on_recover`：非健康状态恢复为 `Healthy` 时派发（首次探测得到 `Healthy` 不算恢复）
+- `on_warning`：monitor 状态变为 `Warning` 时派发
+- `on_critical`：monitor 状态变为 `Critical` 时派发
+- `min_interval_seconds`：同 `(group, monitor)` 维度的派发节流窗口；`0` 或未填表示不节流
+- `channels[].type`：通道类型，当前仅支持 `webhook`
+- `channels[].target`：webhook URL
+- `channels[].extra`：附加 HTTP header，会写入请求头
+
+派发为 best-effort：webhook 调用失败仅记日志，不阻塞调度器和探测主流程。Payload 字段：
+
+```json
+{
+  "monitor_id": "mon_...",
+  "monitor_name": "api-url-health",
+  "server_id": "srv_...",
+  "previous_status": "Healthy",
+  "current_status": "Down",
+  "occurred_at": "2026-05-30T08:12:34Z",
+  "group_id": "grp_...",
+  "group_name": "prod-edge"
+}
+```
+
 ## 完整配置示例
 
 以下示例展示 MongoDB 中 server document 与 monitor documents 的逻辑关系。
@@ -327,6 +393,8 @@ monitors:
 
   - id: mon_url
     server_id: srv_01
+    group_ids:
+      - grp_01
     name: api-url-health
     kind: url
     url: https://api.example.com/health

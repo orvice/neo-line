@@ -10,6 +10,7 @@ import (
 
 	"butterfly.orx.me/core/app"
 	"github.com/gin-gonic/gin"
+	"github.com/orvice/neo-line/internal/alert"
 	"github.com/orvice/neo-line/internal/archive"
 	"github.com/orvice/neo-line/internal/httpapi"
 	"github.com/orvice/neo-line/internal/mcpserver"
@@ -27,6 +28,9 @@ func main() {
 	}
 	if err := mongoStore.EnsureAuthIndexes(ctx); err != nil {
 		log.Fatalf("ensure auth indexes: %v", err)
+	}
+	if err := mongoStore.EnsureGroupIndexes(ctx); err != nil {
+		log.Fatalf("ensure group indexes: %v", err)
 	}
 	if err := bootstrapAdmin(ctx, mongoStore); err != nil {
 		log.Fatalf("bootstrap admin user: %v", err)
@@ -65,7 +69,8 @@ func main() {
 					archiver.Run(schedCtx)
 					close(archiveDone)
 				}()
-				go scheduler.New(mongoStore, archiver).Start(schedCtx)
+				alerter := alert.New(mongoStore, slog.Default().With("component", "alert"))
+				go scheduler.New(mongoStore, archiver).WithAlerter(alerter).Start(schedCtx)
 				return nil
 			},
 		},

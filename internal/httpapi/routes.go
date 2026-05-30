@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
@@ -31,6 +32,10 @@ func Register(r *gin.Engine, st store.Store) {
 		v1.GET("/servers/:id/monitors/:monitor_id/results", api.listCheckResults)
 		v1.GET("/servers/:id/monitors/:monitor_id/uptime", api.getMonitorUptime)
 
+		v1.GET("/monitor-groups", api.listMonitorGroups)
+		v1.GET("/monitor-groups/:group_id", api.getMonitorGroup)
+		v1.GET("/monitor-groups/:group_id/monitors", api.listMonitorsByGroup)
+
 		// Admin endpoints require authentication.
 		admin := v1.Group("")
 		admin.Use(api.authRequired())
@@ -45,6 +50,10 @@ func Register(r *gin.Engine, st store.Store) {
 			admin.POST("/servers/:id/monitors", api.createMonitor)
 			admin.PUT("/servers/:id/monitors/:monitor_id", api.updateMonitor)
 			admin.DELETE("/servers/:id/monitors/:monitor_id", api.deleteMonitor)
+
+			admin.POST("/monitor-groups", api.createMonitorGroup)
+			admin.PUT("/monitor-groups/:group_id", api.updateMonitorGroup)
+			admin.DELETE("/monitor-groups/:group_id", api.deleteMonitorGroup)
 		}
 	}
 }
@@ -197,6 +206,75 @@ func (api *API) getMonitorUptime(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"uptime": uptime})
 }
 
+func (api *API) listMonitorGroups(c *gin.Context) {
+	groups, next, err := api.store.ListMonitorGroups(c.Request.Context(), pageSize(c), c.Query("page_token"))
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"groups": groups, "next_page_token": next})
+}
+
+func (api *API) createMonitorGroup(c *gin.Context) {
+	var group store.MonitorGroup
+	if !bindJSON(c, &group) {
+		return
+	}
+	if strings.TrimSpace(group.Name) == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "name is required"})
+		return
+	}
+	created, err := api.store.CreateMonitorGroup(c.Request.Context(), group)
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	c.JSON(http.StatusCreated, gin.H{"group": created})
+}
+
+func (api *API) getMonitorGroup(c *gin.Context) {
+	group, err := api.store.GetMonitorGroup(c.Request.Context(), c.Param("group_id"))
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"group": group})
+}
+
+func (api *API) updateMonitorGroup(c *gin.Context) {
+	var group store.MonitorGroup
+	if !bindJSON(c, &group) {
+		return
+	}
+	if strings.TrimSpace(group.Name) == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "name is required"})
+		return
+	}
+	updated, err := api.store.UpdateMonitorGroup(c.Request.Context(), c.Param("group_id"), group)
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"group": updated})
+}
+
+func (api *API) deleteMonitorGroup(c *gin.Context) {
+	if err := api.store.DeleteMonitorGroup(c.Request.Context(), c.Param("group_id")); err != nil {
+		respondError(c, err)
+		return
+	}
+	c.Status(http.StatusNoContent)
+}
+
+func (api *API) listMonitorsByGroup(c *gin.Context) {
+	monitors, next, err := api.store.ListMonitorsByGroup(c.Request.Context(), c.Param("group_id"), pageSize(c), c.Query("page_token"))
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"monitors": monitors, "next_page_token": next})
+}
+
 func bindJSON(c *gin.Context, dst any) bool {
 	if err := c.ShouldBindJSON(dst); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid JSON body", "detail": err.Error()})
@@ -208,6 +286,14 @@ func bindJSON(c *gin.Context, dst any) bool {
 func respondError(c *gin.Context, err error) {
 	if store.IsNotFound(err) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+		return
+	}
+	if errors.Is(err, store.ErrGroupNameTaken) {
+		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		return
+	}
+	if errors.Is(err, store.ErrInvalidGroupIDs) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 	if err.Error() == "invalid page_token" {

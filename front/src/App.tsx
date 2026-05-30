@@ -6,6 +6,8 @@ import { LoginPage } from "./pages/login"
 import { ServersPage } from "./pages/servers"
 import { ServerDetailPage } from "./pages/server-detail"
 import { MonitorDetailPage } from "./pages/monitor-detail"
+import { MonitorGroupsPage } from "./pages/monitor-groups"
+import { MonitorGroupDetailPage } from "./pages/monitor-group-detail"
 
 function LoadingScreen() {
   return (
@@ -28,6 +30,11 @@ export function App() {
         <Route
           path="/servers/:serverId/monitors/:monitorId"
           element={<MonitorDetailPage />}
+        />
+        <Route path="/monitor-groups" element={<MonitorGroupsPage />} />
+        <Route
+          path="/monitor-groups/:groupId"
+          element={<MonitorGroupDetailPage />}
         />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

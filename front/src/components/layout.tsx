@@ -1,5 +1,5 @@
-import { Link, Outlet, useLocation } from "react-router-dom"
-import { Activity, LogOut, Monitor, Moon, Sun } from "lucide-react"
+import { Link, NavLink, Outlet, useLocation } from "react-router-dom"
+import { Activity, FolderTree, LogOut, Monitor, Moon, Server, Sun } from "lucide-react"
 
 import { useAuth } from "@/lib/auth"
 import { useTheme } from "@/lib/theme"
@@ -41,6 +41,33 @@ export function Layout() {
               监控面板
             </span>
           </Link>
+          <nav className="hidden items-center gap-1 sm:flex">
+            <NavLink
+              to="/"
+              end
+              className={({ isActive }) =>
+                "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm transition " +
+                (isActive
+                  ? "bg-accent text-accent-foreground"
+                  : "text-muted-foreground hover:bg-accent")
+              }
+            >
+              <Server className="size-4" />
+              服务器
+            </NavLink>
+            <NavLink
+              to="/monitor-groups"
+              className={({ isActive }) =>
+                "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm transition " +
+                (isActive
+                  ? "bg-accent text-accent-foreground"
+                  : "text-muted-foreground hover:bg-accent")
+              }
+            >
+              <FolderTree className="size-4" />
+              分组
+            </NavLink>
+          </nav>
           <div className="flex items-center gap-2">
             <ThemeToggle />
             {user ? (

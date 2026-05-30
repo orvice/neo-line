@@ -52,6 +52,21 @@ func NewServer(st store.Store) *mcp.Server {
 		Description: "List recent check results for a monitor, optionally filtered by an RFC3339 time range.",
 	}, t.listCheckResults)
 
+	mcp.AddTool(srv, &mcp.Tool{
+		Name:        "list_monitor_groups",
+		Description: "List monitor groups (flat) with their alert policies.",
+	}, t.listMonitorGroups)
+
+	mcp.AddTool(srv, &mcp.Tool{
+		Name:        "get_monitor_group",
+		Description: "Get a single monitor group by id, including its alert policy.",
+	}, t.getMonitorGroup)
+
+	mcp.AddTool(srv, &mcp.Tool{
+		Name:        "list_monitors_by_group",
+		Description: "List monitors that belong to the given monitor group (across servers).",
+	}, t.listMonitorsByGroup)
+
 	return srv
 }
 
@@ -191,6 +206,48 @@ func (t *tools) listCheckResults(ctx context.Context, _ *mcp.CallToolRequest, in
 		return nil, listCheckResultsOutput{}, err
 	}
 	return nil, listCheckResultsOutput{Results: results, NextPageToken: next}, nil
+}
+
+type listMonitorGroupsOutput struct {
+	Groups        []store.MonitorGroup `json:"groups"`
+	NextPageToken string               `json:"next_page_token,omitempty"`
+}
+
+func (t *tools) listMonitorGroups(ctx context.Context, _ *mcp.CallToolRequest, in pageInput) (*mcp.CallToolResult, listMonitorGroupsOutput, error) {
+	groups, next, err := t.store.ListMonitorGroups(ctx, in.PageSize, in.PageToken)
+	if err != nil {
+		return nil, listMonitorGroupsOutput{}, err
+	}
+	return nil, listMonitorGroupsOutput{Groups: groups, NextPageToken: next}, nil
+}
+
+type monitorGroupIDInput struct {
+	GroupID string `json:"group_id" jsonschema:"the monitor group id"`
+}
+
+type monitorGroupOutput struct {
+	Group store.MonitorGroup `json:"group"`
+}
+
+func (t *tools) getMonitorGroup(ctx context.Context, _ *mcp.CallToolRequest, in monitorGroupIDInput) (*mcp.CallToolResult, monitorGroupOutput, error) {
+	group, err := t.store.GetMonitorGroup(ctx, in.GroupID)
+	if err != nil {
+		return nil, monitorGroupOutput{}, mapErr(err)
+	}
+	return nil, monitorGroupOutput{Group: group}, nil
+}
+
+type listMonitorsByGroupInput struct {
+	GroupID string `json:"group_id" jsonschema:"the monitor group id"`
+	pageInput
+}
+
+func (t *tools) listMonitorsByGroup(ctx context.Context, _ *mcp.CallToolRequest, in listMonitorsByGroupInput) (*mcp.CallToolResult, listMonitorsOutput, error) {
+	monitors, next, err := t.store.ListMonitorsByGroup(ctx, in.GroupID, in.PageSize, in.PageToken)
+	if err != nil {
+		return nil, listMonitorsOutput{}, err
+	}
+	return nil, listMonitorsOutput{Monitors: monitors, NextPageToken: next}, nil
 }
 
 func parseTime(value string) (*time.Time, error) {

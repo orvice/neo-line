@@ -37,6 +37,7 @@ export interface Server {
 export interface Monitor {
   id: string
   server_id: string
+  group_ids?: string[]
   name: string
   kind: MonitorKind
   enabled: boolean
@@ -132,4 +133,29 @@ export interface MonitorUptime {
 export interface Paged<T> {
   items: T[]
   next_page_token: string
+}
+
+export interface AlertChannel {
+  type: string
+  target: string
+  extra?: Record<string, string>
+}
+
+export interface AlertPolicy {
+  enabled: boolean
+  channels?: AlertChannel[]
+  on_down: boolean
+  on_recover: boolean
+  on_warning: boolean
+  on_critical: boolean
+  min_interval_seconds?: number
+}
+
+export interface MonitorGroup {
+  id: string
+  name: string
+  description?: string
+  alert_policy: AlertPolicy
+  created_at: string
+  updated_at: string
 }

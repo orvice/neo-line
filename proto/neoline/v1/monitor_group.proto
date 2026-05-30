@@ -1,0 +1,122 @@
+syntax = "proto3";
+
+package neoline.v1;
+
+import "google/api/annotations.proto";
+import "google/protobuf/timestamp.proto";
+import "neoline/v1/monitor.proto";
+
+option go_package = "github.com/orvice/neo-line/pkg/proto/neoline/v1;neolinev1";
+
+// AlertChannel describes a single delivery target for an AlertPolicy. The
+// initial supported type is "webhook", which POSTs a JSON payload to target.
+message AlertChannel {
+  string type = 1;
+  string target = 2;
+  map<string, string> extra = 3;
+}
+
+// AlertPolicy is the group-level configuration that drives alert dispatch when
+// any monitor in the group transitions between health states.
+message AlertPolicy {
+  bool enabled = 1;
+  repeated AlertChannel channels = 2;
+  bool on_down = 3;
+  bool on_recover = 4;
+  bool on_warning = 5;
+  bool on_critical = 6;
+  // min_interval_seconds throttles alerts so the same (group, monitor) pair
+  // does not fire more often than this window. Zero disables throttling.
+  uint32 min_interval_seconds = 7;
+}
+
+// MonitorGroup is a flat, named bucket of monitors. A monitor may belong to
+// multiple groups, and each group carries its own alert policy.
+message MonitorGroup {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  AlertPolicy alert_policy = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp updated_at = 6;
+}
+
+message ListMonitorGroupsRequest {
+  uint32 page_size = 1;
+  string page_token = 2;
+}
+
+message ListMonitorGroupsResponse {
+  repeated MonitorGroup groups = 1;
+  string next_page_token = 2;
+}
+
+message CreateMonitorGroupRequest {
+  MonitorGroup group = 1;
+}
+
+message CreateMonitorGroupResponse {
+  MonitorGroup group = 1;
+}
+
+message GetMonitorGroupRequest {
+  string group_id = 1;
+}
+
+message GetMonitorGroupResponse {
+  MonitorGroup group = 1;
+}
+
+message UpdateMonitorGroupRequest {
+  string group_id = 1;
+  MonitorGroup group = 2;
+}
+
+message UpdateMonitorGroupResponse {
+  MonitorGroup group = 1;
+}
+
+message DeleteMonitorGroupRequest {
+  string group_id = 1;
+}
+
+message DeleteMonitorGroupResponse {}
+
+message ListMonitorsByGroupRequest {
+  string group_id = 1;
+  uint32 page_size = 2;
+  string page_token = 3;
+}
+
+message ListMonitorsByGroupResponse {
+  repeated Monitor monitors = 1;
+  string next_page_token = 2;
+}
+
+// MonitorGroupService manages monitor groups and lists their members.
+service MonitorGroupService {
+  rpc ListMonitorGroups(ListMonitorGroupsRequest) returns (ListMonitorGroupsResponse) {
+    option (google.api.http) = {get: "/v1/monitor-groups"};
+  }
+  rpc CreateMonitorGroup(CreateMonitorGroupRequest) returns (CreateMonitorGroupResponse) {
+    option (google.api.http) = {
+      post: "/v1/monitor-groups"
+      body: "group"
+    };
+  }
+  rpc GetMonitorGroup(GetMonitorGroupRequest) returns (GetMonitorGroupResponse) {
+    option (google.api.http) = {get: "/v1/monitor-groups/{group_id}"};
+  }
+  rpc UpdateMonitorGroup(UpdateMonitorGroupRequest) returns (UpdateMonitorGroupResponse) {
+    option (google.api.http) = {
+      put: "/v1/monitor-groups/{group_id}"
+      body: "group"
+    };
+  }
+  rpc DeleteMonitorGroup(DeleteMonitorGroupRequest) returns (DeleteMonitorGroupResponse) {
+    option (google.api.http) = {delete: "/v1/monitor-groups/{group_id}"};
+  }
+  rpc ListMonitorsByGroup(ListMonitorsByGroupRequest) returns (ListMonitorsByGroupResponse) {
+    option (google.api.http) = {get: "/v1/monitor-groups/{group_id}/monitors"};
+  }
+}

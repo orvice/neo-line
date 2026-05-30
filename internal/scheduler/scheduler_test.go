@@ -24,9 +24,9 @@ func (f *fakeStore) ListEnabledMonitors(context.Context) ([]store.Monitor, error
 	return f.monitors, nil
 }
 
-func (f *fakeStore) SaveCheckResult(_ context.Context, result store.CheckResult) error {
+func (f *fakeStore) SaveCheckResult(_ context.Context, result store.CheckResult) (string, error) {
 	f.saved <- result
-	return nil
+	return "", nil
 }
 
 func TestReconcileDispatchesDueMonitors(t *testing.T) {

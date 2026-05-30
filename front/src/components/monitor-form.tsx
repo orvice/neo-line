@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 
 import { api, ApiError } from "@/lib/api"
@@ -47,6 +47,7 @@ interface FormState {
   intervalSeconds: string
   timeoutSeconds: string
   retries: string
+  groupIds: string[]
 }
 
 function toFormState(monitor?: Monitor): FormState {
@@ -66,6 +67,7 @@ function toFormState(monitor?: Monitor): FormState {
     intervalSeconds: monitor?.interval_seconds ? String(monitor.interval_seconds) : "60",
     timeoutSeconds: monitor?.timeout_seconds ? String(monitor.timeout_seconds) : "5",
     retries: monitor?.retries !== undefined ? String(monitor.retries) : "3",
+    groupIds: monitor?.group_ids ?? [],
   }
 }
 
@@ -84,9 +86,28 @@ export function MonitorForm({
   const [form, setForm] = useState<FormState>(toFormState(monitor))
   const isEdit = Boolean(monitor)
 
+  const groupsQuery = useQuery({
+    queryKey: ["monitor-groups"],
+    queryFn: () => api.listMonitorGroups({ page_size: 200 }),
+    enabled: open,
+  })
+  const allGroups = groupsQuery.data?.groups ?? []
+
   useEffect(() => {
     if (open) setForm(toFormState(monitor))
   }, [open, monitor])
+
+  const toggleGroup = (id: string) => {
+    setForm((prev) => {
+      const has = prev.groupIds.includes(id)
+      return {
+        ...prev,
+        groupIds: has
+          ? prev.groupIds.filter((g) => g !== id)
+          : [...prev.groupIds, id],
+      }
+    })
+  }
 
   const mutation = useMutation({
     mutationFn: async () => {
@@ -97,6 +118,7 @@ export function MonitorForm({
         interval_seconds: numberOrUndefined(form.intervalSeconds),
         timeout_seconds: numberOrUndefined(form.timeoutSeconds),
         retries: numberOrUndefined(form.retries),
+        group_ids: form.groupIds,
       }
       if (form.kind === "tcp" || form.kind === "tls_port") {
         body.host = form.host.trim() || undefined
@@ -323,6 +345,36 @@ export function MonitorForm({
                 onChange={(e) => setForm({ ...form, retries: e.target.value })}
               />
             </div>
+          </div>
+
+          <div className="flex flex-col gap-2 rounded-md border p-3">
+            <Label>所属分组</Label>
+            {allGroups.length === 0 ? (
+              <p className="text-muted-foreground text-xs">
+                暂无分组，可前往「监控分组」页面创建。
+              </p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {allGroups.map((g) => {
+                  const selected = form.groupIds.includes(g.id)
+                  return (
+                    <button
+                      key={g.id}
+                      type="button"
+                      onClick={() => toggleGroup(g.id)}
+                      className={
+                        "rounded-md border px-3 py-1 text-sm transition " +
+                        (selected
+                          ? "border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                          : "text-muted-foreground hover:bg-accent")
+                      }
+                    >
+                      {g.name}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
           </div>
 
           <div className="flex items-center justify-between rounded-md border p-3">
