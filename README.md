@@ -164,7 +164,7 @@ curl -s http://localhost:8080/v1/auth/login \
   "enabled": true,
   "url": "https://api.example.com/health",
   "method": "GET",
-  "expected_status_codes": [200],
+  "expected_status_codes": "200-299,301,302",
   "timeout_seconds": 5,
   "interval_seconds": 60,
   "retries": 3,

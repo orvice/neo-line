@@ -46,7 +46,7 @@ export interface Monitor {
   method?: string
   path?: string
   headers?: Record<string, string>
-  expected_status_codes?: number[]
+  expected_status_codes?: string
   tls_verify: boolean
   sni_name?: string
   warning_days?: number

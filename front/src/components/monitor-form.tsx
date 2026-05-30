@@ -58,7 +58,7 @@ function toFormState(monitor?: Monitor): FormState {
     port: monitor?.port ? String(monitor.port) : "",
     url: monitor?.url ?? "",
     method: monitor?.method ?? "GET",
-    expectedStatus: monitor?.expected_status_codes?.join(", ") ?? "",
+    expectedStatus: monitor?.expected_status_codes ?? "",
     tlsVerify: monitor?.tls_verify ?? true,
     sniName: monitor?.sni_name ?? "",
     warningDays: monitor?.warning_days ? String(monitor.warning_days) : "",
@@ -105,10 +105,7 @@ export function MonitorForm({
       if (form.kind === "url") {
         body.url = form.url.trim()
         body.method = form.method.trim() || "GET"
-        body.expected_status_codes = form.expectedStatus
-          .split(",")
-          .map((s) => Number(s.trim()))
-          .filter((n) => !Number.isNaN(n) && n > 0)
+        body.expected_status_codes = form.expectedStatus.trim() || undefined
       }
       if (form.kind === "url" || form.kind === "tls_port") {
         body.tls_verify = form.tlsVerify
@@ -235,7 +232,7 @@ export function MonitorForm({
                     onChange={(e) =>
                       setForm({ ...form, expectedStatus: e.target.value })
                     }
-                    placeholder="200, 204"
+                    placeholder="200-299, 301, 302"
                   />
                 </div>
               </div>

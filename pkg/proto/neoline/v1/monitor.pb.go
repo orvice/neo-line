@@ -64,11 +64,13 @@ func (*TcpConfig) Descriptor() ([]byte, []int) {
 
 // HttpConfig holds HTTP-monitor-specific options.
 type HttpConfig struct {
-	state               protoimpl.MessageState `protogen:"open.v1"`
-	Path                string                 `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`
-	Method              string                 `protobuf:"bytes,2,opt,name=method,proto3" json:"method,omitempty"`
-	Headers             map[string]string      `protobuf:"bytes,3,rep,name=headers,proto3" json:"headers,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	ExpectedStatusCodes []uint32               `protobuf:"varint,4,rep,packed,name=expected_status_codes,json=expectedStatusCodes,proto3" json:"expected_status_codes,omitempty"`
+	state   protoimpl.MessageState `protogen:"open.v1"`
+	Path    string                 `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`
+	Method  string                 `protobuf:"bytes,2,opt,name=method,proto3" json:"method,omitempty"`
+	Headers map[string]string      `protobuf:"bytes,3,rep,name=headers,proto3" json:"headers,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	// expected_status_codes is a comma-separated list of accepted codes and
+	// inclusive ranges, for example "200-299,301,302". Empty accepts only 200.
+	ExpectedStatusCodes string `protobuf:"bytes,4,opt,name=expected_status_codes,json=expectedStatusCodes,proto3" json:"expected_status_codes,omitempty"`
 	unknownFields       protoimpl.UnknownFields
 	sizeCache           protoimpl.SizeCache
 }
@@ -124,21 +126,23 @@ func (x *HttpConfig) GetHeaders() map[string]string {
 	return nil
 }
 
-func (x *HttpConfig) GetExpectedStatusCodes() []uint32 {
+func (x *HttpConfig) GetExpectedStatusCodes() string {
 	if x != nil {
 		return x.ExpectedStatusCodes
 	}
-	return nil
+	return ""
 }
 
 // HttpsConfig holds HTTPS-monitor-specific options. Includes TLS handshake
 // behavior on top of standard HTTP fields.
 type HttpsConfig struct {
-	state               protoimpl.MessageState `protogen:"open.v1"`
-	Path                string                 `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`
-	Method              string                 `protobuf:"bytes,2,opt,name=method,proto3" json:"method,omitempty"`
-	Headers             map[string]string      `protobuf:"bytes,3,rep,name=headers,proto3" json:"headers,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	ExpectedStatusCodes []uint32               `protobuf:"varint,4,rep,packed,name=expected_status_codes,json=expectedStatusCodes,proto3" json:"expected_status_codes,omitempty"`
+	state   protoimpl.MessageState `protogen:"open.v1"`
+	Path    string                 `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`
+	Method  string                 `protobuf:"bytes,2,opt,name=method,proto3" json:"method,omitempty"`
+	Headers map[string]string      `protobuf:"bytes,3,rep,name=headers,proto3" json:"headers,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	// expected_status_codes is a comma-separated list of accepted codes and
+	// inclusive ranges, for example "200-299,301,302". Empty accepts only 200.
+	ExpectedStatusCodes string `protobuf:"bytes,4,opt,name=expected_status_codes,json=expectedStatusCodes,proto3" json:"expected_status_codes,omitempty"`
 	// sni_name overrides the TLS ServerName sent during handshake.
 	SniName string `protobuf:"bytes,5,opt,name=sni_name,json=sniName,proto3" json:"sni_name,omitempty"`
 	// tls_verify enables peer certificate verification.
@@ -198,11 +202,11 @@ func (x *HttpsConfig) GetHeaders() map[string]string {
 	return nil
 }
 
-func (x *HttpsConfig) GetExpectedStatusCodes() []uint32 {
+func (x *HttpsConfig) GetExpectedStatusCodes() string {
 	if x != nil {
 		return x.ExpectedStatusCodes
 	}
-	return nil
+	return ""
 }
 
 func (x *HttpsConfig) GetSniName() string {
@@ -1403,7 +1407,7 @@ const file_neoline_v1_monitor_proto_rawDesc = "" +
 	"\x04path\x18\x01 \x01(\tR\x04path\x12\x16\n" +
 	"\x06method\x18\x02 \x01(\tR\x06method\x12=\n" +
 	"\aheaders\x18\x03 \x03(\v2#.neoline.v1.HttpConfig.HeadersEntryR\aheaders\x122\n" +
-	"\x15expected_status_codes\x18\x04 \x03(\rR\x13expectedStatusCodes\x1a:\n" +
+	"\x15expected_status_codes\x18\x04 \x01(\tR\x13expectedStatusCodes\x1a:\n" +
 	"\fHeadersEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xa3\x02\n" +
@@ -1411,7 +1415,7 @@ const file_neoline_v1_monitor_proto_rawDesc = "" +
 	"\x04path\x18\x01 \x01(\tR\x04path\x12\x16\n" +
 	"\x06method\x18\x02 \x01(\tR\x06method\x12>\n" +
 	"\aheaders\x18\x03 \x03(\v2$.neoline.v1.HttpsConfig.HeadersEntryR\aheaders\x122\n" +
-	"\x15expected_status_codes\x18\x04 \x03(\rR\x13expectedStatusCodes\x12\x19\n" +
+	"\x15expected_status_codes\x18\x04 \x01(\tR\x13expectedStatusCodes\x12\x19\n" +
 	"\bsni_name\x18\x05 \x01(\tR\asniName\x12\x1d\n" +
 	"\n" +
 	"tls_verify\x18\x06 \x01(\bR\ttlsVerify\x1a:\n" +

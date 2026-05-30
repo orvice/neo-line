@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -67,7 +68,7 @@ func probeURL(ctx context.Context, m store.Monitor, timeout time.Duration) outco
 		out.certificate = certificateInfo(resp.TLS.PeerCertificates[0])
 	}
 
-	if !statusCodeAccepted(uint32(resp.StatusCode), m.ExpectedStatusCode) {
+	if !statusCodeAccepted(uint32(resp.StatusCode), m.ExpectedStatusCodes) {
 		out.status = store.StatusDown
 		out.stage = StageHTTP
 		out.errMsg = fmt.Sprintf("unexpected status code %d", resp.StatusCode)
@@ -79,16 +80,43 @@ func probeURL(ctx context.Context, m store.Monitor, timeout time.Duration) outco
 	return out
 }
 
-func statusCodeAccepted(code uint32, expected []uint32) bool {
-	if len(expected) == 0 {
+// statusCodeAccepted reports whether code matches the expected expression.
+// The expression is a comma-separated list of single codes and inclusive
+// ranges, for example "200-299,301,302". An empty expression accepts only 200.
+func statusCodeAccepted(code uint32, expected string) bool {
+	expected = strings.TrimSpace(expected)
+	if expected == "" {
 		return code == http.StatusOK
 	}
-	for _, e := range expected {
-		if e == code {
+	for part := range strings.SplitSeq(expected, ",") {
+		if lo, hi, ok := parseStatusCodeRange(part); ok && code >= lo && code <= hi {
 			return true
 		}
 	}
 	return false
+}
+
+// parseStatusCodeRange parses a single expression segment into an inclusive
+// [lo, hi] range. A bare code like "200" yields lo == hi. Malformed segments
+// return ok == false and are ignored by the caller.
+func parseStatusCodeRange(part string) (lo, hi uint32, ok bool) {
+	part = strings.TrimSpace(part)
+	if part == "" {
+		return 0, 0, false
+	}
+	if before, after, found := strings.Cut(part, "-"); found {
+		low, err1 := strconv.ParseUint(strings.TrimSpace(before), 10, 32)
+		high, err2 := strconv.ParseUint(strings.TrimSpace(after), 10, 32)
+		if err1 != nil || err2 != nil || low > high {
+			return 0, 0, false
+		}
+		return uint32(low), uint32(high), true
+	}
+	v, err := strconv.ParseUint(part, 10, 32)
+	if err != nil {
+		return 0, 0, false
+	}
+	return uint32(v), uint32(v), true
 }
 
 // classifyHTTPError refines a request error, attributing TLS failures to the

@@ -48,19 +48,24 @@ func TestStatusCodeAccepted(t *testing.T) {
 	tests := []struct {
 		name     string
 		code     uint32
-		expected []uint32
+		expected string
 		want     bool
 	}{
 		{name: "defaults to 200", code: 200, want: true},
 		{name: "default rejects non-200", code: 204, want: false},
-		{name: "custom accepts listed code", code: 201, expected: []uint32{201, 202}, want: true},
-		{name: "custom rejects missing code", code: 500, expected: []uint32{201, 202}, want: false},
+		{name: "custom accepts listed code", code: 201, expected: "201, 202", want: true},
+		{name: "custom rejects missing code", code: 500, expected: "201, 202", want: false},
+		{name: "range accepts in-range code", code: 204, expected: "200-299", want: true},
+		{name: "range rejects out-of-range code", code: 301, expected: "200-299", want: false},
+		{name: "mixed list and range", code: 302, expected: "200-299, 301, 302", want: true},
+		{name: "range boundaries inclusive", code: 299, expected: "200-299", want: true},
+		{name: "ignores malformed segment", code: 200, expected: "abc, 200", want: true},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := statusCodeAccepted(tt.code, tt.expected); got != tt.want {
-				t.Fatalf("statusCodeAccepted(%d, %#v) = %v, want %v", tt.code, tt.expected, got, tt.want)
+				t.Fatalf("statusCodeAccepted(%d, %q) = %v, want %v", tt.code, tt.expected, got, tt.want)
 			}
 		})
 	}

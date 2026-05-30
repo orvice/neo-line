@@ -18,7 +18,9 @@ message HttpConfig {
   string path = 1;
   string method = 2;
   map<string, string> headers = 3;
-  repeated uint32 expected_status_codes = 4;
+  // expected_status_codes is a comma-separated list of accepted codes and
+  // inclusive ranges, for example "200-299,301,302". Empty accepts only 200.
+  string expected_status_codes = 4;
 }
 
 // HttpsConfig holds HTTPS-monitor-specific options. Includes TLS handshake
@@ -27,7 +29,9 @@ message HttpsConfig {
   string path = 1;
   string method = 2;
   map<string, string> headers = 3;
-  repeated uint32 expected_status_codes = 4;
+  // expected_status_codes is a comma-separated list of accepted codes and
+  // inclusive ranges, for example "200-299,301,302". Empty accepts only 200.
+  string expected_status_codes = 4;
   // sni_name overrides the TLS ServerName sent during handshake.
   string sni_name = 5;
   // tls_verify enables peer certificate verification.

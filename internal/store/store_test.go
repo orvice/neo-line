@@ -35,8 +35,8 @@ func TestApplyMonitorDefaults(t *testing.T) {
 		if monitor.Method != "GET" {
 			t.Fatalf("Method = %q, want GET", monitor.Method)
 		}
-		if got := monitor.ExpectedStatusCode; len(got) != 1 || got[0] != 200 {
-			t.Fatalf("ExpectedStatusCode = %#v, want [200]", got)
+		if got := monitor.ExpectedStatusCodes; got != "200" {
+			t.Fatalf("ExpectedStatusCodes = %q, want %q", got, "200")
 		}
 	})
 
@@ -58,13 +58,13 @@ func TestApplyMonitorDefaults(t *testing.T) {
 
 	t.Run("preserves configured values", func(t *testing.T) {
 		monitor := Monitor{
-			Kind:               "url",
-			Method:             "POST",
-			ExpectedStatusCode: []uint32{201, 202},
-			IntervalSeconds:    10,
-			TimeoutSeconds:     2,
-			Retries:            1,
-			Status:             StatusHealthy,
+			Kind:                "url",
+			Method:              "POST",
+			ExpectedStatusCodes: "201, 202",
+			IntervalSeconds:     10,
+			TimeoutSeconds:      2,
+			Retries:             1,
+			Status:              StatusHealthy,
 		}
 
 		applyMonitorDefaults(&monitor)
@@ -72,8 +72,8 @@ func TestApplyMonitorDefaults(t *testing.T) {
 		if monitor.Method != "POST" {
 			t.Fatalf("Method = %q, want POST", monitor.Method)
 		}
-		if got := monitor.ExpectedStatusCode; len(got) != 2 || got[0] != 201 || got[1] != 202 {
-			t.Fatalf("ExpectedStatusCode = %#v, want [201 202]", got)
+		if got := monitor.ExpectedStatusCodes; got != "201, 202" {
+			t.Fatalf("ExpectedStatusCodes = %q, want %q", got, "201, 202")
 		}
 		if monitor.IntervalSeconds != 10 || monitor.TimeoutSeconds != 2 || monitor.Retries != 1 || monitor.Status != StatusHealthy {
 			t.Fatalf("defaults overwrote configured values: %#v", monitor)

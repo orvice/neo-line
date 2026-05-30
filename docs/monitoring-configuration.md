@@ -146,8 +146,7 @@ url: https://api.example.com/health
 method: GET
 headers:
   User-Agent: neo-line-monitor
-expected_status_codes:
-  - 200
+expected_status_codes: "200-299,301,302"
 timeout_seconds: 5
 tls_verify: true
 sni_name: api.example.com
@@ -158,7 +157,7 @@ sni_name: api.example.com
 - `url`：目标 URL，scheme 支持 `http` 和 `https`
 - `method`：HTTP method，默认 `GET`
 - `headers`：请求 headers
-- `expected_status_codes`：期望状态码列表，默认 `[200]`
+- `expected_status_codes`：期望状态码表达式，字符串类型。使用逗号分隔多个条目，每个条目可以是单个状态码（如 `200`）或闭区间范围（如 `200-299`）。例如 `"200-299,301,302"`。留空时默认只接受 `200`
 - `timeout_seconds`：请求超时时间
 - `tls_verify`：是否校验证书，仅适用于 `https` URL
 - `sni_name`：自定义 TLS server name，仅适用于 `https` URL
@@ -335,8 +334,7 @@ monitors:
     headers:
       User-Agent: neo-line-monitor
     tls_verify: true
-    expected_status_codes:
-      - 200
+    expected_status_codes: "200-299"
     interval_seconds: 60
     timeout_seconds: 5
     retries: 3

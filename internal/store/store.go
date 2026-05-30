@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -40,30 +41,30 @@ type Server struct {
 
 // Monitor describes one configured check attached to a server.
 type Monitor struct {
-	ID                 string            `bson:"id" json:"id"`
-	ServerID           string            `bson:"server_id" json:"server_id"`
-	Name               string            `bson:"name" json:"name"`
-	Kind               string            `bson:"kind" json:"kind"`
-	Enabled            bool              `bson:"enabled" json:"enabled"`
-	Host               string            `bson:"host,omitempty" json:"host,omitempty"`
-	Port               uint32            `bson:"port,omitempty" json:"port,omitempty"`
-	URL                string            `bson:"url,omitempty" json:"url,omitempty"`
-	Method             string            `bson:"method,omitempty" json:"method,omitempty"`
-	Path               string            `bson:"path,omitempty" json:"path,omitempty"`
-	Headers            map[string]string `bson:"headers,omitempty" json:"headers,omitempty"`
-	ExpectedStatusCode []uint32          `bson:"expected_status_codes,omitempty" json:"expected_status_codes,omitempty"`
-	TLSVerify          bool              `bson:"tls_verify" json:"tls_verify"`
-	SNIName            string            `bson:"sni_name,omitempty" json:"sni_name,omitempty"`
-	WarningDays        uint32            `bson:"warning_days,omitempty" json:"warning_days,omitempty"`
-	CriticalDays       uint32            `bson:"critical_days,omitempty" json:"critical_days,omitempty"`
-	IntervalSeconds    uint32            `bson:"interval_seconds" json:"interval_seconds"`
-	TimeoutSeconds     uint32            `bson:"timeout_seconds" json:"timeout_seconds"`
-	Retries            uint32            `bson:"retries" json:"retries"`
-	Status             string            `bson:"status" json:"status"`
-	LastCheckAt        time.Time         `bson:"last_check_at,omitempty" json:"last_check_at,omitempty"`
-	LastStatusChangeAt time.Time         `bson:"last_status_change_at,omitempty" json:"last_status_change_at,omitempty"`
-	CreatedAt          time.Time         `bson:"created_at" json:"created_at"`
-	UpdatedAt          time.Time         `bson:"updated_at" json:"updated_at"`
+	ID                  string            `bson:"id" json:"id"`
+	ServerID            string            `bson:"server_id" json:"server_id"`
+	Name                string            `bson:"name" json:"name"`
+	Kind                string            `bson:"kind" json:"kind"`
+	Enabled             bool              `bson:"enabled" json:"enabled"`
+	Host                string            `bson:"host,omitempty" json:"host,omitempty"`
+	Port                uint32            `bson:"port,omitempty" json:"port,omitempty"`
+	URL                 string            `bson:"url,omitempty" json:"url,omitempty"`
+	Method              string            `bson:"method,omitempty" json:"method,omitempty"`
+	Path                string            `bson:"path,omitempty" json:"path,omitempty"`
+	Headers             map[string]string `bson:"headers,omitempty" json:"headers,omitempty"`
+	ExpectedStatusCodes string            `bson:"expected_status_codes,omitempty" json:"expected_status_codes,omitempty"`
+	TLSVerify           bool              `bson:"tls_verify" json:"tls_verify"`
+	SNIName             string            `bson:"sni_name,omitempty" json:"sni_name,omitempty"`
+	WarningDays         uint32            `bson:"warning_days,omitempty" json:"warning_days,omitempty"`
+	CriticalDays        uint32            `bson:"critical_days,omitempty" json:"critical_days,omitempty"`
+	IntervalSeconds     uint32            `bson:"interval_seconds" json:"interval_seconds"`
+	TimeoutSeconds      uint32            `bson:"timeout_seconds" json:"timeout_seconds"`
+	Retries             uint32            `bson:"retries" json:"retries"`
+	Status              string            `bson:"status" json:"status"`
+	LastCheckAt         time.Time         `bson:"last_check_at,omitempty" json:"last_check_at,omitempty"`
+	LastStatusChangeAt  time.Time         `bson:"last_status_change_at,omitempty" json:"last_status_change_at,omitempty"`
+	CreatedAt           time.Time         `bson:"created_at" json:"created_at"`
+	UpdatedAt           time.Time         `bson:"updated_at" json:"updated_at"`
 }
 
 type CertificateInfo struct {
@@ -371,8 +372,8 @@ func applyMonitorDefaults(monitor *Monitor) {
 	if monitor.Method == "" && (monitor.Kind == "url" || monitor.Kind == "http" || monitor.Kind == "https") {
 		monitor.Method = "GET"
 	}
-	if len(monitor.ExpectedStatusCode) == 0 && (monitor.Kind == "url" || monitor.Kind == "http" || monitor.Kind == "https") {
-		monitor.ExpectedStatusCode = []uint32{200}
+	if strings.TrimSpace(monitor.ExpectedStatusCodes) == "" && (monitor.Kind == "url" || monitor.Kind == "http" || monitor.Kind == "https") {
+		monitor.ExpectedStatusCodes = "200"
 	}
 	if monitor.Kind == "tls_port" || monitor.Kind == "tls_certificate" {
 		if monitor.Port == 0 {

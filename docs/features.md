@@ -230,7 +230,7 @@ MongoDB 配置字段：
 - URL，例如 `http://example.com/health` 或 `https://example.com/health`
 - Method，默认 `GET`
 - Headers
-- 期望状态码，默认 `200`
+- 期望状态码表达式，字符串类型，支持逗号分隔的单个状态码与闭区间范围，例如 `"200-299,301,302"`，默认 `200`
 - Timeout
 - TLS 校验模式，仅适用于 `https` URL
 - 自定义 SNI name，仅适用于 `https` URL
