@@ -7,7 +7,12 @@ import { toast } from "sonner"
 import { api, ApiError } from "@/lib/api"
 import type { Monitor } from "@/lib/types"
 import { useAuth } from "@/lib/auth"
-import { formatRelative, formatTime, monitorKindLabels } from "@/lib/format"
+import {
+  formatCertExpiry,
+  formatRelative,
+  formatTime,
+  monitorKindLabels,
+} from "@/lib/format"
 import { StatusBadge } from "@/components/status-badge"
 import { MonitorForm } from "@/components/monitor-form"
 import { ConfirmDialog } from "@/components/confirm-dialog"
@@ -188,7 +193,12 @@ export function ServerDetailPage() {
                           {monitorKindLabels[m.kind] ?? m.kind}
                         </TableCell>
                         <TableCell className="text-muted-foreground font-mono text-xs">
-                          {targetLabel(m)}
+                          <div>{targetLabel(m)}</div>
+                          {m.kind === "tls_port" && m.certificate && (
+                            <div className="mt-0.5">
+                              证书 {formatCertExpiry(m.certificate)}
+                            </div>
+                          )}
                         </TableCell>
                         <TableCell className="text-muted-foreground text-sm">
                           {m.interval_seconds}s

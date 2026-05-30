@@ -313,6 +313,9 @@ type Monitor struct {
 	// group_ids lists the monitor groups this monitor belongs to. Used for UI
 	// grouping and to drive group-level alert policies.
 	GroupIds []string `protobuf:"bytes,16,rep,name=group_ids,json=groupIds,proto3" json:"group_ids,omitempty"`
+	// certificate holds the most recently observed peer certificate metadata for
+	// TLS-based monitors. Updated after each probe that reads a certificate.
+	Certificate *CertificateInfo `protobuf:"bytes,17,opt,name=certificate,proto3" json:"certificate,omitempty"`
 	// Per-kind configuration. The set member should match `kind`.
 	//
 	// Types that are valid to be assigned to Config:
@@ -464,6 +467,13 @@ func (x *Monitor) GetUpdatedAt() *timestamppb.Timestamp {
 func (x *Monitor) GetGroupIds() []string {
 	if x != nil {
 		return x.GroupIds
+	}
+	return nil
+}
+
+func (x *Monitor) GetCertificate() *CertificateInfo {
+	if x != nil {
+		return x.Certificate
 	}
 	return nil
 }
@@ -1437,7 +1447,7 @@ const file_neoline_v1_monitor_proto_rawDesc = "" +
 	"\n" +
 	"tls_verify\x18\x02 \x01(\bR\ttlsVerify\x12!\n" +
 	"\fwarning_days\x18\x03 \x01(\rR\vwarningDays\x12#\n" +
-	"\rcritical_days\x18\x04 \x01(\rR\fcriticalDays\"\xdc\x06\n" +
+	"\rcritical_days\x18\x04 \x01(\rR\fcriticalDays\"\x9b\a\n" +
 	"\aMonitor\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\tserver_id\x18\x02 \x01(\tR\bserverId\x12\x12\n" +
@@ -1457,7 +1467,8 @@ const file_neoline_v1_monitor_proto_rawDesc = "" +
 	"created_at\x18\x0e \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
 	"updated_at\x18\x0f \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x1b\n" +
-	"\tgroup_ids\x18\x10 \x03(\tR\bgroupIds\x12)\n" +
+	"\tgroup_ids\x18\x10 \x03(\tR\bgroupIds\x12=\n" +
+	"\vcertificate\x18\x11 \x01(\v2\x1b.neoline.v1.CertificateInfoR\vcertificate\x12)\n" +
 	"\x03tcp\x18\x14 \x01(\v2\x15.neoline.v1.TcpConfigH\x00R\x03tcp\x12,\n" +
 	"\x04http\x18\x15 \x01(\v2\x16.neoline.v1.HttpConfigH\x00R\x04http\x12/\n" +
 	"\x05https\x18\x16 \x01(\v2\x17.neoline.v1.HttpsConfigH\x00R\x05https\x12K\n" +
@@ -1593,44 +1604,45 @@ var file_neoline_v1_monitor_proto_depIdxs = []int32{
 	23, // 5: neoline.v1.Monitor.last_status_change_at:type_name -> google.protobuf.Timestamp
 	23, // 6: neoline.v1.Monitor.created_at:type_name -> google.protobuf.Timestamp
 	23, // 7: neoline.v1.Monitor.updated_at:type_name -> google.protobuf.Timestamp
-	0,  // 8: neoline.v1.Monitor.tcp:type_name -> neoline.v1.TcpConfig
-	1,  // 9: neoline.v1.Monitor.http:type_name -> neoline.v1.HttpConfig
-	2,  // 10: neoline.v1.Monitor.https:type_name -> neoline.v1.HttpsConfig
-	3,  // 11: neoline.v1.Monitor.tls_certificate:type_name -> neoline.v1.TlsCertificateConfig
-	23, // 12: neoline.v1.CertificateInfo.not_before:type_name -> google.protobuf.Timestamp
-	23, // 13: neoline.v1.CertificateInfo.not_after:type_name -> google.protobuf.Timestamp
-	22, // 14: neoline.v1.CheckResult.status:type_name -> neoline.v1.HealthStatus
-	23, // 15: neoline.v1.CheckResult.started_at:type_name -> google.protobuf.Timestamp
-	23, // 16: neoline.v1.CheckResult.ended_at:type_name -> google.protobuf.Timestamp
-	24, // 17: neoline.v1.CheckResult.duration:type_name -> google.protobuf.Duration
-	25, // 18: neoline.v1.CheckResult.error_stage:type_name -> neoline.v1.ErrorStage
-	5,  // 19: neoline.v1.CheckResult.certificate:type_name -> neoline.v1.CertificateInfo
-	4,  // 20: neoline.v1.ListMonitorsResponse.monitors:type_name -> neoline.v1.Monitor
-	4,  // 21: neoline.v1.CreateMonitorRequest.monitor:type_name -> neoline.v1.Monitor
-	4,  // 22: neoline.v1.CreateMonitorResponse.monitor:type_name -> neoline.v1.Monitor
-	4,  // 23: neoline.v1.GetMonitorResponse.monitor:type_name -> neoline.v1.Monitor
-	4,  // 24: neoline.v1.UpdateMonitorRequest.monitor:type_name -> neoline.v1.Monitor
-	4,  // 25: neoline.v1.UpdateMonitorResponse.monitor:type_name -> neoline.v1.Monitor
-	23, // 26: neoline.v1.ListCheckResultsRequest.start_time:type_name -> google.protobuf.Timestamp
-	23, // 27: neoline.v1.ListCheckResultsRequest.end_time:type_name -> google.protobuf.Timestamp
-	6,  // 28: neoline.v1.ListCheckResultsResponse.results:type_name -> neoline.v1.CheckResult
-	7,  // 29: neoline.v1.MonitorService.ListMonitors:input_type -> neoline.v1.ListMonitorsRequest
-	9,  // 30: neoline.v1.MonitorService.CreateMonitor:input_type -> neoline.v1.CreateMonitorRequest
-	11, // 31: neoline.v1.MonitorService.GetMonitor:input_type -> neoline.v1.GetMonitorRequest
-	13, // 32: neoline.v1.MonitorService.UpdateMonitor:input_type -> neoline.v1.UpdateMonitorRequest
-	15, // 33: neoline.v1.MonitorService.DeleteMonitor:input_type -> neoline.v1.DeleteMonitorRequest
-	17, // 34: neoline.v1.MonitorService.ListCheckResults:input_type -> neoline.v1.ListCheckResultsRequest
-	8,  // 35: neoline.v1.MonitorService.ListMonitors:output_type -> neoline.v1.ListMonitorsResponse
-	10, // 36: neoline.v1.MonitorService.CreateMonitor:output_type -> neoline.v1.CreateMonitorResponse
-	12, // 37: neoline.v1.MonitorService.GetMonitor:output_type -> neoline.v1.GetMonitorResponse
-	14, // 38: neoline.v1.MonitorService.UpdateMonitor:output_type -> neoline.v1.UpdateMonitorResponse
-	16, // 39: neoline.v1.MonitorService.DeleteMonitor:output_type -> neoline.v1.DeleteMonitorResponse
-	18, // 40: neoline.v1.MonitorService.ListCheckResults:output_type -> neoline.v1.ListCheckResultsResponse
-	35, // [35:41] is the sub-list for method output_type
-	29, // [29:35] is the sub-list for method input_type
-	29, // [29:29] is the sub-list for extension type_name
-	29, // [29:29] is the sub-list for extension extendee
-	0,  // [0:29] is the sub-list for field type_name
+	5,  // 8: neoline.v1.Monitor.certificate:type_name -> neoline.v1.CertificateInfo
+	0,  // 9: neoline.v1.Monitor.tcp:type_name -> neoline.v1.TcpConfig
+	1,  // 10: neoline.v1.Monitor.http:type_name -> neoline.v1.HttpConfig
+	2,  // 11: neoline.v1.Monitor.https:type_name -> neoline.v1.HttpsConfig
+	3,  // 12: neoline.v1.Monitor.tls_certificate:type_name -> neoline.v1.TlsCertificateConfig
+	23, // 13: neoline.v1.CertificateInfo.not_before:type_name -> google.protobuf.Timestamp
+	23, // 14: neoline.v1.CertificateInfo.not_after:type_name -> google.protobuf.Timestamp
+	22, // 15: neoline.v1.CheckResult.status:type_name -> neoline.v1.HealthStatus
+	23, // 16: neoline.v1.CheckResult.started_at:type_name -> google.protobuf.Timestamp
+	23, // 17: neoline.v1.CheckResult.ended_at:type_name -> google.protobuf.Timestamp
+	24, // 18: neoline.v1.CheckResult.duration:type_name -> google.protobuf.Duration
+	25, // 19: neoline.v1.CheckResult.error_stage:type_name -> neoline.v1.ErrorStage
+	5,  // 20: neoline.v1.CheckResult.certificate:type_name -> neoline.v1.CertificateInfo
+	4,  // 21: neoline.v1.ListMonitorsResponse.monitors:type_name -> neoline.v1.Monitor
+	4,  // 22: neoline.v1.CreateMonitorRequest.monitor:type_name -> neoline.v1.Monitor
+	4,  // 23: neoline.v1.CreateMonitorResponse.monitor:type_name -> neoline.v1.Monitor
+	4,  // 24: neoline.v1.GetMonitorResponse.monitor:type_name -> neoline.v1.Monitor
+	4,  // 25: neoline.v1.UpdateMonitorRequest.monitor:type_name -> neoline.v1.Monitor
+	4,  // 26: neoline.v1.UpdateMonitorResponse.monitor:type_name -> neoline.v1.Monitor
+	23, // 27: neoline.v1.ListCheckResultsRequest.start_time:type_name -> google.protobuf.Timestamp
+	23, // 28: neoline.v1.ListCheckResultsRequest.end_time:type_name -> google.protobuf.Timestamp
+	6,  // 29: neoline.v1.ListCheckResultsResponse.results:type_name -> neoline.v1.CheckResult
+	7,  // 30: neoline.v1.MonitorService.ListMonitors:input_type -> neoline.v1.ListMonitorsRequest
+	9,  // 31: neoline.v1.MonitorService.CreateMonitor:input_type -> neoline.v1.CreateMonitorRequest
+	11, // 32: neoline.v1.MonitorService.GetMonitor:input_type -> neoline.v1.GetMonitorRequest
+	13, // 33: neoline.v1.MonitorService.UpdateMonitor:input_type -> neoline.v1.UpdateMonitorRequest
+	15, // 34: neoline.v1.MonitorService.DeleteMonitor:input_type -> neoline.v1.DeleteMonitorRequest
+	17, // 35: neoline.v1.MonitorService.ListCheckResults:input_type -> neoline.v1.ListCheckResultsRequest
+	8,  // 36: neoline.v1.MonitorService.ListMonitors:output_type -> neoline.v1.ListMonitorsResponse
+	10, // 37: neoline.v1.MonitorService.CreateMonitor:output_type -> neoline.v1.CreateMonitorResponse
+	12, // 38: neoline.v1.MonitorService.GetMonitor:output_type -> neoline.v1.GetMonitorResponse
+	14, // 39: neoline.v1.MonitorService.UpdateMonitor:output_type -> neoline.v1.UpdateMonitorResponse
+	16, // 40: neoline.v1.MonitorService.DeleteMonitor:output_type -> neoline.v1.DeleteMonitorResponse
+	18, // 41: neoline.v1.MonitorService.ListCheckResults:output_type -> neoline.v1.ListCheckResultsResponse
+	36, // [36:42] is the sub-list for method output_type
+	30, // [30:36] is the sub-list for method input_type
+	30, // [30:30] is the sub-list for extension type_name
+	30, // [30:30] is the sub-list for extension extendee
+	0,  // [0:30] is the sub-list for field type_name
 }
 
 func init() { file_neoline_v1_monitor_proto_init() }

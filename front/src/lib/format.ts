@@ -1,4 +1,4 @@
-import type { HealthStatus } from "./types"
+import type { CertificateInfo, HealthStatus } from "./types"
 
 const ZERO_TIME_PREFIX = "0001-01-01"
 
@@ -33,6 +33,25 @@ export function formatRelative(value?: string): string {
   if (hour < 24) return `${hour} 小时前`
   const day = Math.round(hour / 24)
   return `${day} 天前`
+}
+
+export function formatDate(value?: string): string {
+  if (isZeroTime(value)) return "-"
+  const date = new Date(value as string)
+  if (Number.isNaN(date.getTime())) return "-"
+  return date.toLocaleDateString("zh-CN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  })
+}
+
+export function formatCertExpiry(cert?: CertificateInfo): string {
+  if (!cert || isZeroTime(cert.not_after)) return "-"
+  const date = formatDate(cert.not_after)
+  if (cert.days_remaining === undefined) return date
+  if (cert.days_remaining < 0) return `${date} · 已过期`
+  return `${date} · 剩 ${cert.days_remaining} 天`
 }
 
 export function formatDuration(ms: number): string {

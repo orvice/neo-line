@@ -59,6 +59,7 @@ export interface Monitor {
   status: HealthStatus
   last_check_at?: string
   last_status_change_at?: string
+  certificate?: CertificateInfo
   created_at: string
   updated_at: string
 }

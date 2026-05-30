@@ -66,6 +66,7 @@ type Monitor struct {
 	Status              string            `bson:"status" json:"status"`
 	LastCheckAt         time.Time         `bson:"last_check_at,omitempty" json:"last_check_at,omitempty"`
 	LastStatusChangeAt  time.Time         `bson:"last_status_change_at,omitempty" json:"last_status_change_at,omitempty"`
+	Certificate         *CertificateInfo  `bson:"certificate,omitempty" json:"certificate,omitempty"`
 	CreatedAt           time.Time         `bson:"created_at" json:"created_at"`
 	UpdatedAt           time.Time         `bson:"updated_at" json:"updated_at"`
 }

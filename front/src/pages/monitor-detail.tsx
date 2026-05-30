@@ -65,7 +65,8 @@ export function MonitorDetailPage() {
     )
   }
 
-  const latestCert = results.find((r) => r.certificate)?.certificate
+  const latestCert =
+    monitor.certificate ?? results.find((r) => r.certificate)?.certificate
 
   return (
     <div className="animate-enter flex flex-col gap-6">

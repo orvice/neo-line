@@ -60,6 +60,9 @@ func (s *MongoStore) SaveCheckResult(ctx context.Context, result CheckResult) (s
 
 	now := time.Now().UTC()
 	update := bson.M{"status": result.Status, "last_check_at": result.EndedAt, "updated_at": now}
+	if result.Certificate != nil {
+		update["certificate"] = result.Certificate
+	}
 
 	var current Monitor
 	var prevStatus string

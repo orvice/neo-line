@@ -68,6 +68,10 @@ message Monitor {
   // grouping and to drive group-level alert policies.
   repeated string group_ids = 16;
 
+  // certificate holds the most recently observed peer certificate metadata for
+  // TLS-based monitors. Updated after each probe that reads a certificate.
+  CertificateInfo certificate = 17;
+
   // Per-kind configuration. The set member should match `kind`.
   oneof config {
     TcpConfig tcp = 20;
