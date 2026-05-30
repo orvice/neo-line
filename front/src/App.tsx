@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from "react-router-dom"
 import { useAuth } from "./lib/auth"
 import { Layout } from "./components/layout"
 import { LoginPage } from "./pages/login"
+import { StatusPage } from "./pages/status"
 import { ServersPage } from "./pages/servers"
 import { ServerDetailPage } from "./pages/server-detail"
 import { MonitorDetailPage } from "./pages/monitor-detail"
@@ -25,7 +26,8 @@ export function App() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route element={<Layout />}>
-        <Route path="/" element={<ServersPage />} />
+        <Route path="/" element={<StatusPage />} />
+        <Route path="/servers" element={<ServersPage />} />
         <Route path="/servers/:serverId" element={<ServerDetailPage />} />
         <Route
           path="/servers/:serverId/monitors/:monitorId"

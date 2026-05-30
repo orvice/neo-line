@@ -52,6 +52,18 @@ export function Layout() {
                   : "text-muted-foreground hover:bg-accent")
               }
             >
+              <Activity className="size-4" />
+              状态
+            </NavLink>
+            <NavLink
+              to="/servers"
+              className={({ isActive }) =>
+                "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm transition " +
+                (isActive
+                  ? "bg-accent text-accent-foreground"
+                  : "text-muted-foreground hover:bg-accent")
+              }
+            >
               <Server className="size-4" />
               服务器
             </NavLink>
