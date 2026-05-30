@@ -12,7 +12,7 @@ import (
 func newRouter() *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
-	Register(r, nil)
+	Register(r, nil, nil)
 	return r
 }
 

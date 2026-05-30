@@ -26,19 +26,30 @@ const (
 
 // Server is a monitored host. MongoDB is the source of truth for these fields.
 type Server struct {
-	ID                 string    `bson:"id" json:"id"`
-	Name               string    `bson:"name" json:"name"`
-	Host               string    `bson:"host" json:"host"`
-	Environment        string    `bson:"environment,omitempty" json:"environment,omitempty"`
-	Region             string    `bson:"region,omitempty" json:"region,omitempty"`
-	Tags               []string  `bson:"tags,omitempty" json:"tags,omitempty"`
-	SortOrder          uint32    `bson:"sort_order" json:"sort_order"`
-	Enabled            bool      `bson:"enabled" json:"enabled"`
-	HealthStatus       string    `bson:"health_status" json:"health_status"`
-	LastStatusChangeAt time.Time `bson:"last_status_change_at,omitempty" json:"last_status_change_at,omitempty"`
-	LastCheckAt        time.Time `bson:"last_check_at,omitempty" json:"last_check_at,omitempty"`
-	CreatedAt          time.Time `bson:"created_at" json:"created_at"`
-	UpdatedAt          time.Time `bson:"updated_at" json:"updated_at"`
+	ID                 string     `bson:"id" json:"id"`
+	Name               string     `bson:"name" json:"name"`
+	Host               string     `bson:"host" json:"host"`
+	Environment        string     `bson:"environment,omitempty" json:"environment,omitempty"`
+	Region             string     `bson:"region,omitempty" json:"region,omitempty"`
+	Tags               []string   `bson:"tags,omitempty" json:"tags,omitempty"`
+	SortOrder          uint32     `bson:"sort_order" json:"sort_order"`
+	Enabled            bool       `bson:"enabled" json:"enabled"`
+	HealthStatus       string     `bson:"health_status" json:"health_status"`
+	LastStatusChangeAt time.Time  `bson:"last_status_change_at,omitempty" json:"last_status_change_at,omitempty"`
+	LastCheckAt        time.Time  `bson:"last_check_at,omitempty" json:"last_check_at,omitempty"`
+	SSH                *ServerSSH `bson:"ssh,omitempty" json:"ssh,omitempty"`
+	CreatedAt          time.Time  `bson:"created_at" json:"created_at"`
+	UpdatedAt          time.Time  `bson:"updated_at" json:"updated_at"`
+}
+
+// ServerSSH holds per-server SSH overrides. The private key always comes from
+// the global runtime config (key_path); only connection targeting is stored
+// here. Empty Host/Port/User inherit the server Host and the global defaults.
+type ServerSSH struct {
+	Enabled bool   `bson:"enabled" json:"enabled"`
+	Host    string `bson:"host,omitempty" json:"host,omitempty"`
+	Port    uint32 `bson:"port,omitempty" json:"port,omitempty"`
+	User    string `bson:"user,omitempty" json:"user,omitempty"`
 }
 
 // Monitor describes one configured check attached to a server.
@@ -104,6 +115,30 @@ type ServerEvent struct {
 	CurrentStatus  string    `bson:"current_status" json:"current_status"`
 	Reason         string    `bson:"reason,omitempty" json:"reason,omitempty"`
 	OccurredAt     time.Time `bson:"occurred_at" json:"occurred_at"`
+}
+
+// AuditLog records user/API/MCP operations for accountability. It intentionally
+// stores only metadata and sanitized inputs; secrets and full request bodies are
+// not persisted.
+type AuditLog struct {
+	ID           string            `bson:"id" json:"id"`
+	Source       string            `bson:"source" json:"source"`
+	ActorID      string            `bson:"actor_id,omitempty" json:"actor_id,omitempty"`
+	ActorEmail   string            `bson:"actor_email,omitempty" json:"actor_email,omitempty"`
+	TokenPrefix  string            `bson:"token_prefix,omitempty" json:"token_prefix,omitempty"`
+	Action       string            `bson:"action" json:"action"`
+	ResourceType string            `bson:"resource_type,omitempty" json:"resource_type,omitempty"`
+	ResourceID   string            `bson:"resource_id,omitempty" json:"resource_id,omitempty"`
+	Method       string            `bson:"method,omitempty" json:"method,omitempty"`
+	Path         string            `bson:"path,omitempty" json:"path,omitempty"`
+	StatusCode   int               `bson:"status_code,omitempty" json:"status_code,omitempty"`
+	Success      bool              `bson:"success" json:"success"`
+	Error        string            `bson:"error,omitempty" json:"error,omitempty"`
+	DurationMS   int64             `bson:"duration_ms" json:"duration_ms"`
+	RemoteIP     string            `bson:"remote_ip,omitempty" json:"remote_ip,omitempty"`
+	UserAgent    string            `bson:"user_agent,omitempty" json:"user_agent,omitempty"`
+	Metadata     map[string]string `bson:"metadata,omitempty" json:"metadata,omitempty"`
+	OccurredAt   time.Time         `bson:"occurred_at" json:"occurred_at"`
 }
 
 type ServerHealth struct {
@@ -218,6 +253,41 @@ func (s *MongoStore) EnsureServerIndexes(ctx context.Context) error {
 		return err
 	}
 	return nil
+}
+
+// EnsureAuditIndexes creates indexes for operation audit logs.
+func (s *MongoStore) EnsureAuditIndexes(ctx context.Context) error {
+	if _, err := s.auditLogs().Indexes().CreateOne(ctx, mongo.IndexModel{
+		Keys:    bson.D{{Key: "occurred_at", Value: -1}},
+		Options: options.Index().SetName("by_occurred_at"),
+	}); err != nil {
+		return err
+	}
+	if _, err := s.auditLogs().Indexes().CreateOne(ctx, mongo.IndexModel{
+		Keys: bson.D{
+			{Key: "source", Value: 1},
+			{Key: "action", Value: 1},
+			{Key: "occurred_at", Value: -1},
+		},
+		Options: options.Index().SetName("by_source_action_occurred_at"),
+	}); err != nil {
+		return err
+	}
+	return nil
+}
+
+// SaveAuditLog persists one audit log entry. Callers should treat failures as
+// non-fatal to the user operation.
+func (s *MongoStore) SaveAuditLog(ctx context.Context, entry AuditLog) error {
+	now := time.Now().UTC()
+	if entry.ID == "" {
+		entry.ID = "aud_" + uuid.NewString()
+	}
+	if entry.OccurredAt.IsZero() {
+		entry.OccurredAt = now
+	}
+	_, err := s.auditLogs().InsertOne(ctx, entry)
+	return err
 }
 
 func (s *MongoStore) Close(ctx context.Context) error {
@@ -553,10 +623,11 @@ func IsNotFound(err error) bool {
 	return errors.Is(err, mongo.ErrNoDocuments)
 }
 
-func (s *MongoStore) servers() *mongo.Collection  { return s.database.Collection("servers") }
-func (s *MongoStore) monitors() *mongo.Collection { return s.database.Collection("monitors") }
-func (s *MongoStore) results() *mongo.Collection  { return s.database.Collection("monitor_results") }
-func (s *MongoStore) events() *mongo.Collection   { return s.database.Collection("server_events") }
+func (s *MongoStore) servers() *mongo.Collection   { return s.database.Collection("servers") }
+func (s *MongoStore) monitors() *mongo.Collection  { return s.database.Collection("monitors") }
+func (s *MongoStore) results() *mongo.Collection   { return s.database.Collection("monitor_results") }
+func (s *MongoStore) events() *mongo.Collection    { return s.database.Collection("server_events") }
+func (s *MongoStore) auditLogs() *mongo.Collection { return s.database.Collection("audit_logs") }
 func (s *MongoStore) settingsColl() *mongo.Collection {
 	return s.database.Collection("settings")
 }

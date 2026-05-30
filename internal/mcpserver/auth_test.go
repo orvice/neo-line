@@ -29,7 +29,7 @@ func (f *fakeTokenStore) CountMcpTokens(_ context.Context) (int64, error) {
 func newRouterWithStore(st store.Store) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
-	Register(r, st)
+	Register(r, st, nil)
 	return r
 }
 

@@ -37,6 +37,25 @@ redis:
 - `store.redis.<key>`：Butterfly Redis store 配置，框架会按 key 初始化 client。
 - `redis.session_client_key`：neo-line 用于存储 Bearer token 的 Redis client key，默认 `session`。
 
+### 全局 SSH 配置（可选）
+
+SSH 远程执行能力的全局配置放在运行时配置的 `ssh` 下。这是一个 bootstrap/运维级配置，与监控业务配置不同：私钥是绑定到运行 neo-line 的主机文件系统的本地资源，因此**不存入 MongoDB**，只在此处指定路径。
+
+```yaml
+ssh:
+  key_path: "/etc/neo-line/id_ed25519"
+  user: "root"
+  port: 22
+  known_hosts_path: "/etc/neo-line/known_hosts"
+```
+
+- `ssh.key_path`：本地私钥路径，是所有 SSH 连接的唯一私钥来源。为空时不启用 SSH 相关 MCP 工具。私钥不存在或解析失败会导致服务启动报错。
+- `ssh.user`：默认 SSH 用户，server 未覆盖时使用，默认 `root`。
+- `ssh.port`：默认 SSH 端口，server 未覆盖时使用，默认 `22`。
+- `ssh.known_hosts_path`：known_hosts 文件路径，配置后按其校验主机密钥；为空时不校验主机密钥（仅适用于受信任内网）。
+
+每台 server 通过 `servers` 文档中的 `ssh` 子文档启用并覆盖连接目标，详见下文「Server」。
+
 配置读写规则：
 
 - Server、monitor、阈值、启停状态和探测参数都存储在 MongoDB。
@@ -53,6 +72,7 @@ redis:
 - `monitor_groups`
 - `monitor_results`
 - `server_events`
+- `audit_logs`
 - `tls_certificates`
 - `alert_events`
 
@@ -73,6 +93,11 @@ tags:
   - production
 sort_order: 10
 enabled: true
+ssh:
+  enabled: true
+  host: 10.0.0.12
+  port: 22
+  user: ops
 ```
 
 字段说明：
@@ -85,6 +110,11 @@ enabled: true
 - `tags`：标签
 - `sort_order`：展示排序值，默认 `0`；启动时会为历史 server 补齐缺失的 `sort_order: 0`
 - `enabled`：是否启用该 server 的监控
+- `ssh`：可选的 SSH 连接子文档，用于 SSH 远程执行（私钥来自全局 `ssh.key_path`，此处不保存密钥）：
+  - `ssh.enabled`：是否允许对该 server 执行 SSH 工具，默认 `false`
+  - `ssh.host`：SSH 连接地址，为空时回落到 server 的 `host`
+  - `ssh.port`：SSH 端口，为空时回落到全局 `ssh.port`（默认 `22`）
+  - `ssh.user`：SSH 用户，为空时回落到全局 `ssh.user`（默认 `root`）
 - `health_status`：当前聚合健康状态，创建时默认 `Unknown`
 - `last_status_change_at`：最近一次状态变化时间
 - `last_check_at`：最近一次关联 monitor 检查时间

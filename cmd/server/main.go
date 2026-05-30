@@ -17,6 +17,7 @@ import (
 	"github.com/orvice/neo-line/internal/httpapi"
 	"github.com/orvice/neo-line/internal/mcpserver"
 	"github.com/orvice/neo-line/internal/scheduler"
+	nlssh "github.com/orvice/neo-line/internal/ssh"
 	"github.com/orvice/neo-line/internal/store"
 )
 
@@ -24,6 +25,19 @@ type runtimeConfig struct {
 	Mongo   mongoConfig   `yaml:"mongo"`
 	Redis   redisConfig   `yaml:"redis"`
 	Archive archiveConfig `yaml:"archive"`
+	SSH     sshConfig     `yaml:"ssh"`
+}
+
+type sshConfig struct {
+	// KeyPath is the local private key used for all SSH connections. Empty
+	// disables the SSH MCP tools.
+	KeyPath string `yaml:"key_path"`
+	// User is the default SSH user when a server does not override it.
+	User string `yaml:"user"`
+	// Port is the default SSH port when a server does not override it.
+	Port int `yaml:"port"`
+	// KnownHostsPath enables host key verification. Empty skips verification.
+	KnownHostsPath string `yaml:"known_hosts_path"`
 }
 
 type mongoConfig struct {
@@ -57,6 +71,7 @@ func main() {
 	defer cancel()
 
 	var mongoStore *store.MongoStore
+	var sshRunner *nlssh.Runner
 	var archiver archive.Archiver = archive.Noop{}
 	archiveEnabled := false
 	appCfg := &runtimeConfig{}
@@ -72,7 +87,7 @@ func main() {
 				c.JSON(http.StatusOK, gin.H{"message": "pong"})
 			})
 			httpapi.Register(r, mongoStore)
-			mcpserver.Register(r, mongoStore)
+			mcpserver.Register(r, mongoStore, sshRunner)
 		},
 		InitFunc: []func() error{
 			func() error {
@@ -86,6 +101,9 @@ func main() {
 				}
 				if err := mongoStore.EnsureServerIndexes(ctx); err != nil {
 					return fmt.Errorf("ensure server indexes: %w", err)
+				}
+				if err := mongoStore.EnsureAuditIndexes(ctx); err != nil {
+					return fmt.Errorf("ensure audit indexes: %w", err)
 				}
 				if err := mongoStore.EnsureGroupIndexes(ctx); err != nil {
 					return fmt.Errorf("ensure group indexes: %w", err)
@@ -106,6 +124,19 @@ func main() {
 				}
 				if archiveEnabled {
 					log.Println("S3 check-result archiving enabled")
+				}
+
+				sshRunner, err = nlssh.New(nlssh.Config{
+					KeyPath:        appCfg.SSH.KeyPath,
+					User:           appCfg.SSH.User,
+					Port:           appCfg.SSH.Port,
+					KnownHostsPath: appCfg.SSH.KnownHostsPath,
+				})
+				if err != nil {
+					return fmt.Errorf("init ssh: %w", err)
+				}
+				if sshRunner != nil {
+					log.Println("SSH MCP tools enabled")
 				}
 				return nil
 			},

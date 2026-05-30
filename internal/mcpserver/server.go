@@ -9,144 +9,159 @@ import (
 	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+	nlssh "github.com/orvice/neo-line/internal/ssh"
 	"github.com/orvice/neo-line/internal/store"
 )
 
-// NewServer builds an MCP server with read and write monitoring tools.
-func NewServer(st store.Store) *mcp.Server {
+// NewServer builds an MCP server with read and write monitoring tools. When ssh
+// is non-nil, SSH command tools (ssh_exec, ssh_test_connection) are registered.
+func NewServer(st store.Store, ssh *nlssh.Runner) *mcp.Server {
 	srv := mcp.NewServer(&mcp.Implementation{Name: "neo-line", Version: "v1.0.0"}, nil)
-	t := &tools{store: st}
+	t := &tools{store: st, ssh: ssh}
 
-	mcp.AddTool(srv, &mcp.Tool{
+	addAuditedTool(srv, &mcp.Tool{
 		Name:        "list_servers",
 		Description: "List monitored servers, optionally filtered by environment and tags.",
-	}, t.listServers)
+	}, st, t.listServers)
 
-	mcp.AddTool(srv, &mcp.Tool{
+	addAuditedTool(srv, &mcp.Tool{
 		Name:        "get_server",
 		Description: "Get a single monitored server by id.",
-	}, t.getServer)
+	}, st, t.getServer)
 
-	mcp.AddTool(srv, &mcp.Tool{
+	addAuditedTool(srv, &mcp.Tool{
 		Name:        "get_server_health",
 		Description: "Get aggregated health status for a server, including monitor counts per state.",
-	}, t.getServerHealth)
+	}, st, t.getServerHealth)
 
-	mcp.AddTool(srv, &mcp.Tool{
+	addAuditedTool(srv, &mcp.Tool{
 		Name:        "list_server_events",
 		Description: "List health status change events for a server, most recent first.",
-	}, t.listServerEvents)
+	}, st, t.listServerEvents)
 
-	mcp.AddTool(srv, &mcp.Tool{
+	addAuditedTool(srv, &mcp.Tool{
 		Name:        "list_monitors",
 		Description: "List monitors (checks) attached to a server.",
-	}, t.listMonitors)
+	}, st, t.listMonitors)
 
-	mcp.AddTool(srv, &mcp.Tool{
+	addAuditedTool(srv, &mcp.Tool{
 		Name:        "get_monitor",
 		Description: "Get a single monitor by server id and monitor id.",
-	}, t.getMonitor)
+	}, st, t.getMonitor)
 
-	mcp.AddTool(srv, &mcp.Tool{
+	addAuditedTool(srv, &mcp.Tool{
 		Name:        "list_check_results",
 		Description: "List recent check results for a monitor, optionally filtered by an RFC3339 time range.",
-	}, t.listCheckResults)
+	}, st, t.listCheckResults)
 
-	mcp.AddTool(srv, &mcp.Tool{
+	addAuditedTool(srv, &mcp.Tool{
 		Name:        "get_monitor_uptime",
 		Description: "Get Kuma-style rolling uptime windows for a monitor by server id and monitor id.",
-	}, t.getMonitorUptime)
+	}, st, t.getMonitorUptime)
 
-	mcp.AddTool(srv, &mcp.Tool{
+	addAuditedTool(srv, &mcp.Tool{
 		Name:        "list_monitor_groups",
 		Description: "List monitor groups (flat) with their alert policies.",
-	}, t.listMonitorGroups)
+	}, st, t.listMonitorGroups)
 
-	mcp.AddTool(srv, &mcp.Tool{
+	addAuditedTool(srv, &mcp.Tool{
 		Name:        "get_monitor_group",
 		Description: "Get a single monitor group by id, including its alert policy.",
-	}, t.getMonitorGroup)
+	}, st, t.getMonitorGroup)
 
-	mcp.AddTool(srv, &mcp.Tool{
+	addAuditedTool(srv, &mcp.Tool{
 		Name:        "list_monitors_by_group",
 		Description: "List monitors that belong to the given monitor group (across servers).",
-	}, t.listMonitorsByGroup)
+	}, st, t.listMonitorsByGroup)
 
-	mcp.AddTool(srv, &mcp.Tool{
+	addAuditedTool(srv, &mcp.Tool{
 		Name:        "create_server",
 		Description: "Create a new monitored server. Returns the persisted server with its generated id.",
-	}, t.createServer)
+	}, st, t.createServer)
 
-	mcp.AddTool(srv, &mcp.Tool{
+	addAuditedTool(srv, &mcp.Tool{
 		Name:        "update_server",
 		Description: "Update an existing server by id. Replaces mutable fields; preserves health and timestamps.",
-	}, t.updateServer)
+	}, st, t.updateServer)
 
-	mcp.AddTool(srv, &mcp.Tool{
+	addAuditedTool(srv, &mcp.Tool{
 		Name:        "delete_server",
 		Description: "Delete a server by id. Also deletes monitors attached to that server.",
-	}, t.deleteServer)
+	}, st, t.deleteServer)
 
-	mcp.AddTool(srv, &mcp.Tool{
+	addAuditedTool(srv, &mcp.Tool{
 		Name:        "create_monitor",
 		Description: "Create a new monitor attached to a server. Returns the persisted monitor.",
-	}, t.createMonitor)
+	}, st, t.createMonitor)
 
-	mcp.AddTool(srv, &mcp.Tool{
+	addAuditedTool(srv, &mcp.Tool{
 		Name:        "update_monitor",
 		Description: "Update an existing monitor by server id and monitor id.",
-	}, t.updateMonitor)
+	}, st, t.updateMonitor)
 
-	mcp.AddTool(srv, &mcp.Tool{
+	addAuditedTool(srv, &mcp.Tool{
 		Name:        "delete_monitor",
 		Description: "Delete a monitor by server id and monitor id.",
-	}, t.deleteMonitor)
+	}, st, t.deleteMonitor)
 
-	mcp.AddTool(srv, &mcp.Tool{
+	addAuditedTool(srv, &mcp.Tool{
 		Name:        "create_monitor_group",
 		Description: "Create a new monitor group with its alert policy.",
-	}, t.createMonitorGroup)
+	}, st, t.createMonitorGroup)
 
-	mcp.AddTool(srv, &mcp.Tool{
+	addAuditedTool(srv, &mcp.Tool{
 		Name:        "update_monitor_group",
 		Description: "Update an existing monitor group by id, including its alert policy.",
-	}, t.updateMonitorGroup)
+	}, st, t.updateMonitorGroup)
 
-	mcp.AddTool(srv, &mcp.Tool{
+	addAuditedTool(srv, &mcp.Tool{
 		Name:        "delete_monitor_group",
 		Description: "Delete a monitor group by id.",
-	}, t.deleteMonitorGroup)
+	}, st, t.deleteMonitorGroup)
 
-	mcp.AddTool(srv, &mcp.Tool{
+	addAuditedTool(srv, &mcp.Tool{
 		Name:        "list_notify_groups",
 		Description: "List notify groups (reusable buckets of alert delivery channels).",
-	}, t.listNotifyGroups)
+	}, st, t.listNotifyGroups)
 
-	mcp.AddTool(srv, &mcp.Tool{
+	addAuditedTool(srv, &mcp.Tool{
 		Name:        "get_notify_group",
 		Description: "Get a single notify group by id, including its channels.",
-	}, t.getNotifyGroup)
+	}, st, t.getNotifyGroup)
 
-	mcp.AddTool(srv, &mcp.Tool{
+	addAuditedTool(srv, &mcp.Tool{
 		Name:        "create_notify_group",
 		Description: "Create a new notify group with its delivery channels (webhook, telegram, discord, mastodon).",
-	}, t.createNotifyGroup)
+	}, st, t.createNotifyGroup)
 
-	mcp.AddTool(srv, &mcp.Tool{
+	addAuditedTool(srv, &mcp.Tool{
 		Name:        "update_notify_group",
 		Description: "Update an existing notify group by id, including its channels.",
-	}, t.updateNotifyGroup)
+	}, st, t.updateNotifyGroup)
 
-	mcp.AddTool(srv, &mcp.Tool{
+	addAuditedTool(srv, &mcp.Tool{
 		Name:        "delete_notify_group",
 		Description: "Delete a notify group by id. Also removes it from monitor groups that reference it.",
-	}, t.deleteNotifyGroup)
+	}, st, t.deleteNotifyGroup)
+
+	if ssh != nil {
+		addAuditedTool(srv, &mcp.Tool{
+			Name:        "ssh_exec",
+			Description: "Execute a shell command on a server over SSH using the configured local key. The server must have ssh.enabled set.",
+		}, st, t.sshExec)
+
+		addAuditedTool(srv, &mcp.Tool{
+			Name:        "ssh_test_connection",
+			Description: "Open an SSH connection to a server and run a trivial command to verify connectivity and authentication.",
+		}, st, t.sshTestConnection)
+	}
 
 	return srv
 }
 
 type tools struct {
 	store store.Store
+	ssh   *nlssh.Runner
 }
 
 type pageInput struct {

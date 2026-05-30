@@ -18,6 +18,7 @@ type API struct {
 func Register(r *gin.Engine, st store.Store) {
 	api := &API{store: st}
 	v1 := r.Group("/api/v1")
+	v1.Use(api.auditMiddleware())
 	{
 		// Public authentication endpoint.
 		v1.POST("/auth/login", api.login)
