@@ -58,8 +58,14 @@ func TestStatusCodeAccepted(t *testing.T) {
 		{name: "range accepts in-range code", code: 204, expected: "200-299", want: true},
 		{name: "range rejects out-of-range code", code: 301, expected: "200-299", want: false},
 		{name: "mixed list and range", code: 302, expected: "200-299, 301, 302", want: true},
-		{name: "range boundaries inclusive", code: 299, expected: "200-299", want: true},
+		{name: "range upper boundary inclusive", code: 299, expected: "200-299", want: true},
+		{name: "range lower boundary inclusive", code: 200, expected: "200-299", want: true},
 		{name: "ignores malformed segment", code: 200, expected: "abc, 200", want: true},
+		{name: "all-malformed expression rejects", code: 200, expected: "abc, def", want: false},
+		{name: "reversed range is ignored", code: 250, expected: "299-200", want: false},
+		{name: "whitespace around dash", code: 250, expected: " 200 - 299 ", want: true},
+		{name: "trailing comma tolerated", code: 200, expected: "200,", want: true},
+		{name: "non-empty expr does not fall back to 200", code: 200, expected: "404", want: false},
 	}
 
 	for _, tt := range tests {
