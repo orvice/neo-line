@@ -6,14 +6,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
-	"os"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	awsconfig "github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/google/uuid"
 	"github.com/orvice/neo-line/internal/store"
@@ -30,38 +26,14 @@ const (
 	flushTimeout = 30 * time.Second
 )
 
-// Config holds the resolved S3 archive settings.
+// Config holds the resolved S3 archive settings. The S3 client itself is
+// supplied separately by the caller (typically from Butterfly's store/s3
+// integration).
 type Config struct {
 	Bucket        string
 	Prefix        string
-	Region        string
-	Endpoint      string
-	AccessKey     string
-	SecretKey     string
-	UsePathStyle  bool
 	BatchSize     int
 	FlushInterval time.Duration
-}
-
-// configFromEnv reads archive settings from the environment. The second return
-// value is false when archiving is disabled (no bucket configured).
-func configFromEnv() (Config, bool) {
-	bucket := os.Getenv("ARCHIVE_S3_BUCKET")
-	if bucket == "" {
-		return Config{}, false
-	}
-	cfg := Config{
-		Bucket:        bucket,
-		Prefix:        envOr("ARCHIVE_S3_PREFIX", defaultPrefix),
-		Region:        firstNonEmpty(os.Getenv("ARCHIVE_S3_REGION"), os.Getenv("AWS_REGION"), "us-east-1"),
-		Endpoint:      os.Getenv("ARCHIVE_S3_ENDPOINT"),
-		AccessKey:     os.Getenv("ARCHIVE_S3_ACCESS_KEY"),
-		SecretKey:     os.Getenv("ARCHIVE_S3_SECRET_KEY"),
-		UsePathStyle:  os.Getenv("ARCHIVE_S3_ENDPOINT") != "",
-		BatchSize:     envInt("ARCHIVE_S3_BATCH_SIZE", defaultBatchSize),
-		FlushInterval: time.Duration(envInt("ARCHIVE_S3_FLUSH_SECONDS", int(defaultFlushInterval/time.Second))) * time.Second,
-	}
-	return cfg, true
 }
 
 // uploader is the subset of the S3 client the archiver needs, narrowed so the
@@ -78,38 +50,24 @@ type S3Archiver struct {
 	ch     chan store.CheckResult
 }
 
-// New builds an Archiver from the environment. When ARCHIVE_S3_BUCKET is unset
-// it returns a Noop archiver and enabled=false. Otherwise it initializes an S3
-// client (honoring a custom endpoint and static credentials for S3-compatible
-// stores such as MinIO) and returns an *S3Archiver.
-func New(ctx context.Context, logger *slog.Logger) (Archiver, bool, error) {
-	cfg, ok := configFromEnv()
-	if !ok {
+// New builds an Archiver around the given S3 client and configuration. When
+// either the client or the bucket is empty the archiver is disabled: it
+// returns a Noop archiver and enabled=false. Callers should resolve the
+// client and bucket from Butterfly's store/s3 integration:
+//
+//	client := bfs3.GetClient(key)
+//	bucket := bfs3.GetBucket(key)
+func New(client *s3.Client, cfg Config, logger *slog.Logger) (Archiver, bool, error) {
+	if client == nil || cfg.Bucket == "" {
 		return Noop{}, false, nil
 	}
-
-	loadOpts := []func(*awsconfig.LoadOptions) error{awsconfig.WithRegion(cfg.Region)}
-	if cfg.AccessKey != "" && cfg.SecretKey != "" {
-		loadOpts = append(loadOpts, awsconfig.WithCredentialsProvider(
-			credentials.NewStaticCredentialsProvider(cfg.AccessKey, cfg.SecretKey, ""),
-		))
-	}
-	awsCfg, err := awsconfig.LoadDefaultConfig(ctx, loadOpts...)
-	if err != nil {
-		return nil, false, fmt.Errorf("load aws config: %w", err)
-	}
-
-	client := s3.NewFromConfig(awsCfg, func(o *s3.Options) {
-		if cfg.Endpoint != "" {
-			o.BaseEndpoint = aws.String(cfg.Endpoint)
-		}
-		o.UsePathStyle = cfg.UsePathStyle
-	})
-
 	return newWithClient(client, cfg, logger), true, nil
 }
 
 func newWithClient(client uploader, cfg Config, logger *slog.Logger) *S3Archiver {
+	if cfg.Prefix == "" {
+		cfg.Prefix = defaultPrefix
+	}
 	if cfg.BatchSize <= 0 {
 		cfg.BatchSize = defaultBatchSize
 	}
@@ -233,29 +191,4 @@ func objectKey(prefix string, now time.Time, count int) string {
 		count,
 		uuid.NewString()[:8],
 	)
-}
-
-func envOr(key, fallback string) string {
-	if v := os.Getenv(key); v != "" {
-		return v
-	}
-	return fallback
-}
-
-func envInt(key string, fallback int) int {
-	if v := os.Getenv(key); v != "" {
-		if n, err := strconv.Atoi(v); err == nil && n > 0 {
-			return n
-		}
-	}
-	return fallback
-}
-
-func firstNonEmpty(values ...string) string {
-	for _, v := range values {
-		if v != "" {
-			return v
-		}
-	}
-	return ""
 }

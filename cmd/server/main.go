@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"butterfly.orx.me/core/app"
+	bfs3 "butterfly.orx.me/core/store/s3"
 	"github.com/gin-gonic/gin"
 	"github.com/orvice/neo-line/internal/alert"
 	"github.com/orvice/neo-line/internal/archive"
@@ -20,8 +21,9 @@ import (
 )
 
 type runtimeConfig struct {
-	Mongo mongoConfig `yaml:"mongo"`
-	Redis redisConfig `yaml:"redis"`
+	Mongo   mongoConfig   `yaml:"mongo"`
+	Redis   redisConfig   `yaml:"redis"`
+	Archive archiveConfig `yaml:"archive"`
 }
 
 type mongoConfig struct {
@@ -34,6 +36,18 @@ type mongoConfig struct {
 type redisConfig struct {
 	// SessionClientKey selects the Butterfly Redis client configured at store.redis.<key>.
 	SessionClientKey string `yaml:"session_client_key"`
+}
+
+type archiveConfig struct {
+	// ClientKey selects the Butterfly S3 client configured at store.s3.<key>.
+	// Empty disables check-result archiving.
+	ClientKey string `yaml:"client_key"`
+	// Prefix is the object-key prefix for archived NDJSON batches.
+	Prefix string `yaml:"prefix"`
+	// BatchSize is the max number of results per uploaded object.
+	BatchSize int `yaml:"batch_size"`
+	// FlushIntervalSeconds is the upper bound between flushes.
+	FlushIntervalSeconds int `yaml:"flush_interval_seconds"`
 }
 
 func (c *runtimeConfig) Print() {}
@@ -77,7 +91,7 @@ func main() {
 					return fmt.Errorf("bootstrap admin user: %w", err)
 				}
 
-				archiver, archiveEnabled, err = archive.New(ctx, slog.Default())
+				archiver, archiveEnabled, err = newArchiver(appCfg.Archive)
 				if err != nil {
 					return fmt.Errorf("init archive: %w", err)
 				}
@@ -120,6 +134,27 @@ func main() {
 
 	application := app.New(config)
 	application.Run()
+}
+
+// newArchiver wires the S3 archiver against a Butterfly-managed S3 client.
+// When ArchiveConfig.ClientKey is empty or the client/bucket are missing from
+// Butterfly configuration, archiving is disabled and a Noop archiver is
+// returned.
+func newArchiver(cfg archiveConfig) (archive.Archiver, bool, error) {
+	if cfg.ClientKey == "" {
+		return archive.Noop{}, false, nil
+	}
+	client := bfs3.GetClient(cfg.ClientKey)
+	bucket := bfs3.GetBucket(cfg.ClientKey)
+	if client == nil || bucket == "" {
+		return nil, false, fmt.Errorf("archive.client_key %q is not configured; set store.s3.%s.bucket in Butterfly configuration", cfg.ClientKey, cfg.ClientKey)
+	}
+	return archive.New(client, archive.Config{
+		Bucket:        bucket,
+		Prefix:        cfg.Prefix,
+		BatchSize:     cfg.BatchSize,
+		FlushInterval: time.Duration(cfg.FlushIntervalSeconds) * time.Second,
+	}, slog.Default())
 }
 
 // bootstrapAdmin initializes the admin account from the environment.
