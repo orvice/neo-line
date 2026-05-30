@@ -32,6 +32,7 @@ type Server struct {
 	Environment        string    `bson:"environment,omitempty" json:"environment,omitempty"`
 	Region             string    `bson:"region,omitempty" json:"region,omitempty"`
 	Tags               []string  `bson:"tags,omitempty" json:"tags,omitempty"`
+	SortOrder          uint32    `bson:"sort_order" json:"sort_order"`
 	Enabled            bool      `bson:"enabled" json:"enabled"`
 	HealthStatus       string    `bson:"health_status" json:"health_status"`
 	LastStatusChangeAt time.Time `bson:"last_status_change_at,omitempty" json:"last_status_change_at,omitempty"`
@@ -197,6 +198,27 @@ func New(ctx context.Context, clientKey, database, sessionClientKey string) (*Mo
 	return &MongoStore{client: client, database: client.Database(database), sessionClient: sessionClient}, nil
 }
 
+// EnsureServerIndexes creates the indexes used by the servers collection and
+// backfills fields introduced after initial deployments.
+func (s *MongoStore) EnsureServerIndexes(ctx context.Context) error {
+	if _, err := s.servers().UpdateMany(ctx,
+		bson.M{"sort_order": bson.M{"$exists": false}},
+		bson.M{"$set": bson.M{"sort_order": 0}},
+	); err != nil {
+		return err
+	}
+	if _, err := s.servers().Indexes().CreateOne(ctx, mongo.IndexModel{
+		Keys: bson.D{
+			{Key: "sort_order", Value: 1},
+			{Key: "created_at", Value: -1},
+		},
+		Options: options.Index().SetName("by_sort_order_created_at"),
+	}); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (s *MongoStore) Close(ctx context.Context) error {
 	if s == nil {
 		return nil
@@ -221,7 +243,7 @@ func (s *MongoStore) ListServers(ctx context.Context, environment string, tags [
 	if len(tags) > 0 {
 		filter["tags"] = bson.M{"$all": tags}
 	}
-	return findPage[Server](ctx, s.servers(), filter, limit, pageToken, bson.D{{Key: "created_at", Value: -1}})
+	return findPage[Server](ctx, s.servers(), filter, limit, pageToken, bson.D{{Key: "sort_order", Value: 1}, {Key: "created_at", Value: -1}})
 }
 
 func (s *MongoStore) CreateServer(ctx context.Context, server Server) (Server, error) {

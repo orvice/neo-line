@@ -29,6 +29,7 @@ interface FormState {
   environment: string
   region: string
   tags: string
+  sortOrder: string
   enabled: boolean
 }
 
@@ -39,6 +40,8 @@ function toFormState(server?: Server): FormState {
     environment: server?.environment ?? "",
     region: server?.region ?? "",
     tags: server?.tags?.join(", ") ?? "",
+    sortOrder:
+      server?.sort_order !== undefined ? String(server.sort_order) : "0",
     enabled: server?.enabled ?? true,
   }
 }
@@ -63,6 +66,7 @@ export function ServerForm({ open, onOpenChange, server }: ServerFormProps) {
           .split(",")
           .map((t) => t.trim())
           .filter(Boolean),
+        sort_order: form.sortOrder ? Number(form.sortOrder) : 0,
         enabled: form.enabled,
       }
       return isEdit
@@ -144,6 +148,20 @@ export function ServerForm({ open, onOpenChange, server }: ServerFormProps) {
               value={form.tags}
               onChange={(e) => setForm({ ...form, tags: e.target.value })}
               placeholder="web, edge"
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="sort-order">排序值（越小越靠前）</Label>
+            <Input
+              id="sort-order"
+              type="number"
+              min="0"
+              step="1"
+              value={form.sortOrder}
+              onChange={(e) =>
+                setForm({ ...form, sortOrder: e.target.value })
+              }
+              placeholder="0"
             />
           </div>
           <div className="flex items-center justify-between rounded-md border p-3">

@@ -84,6 +84,9 @@ func main() {
 				if err := mongoStore.EnsureAuthIndexes(ctx); err != nil {
 					return fmt.Errorf("ensure auth indexes: %w", err)
 				}
+				if err := mongoStore.EnsureServerIndexes(ctx); err != nil {
+					return fmt.Errorf("ensure server indexes: %w", err)
+				}
 				if err := mongoStore.EnsureGroupIndexes(ctx); err != nil {
 					return fmt.Errorf("ensure group indexes: %w", err)
 				}

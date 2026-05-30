@@ -58,7 +58,7 @@ redis:
 
 ## Server
 
-Server 是主要的被监控资源。
+Server 是主要的被监控资源。Server 列表按 `sort_order ASC, created_at DESC` 返回，`sort_order` 越小越靠前。
 
 MongoDB document 字段示例：
 
@@ -71,6 +71,7 @@ region: ap-east-1
 tags:
   - api
   - production
+sort_order: 10
 enabled: true
 ```
 
@@ -82,6 +83,7 @@ enabled: true
 - `environment`：环境，例如 production、staging
 - `region`：区域或数据中心
 - `tags`：标签
+- `sort_order`：展示排序值，默认 `0`；启动时会为历史 server 补齐缺失的 `sort_order: 0`
 - `enabled`：是否启用该 server 的监控
 - `health_status`：当前聚合健康状态，创建时默认 `Unknown`
 - `last_status_change_at`：最近一次状态变化时间

@@ -22,6 +22,8 @@ message Server {
   google.protobuf.Timestamp last_check_at = 10;
   google.protobuf.Timestamp created_at = 11;
   google.protobuf.Timestamp updated_at = 12;
+  // sort_order controls display order. Smaller values are listed first.
+  uint32 sort_order = 13;
 }
 
 // ServerEvent records a server health-status transition.

@@ -38,8 +38,10 @@ type Server struct {
 	LastCheckAt        *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=last_check_at,json=lastCheckAt,proto3" json:"last_check_at,omitempty"`
 	CreatedAt          *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt          *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	// sort_order controls display order. Smaller values are listed first.
+	SortOrder     uint32 `protobuf:"varint,13,opt,name=sort_order,json=sortOrder,proto3" json:"sort_order,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Server) Reset() {
@@ -154,6 +156,13 @@ func (x *Server) GetUpdatedAt() *timestamppb.Timestamp {
 		return x.UpdatedAt
 	}
 	return nil
+}
+
+func (x *Server) GetSortOrder() uint32 {
+	if x != nil {
+		return x.SortOrder
+	}
+	return 0
 }
 
 // ServerEvent records a server health-status transition.
@@ -1035,7 +1044,7 @@ var File_neoline_v1_server_proto protoreflect.FileDescriptor
 const file_neoline_v1_server_proto_rawDesc = "" +
 	"\n" +
 	"\x17neoline/v1/server.proto\x12\n" +
-	"neoline.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x17neoline/v1/common.proto\"\xec\x03\n" +
+	"neoline.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x17neoline/v1/common.proto\"\x8b\x04\n" +
 	"\x06Server\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x12\n" +
@@ -1051,7 +1060,9 @@ const file_neoline_v1_server_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\x93\x02\n" +
+	"updated_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x1d\n" +
+	"\n" +
+	"sort_order\x18\r \x01(\rR\tsortOrder\"\x93\x02\n" +
 	"\vServerEvent\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\tserver_id\x18\x02 \x01(\tR\bserverId\x12A\n" +

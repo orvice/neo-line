@@ -149,7 +149,7 @@ export function ServersPage() {
       <Card className="py-0">
         <CardContent className="px-0">
           {isLoading ? (
-            <TableSkeleton rows={6} columns={user ? 6 : 5} />
+            <TableSkeleton rows={6} columns={user ? 7 : 6} />
           ) : isError ? (
             <div className="text-destructive p-8 text-center">
               {error instanceof ApiError ? error.message : "加载失败"}
@@ -167,6 +167,7 @@ export function ServersPage() {
                   <TableHead>名称</TableHead>
                   <TableHead>主机</TableHead>
                   <TableHead>环境</TableHead>
+                  <TableHead>排序</TableHead>
                   <TableHead>最近检查</TableHead>
                   {user && <TableHead className="text-right">操作</TableHead>}
                 </TableRow>
@@ -195,6 +196,9 @@ export function ServersPage() {
                     </TableCell>
                     <TableCell className="text-muted-foreground text-sm">
                       {s.environment || "-"}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-sm tabular-nums">
+                      {s.sort_order ?? 0}
                     </TableCell>
                     <TableCell className="text-muted-foreground text-sm">
                       {formatRelative(s.last_check_at)}

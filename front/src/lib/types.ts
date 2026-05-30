@@ -26,6 +26,7 @@ export interface Server {
   environment?: string
   region?: string
   tags?: string[]
+  sort_order: number
   enabled: boolean
   health_status: HealthStatus
   last_status_change_at?: string

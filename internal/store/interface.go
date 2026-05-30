@@ -48,6 +48,7 @@ type Store interface {
 	GetSettings(ctx context.Context) (Settings, error)
 	UpdateSettings(ctx context.Context, settings Settings) (Settings, error)
 
+	EnsureServerIndexes(ctx context.Context) error
 	EnsureAuthIndexes(ctx context.Context) error
 	EnsureGroupIndexes(ctx context.Context) error
 	EnsureNotifyGroupIndexes(ctx context.Context) error
