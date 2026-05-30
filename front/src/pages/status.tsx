@@ -60,30 +60,33 @@ function uptimePct(uptime?: MonitorUptime): string {
 
 export function StatusPage() {
   const settings = useSettings()
-  const groupsQuery = useQuery({
-    queryKey: ["status-groups"],
-    queryFn: () => api.listMonitorGroups({ page_size: 200 }),
+  const serversQuery = useQuery({
+    queryKey: ["status-servers"],
+    queryFn: () => api.listServers({ page_size: 200 }),
     refetchInterval: 60_000,
   })
-  const groups = groupsQuery.data?.groups ?? []
+  const servers = useMemo(
+    () => (serversQuery.data?.servers ?? []).filter((s) => s.enabled),
+    [serversQuery.data]
+  )
 
   const monitorQueries = useQueries({
-    queries: groups.map((g) => ({
-      queryKey: ["status-group-monitors", g.id],
-      queryFn: () => api.listMonitorsByGroup(g.id, { page_size: 200 }),
+    queries: servers.map((s) => ({
+      queryKey: ["status-server-monitors", s.id],
+      queryFn: () => api.listMonitors(s.id, { page_size: 200 }),
       refetchInterval: 60_000,
     })),
   })
 
   const sections = useMemo(
     () =>
-      groups.map((group, i) => ({
-        group,
+      servers.map((server, i) => ({
+        server,
         monitors: (monitorQueries[i]?.data?.monitors ?? []).filter(
           (m) => m.enabled
         ),
       })),
-    [groups, monitorQueries]
+    [servers, monitorQueries]
   )
 
   const allMonitors = useMemo(
@@ -127,9 +130,9 @@ export function StatusPage() {
     return times[times.length - 1]
   }, [allMonitors])
 
-  const loading = groupsQuery.isLoading
+  const loading = serversQuery.isLoading
   const isFetching =
-    groupsQuery.isFetching || monitorQueries.some((q) => q.isFetching)
+    serversQuery.isFetching || monitorQueries.some((q) => q.isFetching)
 
   return (
     <div className="animate-enter mx-auto flex max-w-3xl flex-col gap-6">
@@ -153,7 +156,7 @@ export function StatusPage() {
               variant="ghost"
               size="icon"
               onClick={() => {
-                groupsQuery.refetch()
+                serversQuery.refetch()
                 monitorQueries.forEach((q) => q.refetch())
                 uptimeQueries.forEach((q) => q.refetch())
               }}
@@ -170,46 +173,52 @@ export function StatusPage() {
       {!loading && sections.length === 0 && (
         <Card>
           <CardContent className="text-muted-foreground py-10 text-center">
-            暂无监控分组，请在分组中添加监控项后展示在状态页。
+            暂无启用的服务器，请添加服务器并配置监控项后展示在状态页。
           </CardContent>
         </Card>
       )}
 
-      {sections.map(({ group, monitors }) => (
-        <Card key={group.id}>
-          <CardContent className="flex flex-col gap-1 py-4">
-            <div className="mb-1 flex items-baseline justify-between gap-2">
-              <h2 className="font-semibold">{group.name}</h2>
-              <Link
-                to={`/monitor-groups/${group.id}`}
-                className="text-muted-foreground hover:text-foreground text-xs"
-              >
-                详情
-              </Link>
-            </div>
-            {group.description && (
-              <p className="text-muted-foreground mb-1 text-xs">
-                {group.description}
-              </p>
-            )}
-            {monitors.length === 0 ? (
-              <p className="text-muted-foreground py-3 text-sm">
-                该分组下暂无启用的监控项
-              </p>
-            ) : (
-              <div className="divide-y">
-                {monitors.map((m) => (
-                  <MonitorRow
-                    key={m.id}
-                    monitor={m}
-                    uptime={uptimeByMonitor.get(m.id)}
-                  />
-                ))}
+      {sections.map(({ server, monitors }) => {
+        const serverStatus = monitors.length
+          ? worst(monitors.map((m) => normalizeStatus(m.status)))
+          : normalizeStatus(server.health_status)
+        return (
+          <Card key={server.id}>
+            <CardContent className="flex flex-col gap-1 py-4">
+              <div className="mb-1 flex items-baseline justify-between gap-2">
+                <div className="flex min-w-0 items-center gap-2">
+                  <StatusDot status={serverStatus} />
+                  <h2 className="truncate font-semibold">{server.name}</h2>
+                  <span className="text-muted-foreground truncate text-xs">
+                    {server.host}
+                  </span>
+                </div>
+                <Link
+                  to={`/servers/${server.id}`}
+                  className="text-muted-foreground hover:text-foreground shrink-0 text-xs"
+                >
+                  详情
+                </Link>
               </div>
-            )}
-          </CardContent>
-        </Card>
-      ))}
+              {monitors.length === 0 ? (
+                <p className="text-muted-foreground py-3 text-sm">
+                  该服务器下暂无启用的监控项
+                </p>
+              ) : (
+                <div className="divide-y">
+                  {monitors.map((m) => (
+                    <MonitorRow
+                      key={m.id}
+                      monitor={m}
+                      uptime={uptimeByMonitor.get(m.id)}
+                    />
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )
+      })}
     </div>
   )
 }
@@ -226,9 +235,12 @@ function MonitorRow({
       <StatusDot status={monitor.status} />
       <Link
         to={`/servers/${monitor.server_id}/monitors/${monitor.id}`}
-        className="min-w-0 flex-1 truncate text-sm font-medium hover:underline"
+        className="flex min-w-0 flex-1 items-center gap-2 truncate text-sm font-medium hover:underline"
       >
-        {monitor.name}
+        <span className="truncate">{monitor.name}</span>
+        <span className="bg-muted text-muted-foreground shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide">
+          {monitor.kind}
+        </span>
       </Link>
       <div className="hidden sm:block">
         <HeartbeatBar beats={uptime?.heartbeats ?? []} max={30} />
