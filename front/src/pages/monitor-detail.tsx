@@ -12,6 +12,7 @@ import {
 } from "@/lib/format"
 import { StatusBadge } from "@/components/status-badge"
 import { HeartbeatBar } from "@/components/heartbeat-bar"
+import { TableSkeleton } from "@/components/table-skeleton"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -67,7 +68,7 @@ export function MonitorDetailPage() {
   const latestCert = results.find((r) => r.certificate)?.certificate
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="animate-enter flex flex-col gap-6">
       <Button asChild variant="ghost" size="sm" className="w-fit -ml-2">
         <Link to={`/servers/${serverId}`}>
           <ArrowLeft />
@@ -119,11 +120,11 @@ export function MonitorDetailPage() {
             )}
             {monitor.kind === "url" && (
               <>
-                <Field label="URL" value={monitor.url ?? "—"} />
+                <Field label="URL" value={monitor.url ?? "-"} />
                 <Field label="方法" value={monitor.method ?? "GET"} />
                 <Field
                   label="期望状态码"
-                  value={monitor.expected_status_codes?.join(", ") ?? "—"}
+                  value={monitor.expected_status_codes || "-"}
                 />
               </>
             )}
@@ -163,8 +164,8 @@ export function MonitorDetailPage() {
           </CardHeader>
           <CardContent>
             <dl className="grid grid-cols-1 gap-x-8 gap-y-3 text-sm sm:grid-cols-2">
-              <Field label="主题" value={latestCert.subject || "—"} />
-              <Field label="颁发者" value={latestCert.issuer || "—"} />
+              <Field label="主题" value={latestCert.subject || "-"} />
+              <Field label="颁发者" value={latestCert.issuer || "-"} />
               <Field
                 label="有效期至"
                 value={formatTime(latestCert.not_after)}
@@ -174,16 +175,16 @@ export function MonitorDetailPage() {
                 value={
                   latestCert.days_remaining !== undefined
                     ? `${latestCert.days_remaining} 天`
-                    : "—"
+                    : "-"
                 }
               />
               <Field
                 label="DNS 名称"
-                value={latestCert.dns_names?.join(", ") || "—"}
+                value={latestCert.dns_names?.join(", ") || "-"}
               />
               <Field
                 label="序列号"
-                value={latestCert.serial_number || "—"}
+                value={latestCert.serial_number || "-"}
               />
             </dl>
           </CardContent>
@@ -195,9 +196,7 @@ export function MonitorDetailPage() {
         <Card className="py-0">
           <CardContent className="px-0">
             {resultsQuery.isLoading ? (
-              <div className="text-muted-foreground p-8 text-center">
-                加载中…
-              </div>
+              <TableSkeleton rows={6} columns={5} />
             ) : results.length === 0 ? (
               <div className="text-muted-foreground p-10 text-center">
                 暂无检查记录
@@ -238,7 +237,7 @@ function ResultRow({ result }: { result: CheckResult }) {
         {formatDuration(result.duration_ms)}
       </TableCell>
       <TableCell className="text-muted-foreground text-sm">
-        {result.http_status_code || "—"}
+        {result.http_status_code || "-"}
       </TableCell>
       <TableCell className="text-muted-foreground max-w-md truncate text-xs">
         {result.error_message
@@ -257,14 +256,14 @@ function UptimeStat({
   window?: UptimeWindow
 }) {
   const hasData = window && window.total > 0
-  const pct = hasData ? (window.uptime * 100).toFixed(2) : "—"
+  const pct = hasData ? (window.uptime * 100).toFixed(2) : "-"
   const color = !hasData
     ? "text-muted-foreground"
     : window.uptime >= 0.99
-      ? "text-emerald-400"
+      ? "text-emerald-600 dark:text-emerald-400"
       : window.uptime >= 0.95
-        ? "text-amber-400"
-        : "text-red-400"
+        ? "text-amber-600 dark:text-amber-400"
+        : "text-red-600 dark:text-red-400"
   return (
     <div className="flex flex-col gap-0.5">
       <span className="text-muted-foreground text-xs">{label}</span>
@@ -274,9 +273,9 @@ function UptimeStat({
       </span>
       {hasData && (
         <span className="text-muted-foreground text-xs">
-          {window.total} 次检查 · {window.down} 次失败
+          {window.total} 次检查，{window.down} 次失败
           {window.avg_latency_ms > 0 &&
-            ` · 平均 ${Math.round(window.avg_latency_ms)} ms`}
+            `，平均 ${Math.round(window.avg_latency_ms)} ms`}
         </span>
       )}
     </div>

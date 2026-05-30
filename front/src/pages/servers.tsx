@@ -11,9 +11,11 @@ import { formatRelative, statusLabels } from "@/lib/format"
 import { StatusBadge } from "@/components/status-badge"
 import { ServerForm } from "@/components/server-form"
 import { ConfirmDialog } from "@/components/confirm-dialog"
+import { TableSkeleton } from "@/components/table-skeleton"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   Table,
   TableBody,
@@ -86,7 +88,7 @@ export function ServersPage() {
   })
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="animate-enter flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold">服务器</h1>
@@ -125,7 +127,13 @@ export function ServersPage() {
               <span className="text-muted-foreground text-xs">
                 {statusLabels[status]}
               </span>
-              <span className="text-2xl font-semibold">{summary[status]}</span>
+              {isLoading ? (
+                <Skeleton className="h-8 w-10" />
+              ) : (
+                <span className="text-2xl font-semibold tabular-nums">
+                  {summary[status]}
+                </span>
+              )}
             </CardContent>
           </Card>
         ))}
@@ -141,7 +149,7 @@ export function ServersPage() {
       <Card className="py-0">
         <CardContent className="px-0">
           {isLoading ? (
-            <div className="text-muted-foreground p-8 text-center">加载中…</div>
+            <TableSkeleton rows={6} columns={user ? 6 : 5} />
           ) : isError ? (
             <div className="text-destructive p-8 text-center">
               {error instanceof ApiError ? error.message : "加载失败"}
@@ -186,7 +194,7 @@ export function ServersPage() {
                       {s.host}
                     </TableCell>
                     <TableCell className="text-muted-foreground text-sm">
-                      {s.environment || "—"}
+                      {s.environment || "-"}
                     </TableCell>
                     <TableCell className="text-muted-foreground text-sm">
                       {formatRelative(s.last_check_at)}

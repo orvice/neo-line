@@ -7,9 +7,9 @@ export function isZeroTime(value?: string): boolean {
 }
 
 export function formatTime(value?: string): string {
-  if (isZeroTime(value)) return "—"
+  if (isZeroTime(value)) return "-"
   const date = new Date(value as string)
-  if (Number.isNaN(date.getTime())) return "—"
+  if (Number.isNaN(date.getTime())) return "-"
   return date.toLocaleString("zh-CN", {
     year: "numeric",
     month: "2-digit",
@@ -23,7 +23,7 @@ export function formatTime(value?: string): string {
 export function formatRelative(value?: string): string {
   if (isZeroTime(value)) return "从未"
   const date = new Date(value as string)
-  if (Number.isNaN(date.getTime())) return "—"
+  if (Number.isNaN(date.getTime())) return "-"
   const diff = Date.now() - date.getTime()
   const sec = Math.round(diff / 1000)
   if (sec < 60) return `${sec} 秒前`

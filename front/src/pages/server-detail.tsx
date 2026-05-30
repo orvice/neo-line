@@ -11,6 +11,7 @@ import { formatRelative, formatTime, monitorKindLabels } from "@/lib/format"
 import { StatusBadge } from "@/components/status-badge"
 import { MonitorForm } from "@/components/monitor-form"
 import { ConfirmDialog } from "@/components/confirm-dialog"
+import { TableSkeleton } from "@/components/table-skeleton"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
@@ -79,7 +80,7 @@ export function ServerDetailPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="animate-enter flex flex-col gap-6">
       <Button asChild variant="ghost" size="sm" className="w-fit -ml-2">
         <Link to="/">
           <ArrowLeft />
@@ -146,9 +147,7 @@ export function ServerDetailPage() {
           <Card className="py-0">
             <CardContent className="px-0">
               {monitorsQuery.isLoading ? (
-                <div className="text-muted-foreground p-8 text-center">
-                  加载中…
-                </div>
+                <TableSkeleton rows={4} columns={user ? 7 : 6} />
               ) : monitors.length === 0 ? (
                 <div className="text-muted-foreground p-10 text-center">
                   暂无监控项
@@ -259,7 +258,7 @@ export function ServerDetailPage() {
                           </div>
                         </TableCell>
                         <TableCell className="text-muted-foreground text-sm">
-                          {e.reason || "—"}
+                          {e.reason || "-"}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -305,7 +304,7 @@ function SummaryCard({ label, value }: { label: string; value: number }) {
 }
 
 function targetLabel(m: Monitor): string {
-  if (m.kind === "url") return m.url ?? "—"
+  if (m.kind === "url") return m.url ?? "-"
   if (m.host || m.port) return `${m.host ?? ""}${m.port ? `:${m.port}` : ""}`
-  return "—"
+  return "-"
 }

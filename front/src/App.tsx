@@ -9,7 +9,7 @@ import { MonitorDetailPage } from "./pages/monitor-detail"
 
 function LoadingScreen() {
   return (
-    <div className="flex h-screen items-center justify-center text-muted-foreground">
+    <div className="flex min-h-[100dvh] items-center justify-center text-muted-foreground">
       加载中…
     </div>
   )

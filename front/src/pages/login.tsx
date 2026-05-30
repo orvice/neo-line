@@ -43,11 +43,11 @@ export function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+    <div className="flex min-h-[100dvh] items-center justify-center bg-background px-4">
       <Card className="w-full max-w-sm">
         <CardHeader className="items-center text-center">
           <div className="mb-2 flex items-center gap-2 text-lg font-semibold">
-            <Activity className="size-5 text-emerald-400" />
+            <Activity className="size-5 text-emerald-600 dark:text-emerald-400" />
             neo-line
           </div>
           <CardTitle>登录管理后台</CardTitle>
