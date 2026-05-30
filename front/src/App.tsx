@@ -11,6 +11,7 @@ import { MonitorDetailPage } from "./pages/monitor-detail"
 import { MonitorGroupsPage } from "./pages/monitor-groups"
 import { MonitorGroupDetailPage } from "./pages/monitor-group-detail"
 import { SettingsPage } from "./pages/settings"
+import { McpPage } from "./pages/mcp"
 
 function LoadingScreen() {
   return (
@@ -75,6 +76,14 @@ export function App() {
           element={
             <RequireAuth>
               <MonitorGroupDetailPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/mcp"
+          element={
+            <RequireAuth>
+              <McpPage />
             </RequireAuth>
           }
         />

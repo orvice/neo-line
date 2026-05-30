@@ -1,6 +1,6 @@
-// Package mcpserver exposes neo-line monitoring data over the Model Context
-// Protocol using the official Go SDK. It serves read-only tools backed by the
-// MongoDB store over the streamable HTTP transport.
+// Package mcpserver exposes neo-line monitoring data and configuration over
+// the Model Context Protocol using the official Go SDK. It serves read and
+// write tools backed by the MongoDB store over the streamable HTTP transport.
 package mcpserver
 
 import (
@@ -12,7 +12,7 @@ import (
 	"github.com/orvice/neo-line/internal/store"
 )
 
-// NewServer builds an MCP server with read-only monitoring tools.
+// NewServer builds an MCP server with read and write monitoring tools.
 func NewServer(st store.Store) *mcp.Server {
 	srv := mcp.NewServer(&mcp.Implementation{Name: "neo-line", Version: "v1.0.0"}, nil)
 	t := &tools{store: st}
@@ -71,6 +71,51 @@ func NewServer(st store.Store) *mcp.Server {
 		Name:        "list_monitors_by_group",
 		Description: "List monitors that belong to the given monitor group (across servers).",
 	}, t.listMonitorsByGroup)
+
+	mcp.AddTool(srv, &mcp.Tool{
+		Name:        "create_server",
+		Description: "Create a new monitored server. Returns the persisted server with its generated id.",
+	}, t.createServer)
+
+	mcp.AddTool(srv, &mcp.Tool{
+		Name:        "update_server",
+		Description: "Update an existing server by id. Replaces mutable fields; preserves health and timestamps.",
+	}, t.updateServer)
+
+	mcp.AddTool(srv, &mcp.Tool{
+		Name:        "delete_server",
+		Description: "Delete a server by id. Also deletes monitors attached to that server.",
+	}, t.deleteServer)
+
+	mcp.AddTool(srv, &mcp.Tool{
+		Name:        "create_monitor",
+		Description: "Create a new monitor attached to a server. Returns the persisted monitor.",
+	}, t.createMonitor)
+
+	mcp.AddTool(srv, &mcp.Tool{
+		Name:        "update_monitor",
+		Description: "Update an existing monitor by server id and monitor id.",
+	}, t.updateMonitor)
+
+	mcp.AddTool(srv, &mcp.Tool{
+		Name:        "delete_monitor",
+		Description: "Delete a monitor by server id and monitor id.",
+	}, t.deleteMonitor)
+
+	mcp.AddTool(srv, &mcp.Tool{
+		Name:        "create_monitor_group",
+		Description: "Create a new monitor group with its alert policy.",
+	}, t.createMonitorGroup)
+
+	mcp.AddTool(srv, &mcp.Tool{
+		Name:        "update_monitor_group",
+		Description: "Update an existing monitor group by id, including its alert policy.",
+	}, t.updateMonitorGroup)
+
+	mcp.AddTool(srv, &mcp.Tool{
+		Name:        "delete_monitor_group",
+		Description: "Delete a monitor group by id.",
+	}, t.deleteMonitorGroup)
 
 	return srv
 }
@@ -265,6 +310,108 @@ func (t *tools) listMonitorsByGroup(ctx context.Context, _ *mcp.CallToolRequest,
 		return nil, listMonitorsOutput{}, err
 	}
 	return nil, listMonitorsOutput{Monitors: monitors, NextPageToken: next}, nil
+}
+
+type createServerInput struct {
+	Server store.Server `json:"server" jsonschema:"server fields; id is optional and will be generated when empty"`
+}
+
+func (t *tools) createServer(ctx context.Context, _ *mcp.CallToolRequest, in createServerInput) (*mcp.CallToolResult, serverOutput, error) {
+	created, err := t.store.CreateServer(ctx, in.Server)
+	if err != nil {
+		return nil, serverOutput{}, err
+	}
+	return nil, serverOutput{Server: created}, nil
+}
+
+type updateServerInput struct {
+	ID     string       `json:"id" jsonschema:"the server id"`
+	Server store.Server `json:"server" jsonschema:"updated server fields; replaces mutable fields"`
+}
+
+func (t *tools) updateServer(ctx context.Context, _ *mcp.CallToolRequest, in updateServerInput) (*mcp.CallToolResult, serverOutput, error) {
+	updated, err := t.store.UpdateServer(ctx, in.ID, in.Server)
+	if err != nil {
+		return nil, serverOutput{}, mapErr(err)
+	}
+	return nil, serverOutput{Server: updated}, nil
+}
+
+type deleteOutput struct {
+	Deleted bool `json:"deleted"`
+}
+
+func (t *tools) deleteServer(ctx context.Context, _ *mcp.CallToolRequest, in serverIDInput) (*mcp.CallToolResult, deleteOutput, error) {
+	if err := t.store.DeleteServer(ctx, in.ID); err != nil {
+		return nil, deleteOutput{}, mapErr(err)
+	}
+	return nil, deleteOutput{Deleted: true}, nil
+}
+
+type createMonitorInput struct {
+	ServerID string        `json:"server_id" jsonschema:"the server id this monitor belongs to"`
+	Monitor  store.Monitor `json:"monitor" jsonschema:"monitor fields; id is optional and will be generated when empty"`
+}
+
+func (t *tools) createMonitor(ctx context.Context, _ *mcp.CallToolRequest, in createMonitorInput) (*mcp.CallToolResult, monitorOutput, error) {
+	created, err := t.store.CreateMonitor(ctx, in.ServerID, in.Monitor)
+	if err != nil {
+		return nil, monitorOutput{}, mapErr(err)
+	}
+	return nil, monitorOutput{Monitor: created}, nil
+}
+
+type updateMonitorInput struct {
+	ServerID  string        `json:"server_id" jsonschema:"the server id"`
+	MonitorID string        `json:"monitor_id" jsonschema:"the monitor id"`
+	Monitor   store.Monitor `json:"monitor" jsonschema:"updated monitor fields"`
+}
+
+func (t *tools) updateMonitor(ctx context.Context, _ *mcp.CallToolRequest, in updateMonitorInput) (*mcp.CallToolResult, monitorOutput, error) {
+	updated, err := t.store.UpdateMonitor(ctx, in.ServerID, in.MonitorID, in.Monitor)
+	if err != nil {
+		return nil, monitorOutput{}, mapErr(err)
+	}
+	return nil, monitorOutput{Monitor: updated}, nil
+}
+
+func (t *tools) deleteMonitor(ctx context.Context, _ *mcp.CallToolRequest, in getMonitorInput) (*mcp.CallToolResult, deleteOutput, error) {
+	if err := t.store.DeleteMonitor(ctx, in.ServerID, in.MonitorID); err != nil {
+		return nil, deleteOutput{}, mapErr(err)
+	}
+	return nil, deleteOutput{Deleted: true}, nil
+}
+
+type createMonitorGroupInput struct {
+	Group store.MonitorGroup `json:"group" jsonschema:"monitor group fields; id is optional and will be generated when empty"`
+}
+
+func (t *tools) createMonitorGroup(ctx context.Context, _ *mcp.CallToolRequest, in createMonitorGroupInput) (*mcp.CallToolResult, monitorGroupOutput, error) {
+	created, err := t.store.CreateMonitorGroup(ctx, in.Group)
+	if err != nil {
+		return nil, monitorGroupOutput{}, err
+	}
+	return nil, monitorGroupOutput{Group: created}, nil
+}
+
+type updateMonitorGroupInput struct {
+	GroupID string             `json:"group_id" jsonschema:"the monitor group id"`
+	Group   store.MonitorGroup `json:"group" jsonschema:"updated monitor group fields, including alert policy"`
+}
+
+func (t *tools) updateMonitorGroup(ctx context.Context, _ *mcp.CallToolRequest, in updateMonitorGroupInput) (*mcp.CallToolResult, monitorGroupOutput, error) {
+	updated, err := t.store.UpdateMonitorGroup(ctx, in.GroupID, in.Group)
+	if err != nil {
+		return nil, monitorGroupOutput{}, mapErr(err)
+	}
+	return nil, monitorGroupOutput{Group: updated}, nil
+}
+
+func (t *tools) deleteMonitorGroup(ctx context.Context, _ *mcp.CallToolRequest, in monitorGroupIDInput) (*mcp.CallToolResult, deleteOutput, error) {
+	if err := t.store.DeleteMonitorGroup(ctx, in.GroupID); err != nil {
+		return nil, deleteOutput{}, mapErr(err)
+	}
+	return nil, deleteOutput{Deleted: true}, nil
 }
 
 func parseTime(value string) (*time.Time, error) {

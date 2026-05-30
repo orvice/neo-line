@@ -2,69 +2,39 @@
 
 neo-line 是一个基于 Go 和 Butterfly 应用框架构建的服务器监控服务，用于管理服务器监控配置，并持续检查服务器暴露的网络服务状态。
 
-项目当前以 MongoDB 作为监控业务配置和运行状态的唯一数据源，已覆盖 TCP 端口探测、HTTP/HTTPS URL 探测、TLS Port 握手与证书状态探测、Monitor 分组、分组级 webhook 告警、公开状态页，以及服务器健康状态聚合。
+MongoDB 是监控业务配置和运行状态的主要数据源；Redis 用于登录后签发的 Bearer token 会话存储。
 
-## 当前开发进度
+## 主要能力
 
-### 后端服务
+- Server / Monitor / Monitor Group 管理
+- TCP 端口探测、HTTP/HTTPS URL 探测、TLS Port 握手和证书状态探测
+- URL 和 TLS Port 探测支持 TLS 校验配置与自定义 SNI
+- Monitor 与 Server 健康状态聚合：`Down > Critical > Warning > Unknown > Healthy`
+- 公开状态页、管理后台、站点展示设置
+- 分组级 webhook 告警策略
+- 可选 S3 / S3 兼容对象存储归档检查结果
+- MCP Streamable HTTP 端点：`/api/mcp`
 
-- 已接入 Butterfly 应用框架和 Gin HTTP Router。
-- 已接入 MongoDB，当前代码读写 `servers`、`monitors`、`monitor_groups`、`monitor_results`、`server_events`、`settings`、`users` collections。
-- 已接入 Redis，登录后签发的 Bearer token 会话存储在 Redis。
-- 已提供 `/ping` 存活检查接口。
-- 已实现管理员账号初始化、登录、Bearer Token 会话和登出。
-- 已实现 Server CRUD、Monitor CRUD、健康状态查询、状态事件查询、检查结果查询和 uptime 汇总查询。
-- 已实现 Monitor Group CRUD，monitor 可通过 `group_ids` 加入零个或多个分组。
-- 已实现站点设置 API，用于配置状态页标题和站点名称。
-- 已实现后台调度器，每 `5s` 从 MongoDB 重新读取已启用的 server / monitor，并按 monitor 的 `interval_seconds` 调度探测。
-- 已实现探测并持久化结果：`tcp`、`url`、`tls_port`。
-- 已实现分组级 webhook 告警：monitor 状态变化时按所属分组的 `alert_policy` 尽力派发通知。
-- 已实现可选 S3 / S3 兼容对象存储归档，将已写入 MongoDB 的检查结果按批写为 NDJSON。
-- 已实现 MCP Streamable HTTP 只读工具端点 `/mcp`，可查询 server、monitor、monitor group、健康状态、事件和检查结果。
+## 项目结构
 
-### 探测能力
-
-- `tcp`：检查目标 `host:port` 是否可以建立 TCP 连接。
-- `url`：统一支持 HTTP 和 HTTPS URL，支持 method、headers、期望状态码、超时、重试、HTTPS TLS 校验和自定义 `sni_name`。
-- `tls_port`：连接目标 TLS 端口并执行握手，不发送 HTTP 请求；支持证书校验、自定义 SNI、证书元数据记录，以及证书过期 Warning / Critical 阈值。
-
-当前健康状态聚合顺序为：
-
-```text
-Down > Critical > Warning > Unknown > Healthy
-```
-
-### 前端管理台
-
-`front/` 目录已包含 React + Vite + Tailwind v4 + shadcn/ui 管理界面：
-
-- 公开状态页，按 monitor 分组展示整体状态、最近心跳和 24 小时可用率。
-- 邮箱 / 密码登录。
-- 服务器列表、搜索、增删改。
-- 服务器详情、健康概览、状态变更事件。
-- 监控项管理。
-- 监控项详情、TLS 证书信息、检查历史和 uptime heartbeat。
-- Monitor 分组管理，以及分组级 webhook 告警策略表单。
-- 站点设置页面，可配置状态页标题和站点名称。
-- 支持 `tcp`、`url`、`tls_port` 三种监控类型的动态表单。
-
-### Protobuf
-
-- `proto/` 下已有 `neoline.v1` protobuf 定义。
-- `pkg/proto` 下已有 Buf 生成的 Go、gRPC 和 grpc-gateway 代码。
-- `Makefile` 提供 `proto`、`proto-lint`、`proto-format`、`proto-breaking`、`proto-deps` 命令。
+- `cmd/server/main.go`：后端入口
+- `internal/`：HTTP API、探测器、调度器、存储、告警、归档、MCP server
+- `front/`：React + Vite + Tailwind v4 + shadcn/ui 前端
+- `proto/`：protobuf 定义
+- `pkg/proto/`：Buf 生成代码
+- `docs/`：中文项目文档
 
 ## 运行要求
 
 - Go `1.26.2`
 - MongoDB
-- Redis（用于登录 Bearer token 会话存储）
-- 前端开发需要 Node.js 和 pnpm，当前前端声明 `pnpm@10.15.1`
-- 如需重新生成 protobuf，需要安装 Buf
+- Redis
+- Node.js + pnpm（前端开发需要，当前前端声明 `pnpm@10.15.1`）
+- Buf（仅修改 protobuf 后重新生成时需要）
 
-## 启动后端
+## 本地启动
 
-先准备 MongoDB 和 Redis，再创建 Butterfly 配置文件，例如 `config.yaml`：
+准备 MongoDB 和 Redis，然后创建 Butterfly 配置文件，例如 `config.yaml`：
 
 ```yaml
 store:
@@ -78,13 +48,10 @@ store:
       db: 0
 
 mongo:
-  # 对应上面的 store.mongo.primary；未配置时默认使用 primary
   client_key: "primary"
-  # neo-line 业务 collections 所在数据库；未配置时默认使用 neo_line
   database: "neo_line"
 
 redis:
-  # 对应上面的 store.redis.session；未配置时默认使用 session
   session_client_key: "session"
 
 log:
@@ -92,7 +59,7 @@ log:
   format: "text"
 ```
 
-然后通过 Butterfly 的配置环境变量启动：
+启动后端：
 
 ```bash
 export BUTTERFLY_CONFIG_TYPE=file
@@ -102,21 +69,13 @@ export ADMIN_PASSWORD=change-me
 go run ./cmd/server
 ```
 
-默认 HTTP 服务端口由 Butterfly 提供，当前文档约定为 `8080`。启动后可以验证：
+验证：
 
 ```bash
 curl http://localhost:8080/ping
 ```
 
-期望响应：
-
-```json
-{"message":"pong"}
-```
-
-如果未设置 `ADMIN_PASSWORD`，服务会跳过管理员账号初始化；这适合只读调试，但无法使用需要登录的写接口。
-
-## 启动前端
+启动前端：
 
 ```bash
 cd front
@@ -124,191 +83,22 @@ pnpm install
 VITE_API_TARGET=http://localhost:8080 pnpm dev
 ```
 
-前端开发服务器默认运行在 `http://localhost:5173`，并把 `/api/v1` 与 `/ping` 代理到后端。
+前端开发服务器默认运行在 `http://localhost:5173`。
 
-生产构建：
+## 常用配置
 
-```bash
-cd front
-pnpm build
-```
+| 变量 | 说明 |
+| --- | --- |
+| `BUTTERFLY_CONFIG_TYPE` | 配置来源；本地通常设为 `file` |
+| `BUTTERFLY_CONFIG_FILE_PATH` | `BUTTERFLY_CONFIG_TYPE=file` 时的 YAML 配置文件路径 |
+| `ADMIN_EMAIL` | 管理员账号邮箱，默认 `admin@neo-line.local` |
+| `ADMIN_PASSWORD` | 管理员密码；设置后启动时会创建或轮换管理员密码 |
+| `MCP_AUTH_TOKEN` | `/api/mcp` 静态鉴权 token；为空时 MCP 端点不额外校验 |
+| `ARCHIVE_S3_BUCKET` | 设置后启用检查结果 S3 归档 |
 
-## 主要环境变量与配置项
+更多配置项和监控字段见 [监控配置文档](./docs/monitoring-configuration.md)。
 
-Butterfly 框架通过 `BUTTERFLY_` 前缀环境变量加载配置：
-
-| 变量 | 默认值 | 说明 |
-| --- | --- | --- |
-| `BUTTERFLY_CONFIG_TYPE` | `consul` | 配置来源；本地运行通常设为 `file` |
-| `BUTTERFLY_CONFIG_FILE_PATH` | 无 | `BUTTERFLY_CONFIG_TYPE=file` 时的 YAML 配置文件路径 |
-| `BUTTERFLY_CONFIG_CONSUL_ADDRESS` | `consul:8500` | `BUTTERFLY_CONFIG_TYPE=consul` 时的 Consul 地址 |
-| `BUTTERFLY_CONFIG_CONSUL_NAMESPACE` | 无 | Consul KV namespace；最终 key 为 `<namespace>/neo-line` |
-| `ADMIN_EMAIL` | `admin@neo-line.local` | 管理员账号邮箱 |
-| `ADMIN_PASSWORD` | 无 | 管理员密码；设置后启动时会创建或轮换管理员密码 |
-| `MCP_AUTH_TOKEN` | 无 | `/mcp` 静态鉴权 token；为空时 MCP 端点不额外校验 |
-
-MongoDB 连接不再由 `MONGODB_URI` 直接读取，而是放在 Butterfly 核心配置中：
-
-```yaml
-store:
-  mongo:
-    primary:
-      uri: "mongodb://localhost:27017"
-  redis:
-    session:
-      addr: "localhost:6379"
-      password: ""
-      db: 0
-
-mongo:
-  client_key: "primary"
-  database: "neo_line"
-
-redis:
-  session_client_key: "session"
-```
-
-`store.mongo.primary` 由 Butterfly 初始化为 Mongo client；应用侧的 `mongo.client_key` 选择该 client，`mongo.database` 选择 neo-line 使用的数据库。
-
-`store.redis.session` 由 Butterfly 初始化为 Redis client；应用侧的 `redis.session_client_key` 选择该 client，用于存储登录后签发的 Bearer token。Token key 前缀为 `neo-line:session:`，TTL 默认为 `24h`。
-
-其他环境变量：
-
-| 变量 | 默认值 | 说明 |
-| --- | --- | --- |
-| `ARCHIVE_S3_BUCKET` | 无 | 设置后启用检查结果 S3 归档 |
-| `ARCHIVE_S3_PREFIX` | `monitor_results` | S3 归档对象前缀 |
-| `ARCHIVE_S3_REGION` | `AWS_REGION` 或 `us-east-1` | S3 区域 |
-| `ARCHIVE_S3_ENDPOINT` | 无 | S3 兼容存储 endpoint；设置后使用 path-style |
-| `ARCHIVE_S3_ACCESS_KEY` / `ARCHIVE_S3_SECRET_KEY` | 无 | S3 静态凭证；为空时使用 AWS 默认凭证链 |
-| `ARCHIVE_S3_BATCH_SIZE` | `100` | 单批归档结果数量 |
-| `ARCHIVE_S3_FLUSH_SECONDS` | `60` | 归档刷写间隔秒数 |
-
-## 主要 HTTP 接口
-
-公开读接口：
-
-- `GET /ping`
-- `POST /api/v1/auth/login`
-- `GET /api/v1/settings`
-- `GET /api/v1/servers`
-- `GET /api/v1/servers/:id`
-- `GET /api/v1/servers/:id/health`
-- `GET /api/v1/servers/:id/events`
-- `GET /api/v1/servers/:id/monitors`
-- `GET /api/v1/servers/:id/monitors/:monitor_id`
-- `GET /api/v1/servers/:id/monitors/:monitor_id/results`
-- `GET /api/v1/servers/:id/monitors/:monitor_id/uptime`
-- `GET /api/v1/monitor-groups`
-- `GET /api/v1/monitor-groups/:group_id`
-- `GET /api/v1/monitor-groups/:group_id/monitors`
-
-需要 Bearer Token 的管理接口：
-
-- `GET /api/v1/auth/me`
-- `POST /api/v1/auth/logout`
-- `PUT /api/v1/settings`
-- `POST /api/v1/servers`
-- `PUT /api/v1/servers/:id`
-- `DELETE /api/v1/servers/:id`
-- `POST /api/v1/servers/:id/monitors`
-- `PUT /api/v1/servers/:id/monitors/:monitor_id`
-- `DELETE /api/v1/servers/:id/monitors/:monitor_id`
-- `POST /api/v1/monitor-groups`
-- `PUT /api/v1/monitor-groups/:group_id`
-- `DELETE /api/v1/monitor-groups/:group_id`
-
-登录示例：
-
-```bash
-curl -s http://localhost:8080/api/v1/auth/login \
-  -H 'Content-Type: application/json' \
-  -d '{"email":"admin@neo-line.local","password":"change-me"}'
-```
-
-## 配置模型示例
-
-创建 server：
-
-```json
-{
-  "name": "production-api-01",
-  "host": "10.0.0.10",
-  "environment": "production",
-  "region": "ap-east-1",
-  "tags": ["api", "production"],
-  "enabled": true
-}
-```
-
-创建 URL monitor：
-
-```json
-{
-  "name": "api-health",
-  "kind": "url",
-  "enabled": true,
-  "group_ids": ["grp_production"],
-  "url": "https://api.example.com/health",
-  "method": "GET",
-  "expected_status_codes": "200-299,301,302",
-  "timeout_seconds": 5,
-  "interval_seconds": 60,
-  "retries": 3,
-  "tls_verify": true,
-  "sni_name": "api.example.com"
-}
-```
-
-创建 Monitor Group，并配置 webhook 告警策略：
-
-```json
-{
-  "id": "grp_production",
-  "name": "production",
-  "description": "Production services",
-  "alert_policy": {
-    "enabled": true,
-    "on_down": true,
-    "on_recover": true,
-    "on_warning": true,
-    "on_critical": true,
-    "min_interval_seconds": 300,
-    "channels": [
-      {
-        "type": "webhook",
-        "target": "https://hooks.example.com/neo-line",
-        "extra": {
-          "X-Alert-Source": "neo-line"
-        }
-      }
-    ]
-  }
-}
-```
-
-创建 TLS Port monitor：
-
-```json
-{
-  "name": "api-cert",
-  "kind": "tls_port",
-  "enabled": true,
-  "host": "203.0.113.10",
-  "port": 443,
-  "sni_name": "api.example.com",
-  "tls_verify": true,
-  "warning_days": 30,
-  "critical_days": 7,
-  "timeout_seconds": 5,
-  "interval_seconds": 60,
-  "retries": 3
-}
-```
-
-## 验证命令
-
-后端：
+## 常用命令
 
 ```bash
 go fmt ./...
@@ -316,14 +106,10 @@ go test ./...
 go build ./...
 ```
 
-前端：
-
 ```bash
 cd front
 pnpm build
 ```
-
-Protobuf：
 
 ```bash
 make proto-lint
@@ -332,89 +118,15 @@ make proto
 
 ## Docker
 
-后端镜像：
-
 ```bash
 docker build -t neo-line .
-```
-
-前端镜像：
-
-```bash
 docker build -t neo-line-front ./front
 ```
 
-前端镜像通过 Nginx 提供静态资源，并把 `/api/v1`、`/ping` 反向代理到后端。运行时可用 `BACKEND_URL` 覆盖默认后端地址：
-
-```bash
-docker run -e BACKEND_URL=http://neo-line:8080 -p 8081:80 neo-line-front
-```
-
-最小 Docker Compose 示例：
-
-```yaml
-services:
-  mongodb:
-    image: mongo:8
-    restart: unless-stopped
-    volumes:
-      - neo-line-mongodb:/data/db
-
-  redis:
-    image: redis:8-alpine
-    restart: unless-stopped
-    volumes:
-      - neo-line-redis:/data
-
-  neo-line:
-    build: .
-    restart: unless-stopped
-    depends_on:
-      - mongodb
-      - redis
-    environment:
-      BUTTERFLY_CONFIG_TYPE: file
-      BUTTERFLY_CONFIG_FILE_PATH: /etc/neo-line/config.yaml
-      ADMIN_EMAIL: admin@neo-line.local
-      ADMIN_PASSWORD: change-me
-    volumes:
-      - ./config.yaml:/etc/neo-line/config.yaml:ro
-    ports:
-      - "8080:8080"
-
-  neo-line-front:
-    build: ./front
-    restart: unless-stopped
-    depends_on:
-      - neo-line
-    environment:
-      BACKEND_URL: http://neo-line:8080
-    ports:
-      - "8081:80"
-
-volumes:
-  neo-line-mongodb:
-  neo-line-redis:
-```
-
-启动：
-
-```bash
-docker compose up --build
-```
-
-启动后：
-
-- 后端 API：`http://localhost:8080`
-- 前端管理台：`http://localhost:8081`
-- 默认管理员：`admin@neo-line.local` / `change-me`
-
-部署时应把 `ADMIN_PASSWORD` 改为实际密码；服务每次启动都会按该环境变量创建或轮换管理员密码。
+前端镜像通过 Nginx 提供静态资源，并把 `/api/v1`、`/ping` 反向代理到后端。运行时可用 `BACKEND_URL` 覆盖默认后端地址。
 
 ## 文档
 
-更多项目说明见：
-
-- [docs/README.md](./docs/README.md)
-- [docs/features.md](./docs/features.md)
-- [docs/monitoring-configuration.md](./docs/monitoring-configuration.md)
+- [文档首页](./docs/README.md)
+- [功能说明](./docs/features.md)
+- [监控配置](./docs/monitoring-configuration.md)
