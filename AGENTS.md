@@ -147,9 +147,3 @@ Before committing, check repository state:
 ```bash
 git status --short
 ```
-
-When creating commits as Craft Agent, include the co-author trailer:
-
-```text
-Co-Authored-By: Craft Agent <agents-noreply@craft.do>
-```
