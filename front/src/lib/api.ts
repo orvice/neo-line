@@ -1,6 +1,8 @@
 import type {
   CheckResult,
+  CreateMcpTokenResponse,
   LoginResponse,
+  McpToken,
   Monitor,
   MonitorGroup,
   MonitorUptime,
@@ -150,6 +152,16 @@ export const api = {
     request<void>(`/monitor-groups/${groupId}`, { method: "DELETE" }),
   listMonitorsByGroup: (groupId: string, query?: { page_token?: string; page_size?: number }) =>
     request<ListResponse & { monitors: Monitor[] }>(`/monitor-groups/${groupId}/monitors`, { query, auth: false }),
+
+  // MCP tokens
+  listMcpTokens: () => request<{ tokens: McpToken[] }>("/mcp-tokens"),
+  createMcpToken: (name: string) =>
+    request<CreateMcpTokenResponse>("/mcp-tokens", {
+      method: "POST",
+      body: { name },
+    }),
+  deleteMcpToken: (id: string) =>
+    request<void>(`/mcp-tokens/${id}`, { method: "DELETE" }),
 
   // Check results
   listCheckResults: (

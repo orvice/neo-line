@@ -44,6 +44,13 @@ type Store interface {
 
 	EnsureAuthIndexes(ctx context.Context) error
 	EnsureGroupIndexes(ctx context.Context) error
+	EnsureMcpTokenIndexes(ctx context.Context) error
+
+	ListMcpTokens(ctx context.Context) ([]McpToken, error)
+	CreateMcpToken(ctx context.Context, name string) (McpToken, string, error)
+	DeleteMcpToken(ctx context.Context, id string) error
+	CountMcpTokens(ctx context.Context) (int64, error)
+	ValidateMcpToken(ctx context.Context, plaintext string) (bool, error)
 	EnsureAdminUser(ctx context.Context, email, password string) error
 	Authenticate(ctx context.Context, email, password string) (User, error)
 	CreateSession(ctx context.Context, user User) (Session, error)

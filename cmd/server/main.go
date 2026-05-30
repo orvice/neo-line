@@ -87,6 +87,9 @@ func main() {
 				if err := mongoStore.EnsureGroupIndexes(ctx); err != nil {
 					return fmt.Errorf("ensure group indexes: %w", err)
 				}
+				if err := mongoStore.EnsureMcpTokenIndexes(ctx); err != nil {
+					return fmt.Errorf("ensure mcp token indexes: %w", err)
+				}
 				if err := bootstrapAdmin(ctx, mongoStore); err != nil {
 					return fmt.Errorf("bootstrap admin user: %w", err)
 				}

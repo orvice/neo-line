@@ -58,6 +58,10 @@ func Register(r *gin.Engine, st store.Store) {
 			admin.POST("/monitor-groups", api.createMonitorGroup)
 			admin.PUT("/monitor-groups/:group_id", api.updateMonitorGroup)
 			admin.DELETE("/monitor-groups/:group_id", api.deleteMonitorGroup)
+
+			admin.GET("/mcp-tokens", api.listMcpTokens)
+			admin.POST("/mcp-tokens", api.createMcpToken)
+			admin.DELETE("/mcp-tokens/:token_id", api.deleteMcpToken)
 		}
 	}
 }
