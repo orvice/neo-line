@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Link } from "react-router-dom"
 import { useQueries, useQuery } from "@tanstack/react-query"
 import {
@@ -10,8 +10,10 @@ import {
   Database,
   Gauge,
   Globe2,
+  LayoutGrid,
   LockKeyhole,
   RefreshCw,
+  Rows3,
   Search,
   Server as ServerIcon,
   ShieldCheck,
@@ -120,6 +122,23 @@ const STATUS_TONES: Record<
   },
 }
 
+type Density = "comfortable" | "compact"
+
+const DENSITY_STORAGE_KEY = "status-page-density"
+
+function useDensity(): [Density, (value: Density) => void] {
+  const [density, setDensity] = useState<Density>(() => {
+    if (typeof window === "undefined") return "comfortable"
+    return window.localStorage.getItem(DENSITY_STORAGE_KEY) === "compact"
+      ? "compact"
+      : "comfortable"
+  })
+  useEffect(() => {
+    window.localStorage.setItem(DENSITY_STORAGE_KEY, density)
+  }, [density])
+  return [density, setDensity]
+}
+
 function normalizeStatus(status: string): HealthStatus {
   return status in STATUS_RANK ? (status as HealthStatus) : "Unknown"
 }
@@ -179,6 +198,8 @@ function statusCountText(count: number): string {
 export function StatusPage() {
   const settings = useSettings()
   const [searchTerm, setSearchTerm] = useState("")
+  const [density, setDensity] = useDensity()
+  const compact = density === "compact"
 
   const groupsQuery = useQuery({
     queryKey: ["status-groups"],
@@ -332,6 +353,38 @@ export function StatusPage() {
                 className="min-w-0 flex-1 border-0 bg-transparent text-sm text-[#d3e4fe] outline-none placeholder:text-[#87929a]"
               />
             </label>
+            <div className="flex h-10 items-center rounded-lg border border-[#3e484f] bg-[#102034]/90 p-1">
+              <button
+                type="button"
+                onClick={() => setDensity("comfortable")}
+                aria-pressed={!compact}
+                title="标准布局"
+                className={cn(
+                  "inline-flex h-full items-center gap-1.5 rounded-md px-2.5 text-sm font-semibold transition",
+                  !compact
+                    ? "bg-[#38bdf8]/15 text-[#8ed5ff]"
+                    : "text-[#87929a] hover:text-[#bdc8d1]"
+                )}
+              >
+                <LayoutGrid className="size-4" />
+                <span className="hidden sm:inline">标准</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setDensity("compact")}
+                aria-pressed={compact}
+                title="紧凑布局"
+                className={cn(
+                  "inline-flex h-full items-center gap-1.5 rounded-md px-2.5 text-sm font-semibold transition",
+                  compact
+                    ? "bg-[#38bdf8]/15 text-[#8ed5ff]"
+                    : "text-[#87929a] hover:text-[#bdc8d1]"
+                )}
+              >
+                <Rows3 className="size-4" />
+                <span className="hidden sm:inline">紧凑</span>
+              </button>
+            </div>
             <button
               type="button"
               onClick={() => {
@@ -462,12 +515,20 @@ export function StatusPage() {
                       ) : serverRows.length === 0 ? (
                         <EmptyState text="该分组下暂无启用的监控项。" compact />
                       ) : (
-                        <div className="grid gap-4 xl:grid-cols-2">
+                        <div
+                          className={cn(
+                            "grid",
+                            compact
+                              ? "gap-3 sm:grid-cols-2 xl:grid-cols-3"
+                              : "gap-4 xl:grid-cols-2"
+                          )}
+                        >
                           {serverRows.map((row) => (
                             <ServerCard
                               key={row.serverId}
                               row={row}
                               uptimeByMonitor={uptimeByMonitor}
+                              compact={compact}
                             />
                           ))}
                         </div>
@@ -597,9 +658,11 @@ function groupMonitorsByServer(
 function ServerCard({
   row,
   uptimeByMonitor,
+  compact = false,
 }: {
   row: ServerRowData
   uptimeByMonitor: Map<string, MonitorUptime>
+  compact?: boolean
 }) {
   const serverStatus = worst(row.monitors.map((m) => normalizeStatus(m.status)))
   const tone = STATUS_TONES[serverStatus]
@@ -622,15 +685,28 @@ function ServerCard({
           serverStatus === "Healthy" ? "bg-[#4edea3]" : tone.bar
         )}
       />
-      <header className="flex flex-col gap-3 border-b border-[#3e484f] bg-[#1b2b3f] p-4 sm:flex-row sm:items-center sm:justify-between">
+      <header
+        className={cn(
+          "flex flex-col gap-3 border-b border-[#3e484f] bg-[#1b2b3f] sm:flex-row sm:items-center sm:justify-between",
+          compact ? "p-3" : "p-4"
+        )}
+      >
         <div className="flex min-w-0 items-center gap-3">
-          <div className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-[#3e484f] bg-[#031427] text-[#8ed5ff]">
-            <ServerIcon className="size-5" />
+          <div
+            className={cn(
+              "flex shrink-0 items-center justify-center rounded-lg border border-[#3e484f] bg-[#031427] text-[#8ed5ff]",
+              compact ? "size-8" : "size-9"
+            )}
+          >
+            <ServerIcon className={compact ? "size-4" : "size-5"} />
           </div>
           <div className="min-w-0">
             <Link
               to={`/servers/${row.serverId}`}
-              className="block truncate text-lg font-semibold tracking-normal text-white hover:text-[#8ed5ff]"
+              className={cn(
+                "block truncate font-semibold tracking-normal text-white hover:text-[#8ed5ff]",
+                compact ? "text-base" : "text-lg"
+              )}
             >
               {serverName}
             </Link>
@@ -644,33 +720,120 @@ function ServerCard({
             </div>
           </div>
         </div>
-        <div
-          className={cn(
-            "inline-flex w-fit items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-semibold",
-            tone.border,
-            tone.bg,
-            tone.text
+        <div className="flex shrink-0 items-center gap-2">
+          {compact && (
+            <span className="font-mono text-xs font-semibold text-[#bdc8d1]">
+              {serverUptime}
+            </span>
           )}
-        >
-          <span className={cn("size-2 rounded-full", tone.dot)} />
-          {tone.code}
+          <div
+            className={cn(
+              "inline-flex w-fit items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-semibold",
+              tone.border,
+              tone.bg,
+              tone.text
+            )}
+          >
+            <span className={cn("size-2 rounded-full", tone.dot)} />
+            {tone.code}
+          </div>
         </div>
       </header>
 
-      <div className="flex flex-col gap-3 p-4">
-        <div className="grid grid-cols-2 gap-3">
-          <ServerMiniStat label="24h 可用性" value={serverUptime} />
-          <ServerMiniStat label="监控项" value={String(row.monitors.length)} />
-        </div>
-        {row.monitors.map((monitor) => (
-          <MonitorPanel
-            key={monitor.id}
-            monitor={monitor}
-            uptime={uptimeByMonitor.get(monitor.id)}
-          />
-        ))}
+      <div className={cn("flex flex-col", compact ? "gap-2 p-3" : "gap-3 p-4")}>
+        {!compact && (
+          <div className="grid grid-cols-2 gap-3">
+            <ServerMiniStat label="24h 可用性" value={serverUptime} />
+            <ServerMiniStat label="监控项" value={String(row.monitors.length)} />
+          </div>
+        )}
+        {row.monitors.map((monitor) =>
+          compact ? (
+            <CompactMonitorRow
+              key={monitor.id}
+              monitor={monitor}
+              uptime={uptimeByMonitor.get(monitor.id)}
+            />
+          ) : (
+            <MonitorPanel
+              key={monitor.id}
+              monitor={monitor}
+              uptime={uptimeByMonitor.get(monitor.id)}
+            />
+          )
+        )}
       </div>
     </article>
+  )
+}
+
+function CompactMonitorRow({
+  monitor,
+  uptime,
+}: {
+  monitor: Monitor
+  uptime?: MonitorUptime
+}) {
+  const status = normalizeStatus(monitor.status)
+  const tone = STATUS_TONES[status]
+  const window24h = uptime?.windows?.["24h"]
+  const Icon = monitorIcon(monitor)
+  const target = monitorTarget(monitor)
+
+  return (
+    <Link
+      to={`/servers/${monitor.server_id}/monitors/${monitor.id}`}
+      className={cn(
+        "group flex items-center gap-3 rounded-md border bg-[#031427] px-2.5 py-2 transition hover:border-[#8ed5ff]/70",
+        status === "Healthy" ? "border-[#3e484f]/70" : tone.border,
+        status !== "Healthy" && tone.softBg
+      )}
+    >
+      <span className={cn("size-2 shrink-0 rounded-full", tone.dot)} />
+      <Icon className={cn("size-4 shrink-0", tone.text)} />
+      <div className="min-w-0 flex-1">
+        <div className="truncate text-sm font-medium text-white">
+          {monitor.name}
+        </div>
+        <div className="truncate font-mono text-xs text-[#87929a]">{target}</div>
+      </div>
+      <div className="hidden w-24 shrink-0 sm:block">
+        <CompactHeartbeats beats={uptime?.heartbeats ?? []} />
+      </div>
+      <div className="w-16 shrink-0 text-right">
+        <div className="font-mono text-sm text-[#d3e4fe]">{uptimePct(uptime)}</div>
+        <div className="font-mono text-[11px] text-[#87929a]">
+          {formatLatency(window24h)}
+        </div>
+      </div>
+    </Link>
+  )
+}
+
+function CompactHeartbeats({ beats }: { beats: Heartbeat[] }) {
+  const recent = beats.slice(-20)
+
+  if (recent.length === 0) {
+    return <div className="h-4 rounded bg-[#0b1c30]" />
+  }
+
+  return (
+    <div
+      className="grid h-4 gap-[2px] overflow-hidden rounded bg-[#0b1c30] p-[2px]"
+      style={{ gridTemplateColumns: `repeat(${recent.length}, minmax(0, 1fr))` }}
+    >
+      {recent.map((beat, i) => {
+        const status = normalizeStatus(beat.status)
+        const tone = STATUS_TONES[status]
+        return (
+          <div
+            key={`${beat.started_at}-${i}`}
+            className={cn("min-w-0 rounded-[1px]", tone.bar)}
+            title={`${statusLabels[status]} · ${formatTime(beat.started_at)} · ${beat.duration_ms} ms`}
+          />
+        )
+      })}
+    </div>
   )
 }
 
