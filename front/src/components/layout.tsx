@@ -17,6 +17,7 @@ import { useAuth } from "@/lib/auth"
 import { useTheme } from "@/lib/theme"
 import { useSettings } from "@/lib/settings"
 import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
 
 const themeOrder = ["light", "dark", "system"] as const
 const themeIcon = { light: Sun, dark: Moon, system: Monitor }
@@ -43,19 +44,49 @@ export function Layout() {
   const { user, logout } = useAuth()
   const location = useLocation()
   const settings = useSettings()
+  const isStatusPage = location.pathname === "/"
 
   useEffect(() => {
     document.title = settings.site_name
   }, [settings.site_name])
 
+  const navClass = ({ isActive }: { isActive: boolean }) =>
+    cn(
+      "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm transition",
+      isStatusPage
+        ? isActive
+          ? "bg-[#102034] text-[#8ed5ff]"
+          : "text-[#bdc8d1] hover:bg-[#102034] hover:text-[#8ed5ff]"
+        : isActive
+          ? "bg-accent text-accent-foreground"
+          : "text-muted-foreground hover:bg-accent"
+    )
+
   return (
-    <div className="min-h-[100dvh] bg-background">
-      <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur">
+    <div
+      className={cn(
+        "min-h-[100dvh]",
+        isStatusPage ? "bg-[#031427] text-[#d3e4fe]" : "bg-background"
+      )}
+    >
+      <header
+        className={cn(
+          "sticky top-0 z-40 border-b backdrop-blur",
+          isStatusPage
+            ? "border-[#3e484f] bg-[#031427]/90"
+            : "bg-background/80"
+        )}
+      >
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
           <Link to="/" className="flex items-center gap-2 font-semibold">
             <Activity className="size-5 text-emerald-600 dark:text-emerald-400" />
             <span>{settings.site_name}</span>
-            <span className="text-muted-foreground text-sm font-normal">
+            <span
+              className={cn(
+                "text-sm font-normal",
+                isStatusPage ? "text-[#bdc8d1]" : "text-muted-foreground"
+              )}
+            >
               监控面板
             </span>
           </Link>
@@ -63,12 +94,7 @@ export function Layout() {
             <NavLink
               to="/"
               end
-              className={({ isActive }) =>
-                "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm transition " +
-                (isActive
-                  ? "bg-accent text-accent-foreground"
-                  : "text-muted-foreground hover:bg-accent")
-              }
+              className={navClass}
             >
               <Activity className="size-4" />
               状态
@@ -77,60 +103,35 @@ export function Layout() {
               <>
                 <NavLink
                   to="/servers"
-                  className={({ isActive }) =>
-                    "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm transition " +
-                    (isActive
-                      ? "bg-accent text-accent-foreground"
-                      : "text-muted-foreground hover:bg-accent")
-                  }
+                  className={navClass}
                 >
                   <Server className="size-4" />
                   服务器
                 </NavLink>
                 <NavLink
                   to="/monitor-groups"
-                  className={({ isActive }) =>
-                    "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm transition " +
-                    (isActive
-                      ? "bg-accent text-accent-foreground"
-                      : "text-muted-foreground hover:bg-accent")
-                  }
+                  className={navClass}
                 >
                   <FolderTree className="size-4" />
                   分组
                 </NavLink>
                 <NavLink
                   to="/notify-groups"
-                  className={({ isActive }) =>
-                    "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm transition " +
-                    (isActive
-                      ? "bg-accent text-accent-foreground"
-                      : "text-muted-foreground hover:bg-accent")
-                  }
+                  className={navClass}
                 >
                   <BellRing className="size-4" />
                   通知组
                 </NavLink>
                 <NavLink
                   to="/mcp"
-                  className={({ isActive }) =>
-                    "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm transition " +
-                    (isActive
-                      ? "bg-accent text-accent-foreground"
-                      : "text-muted-foreground hover:bg-accent")
-                  }
+                  className={navClass}
                 >
                   <Plug className="size-4" />
                   MCP
                 </NavLink>
                 <NavLink
                   to="/settings"
-                  className={({ isActive }) =>
-                    "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm transition " +
-                    (isActive
-                      ? "bg-accent text-accent-foreground"
-                      : "text-muted-foreground hover:bg-accent")
-                  }
+                  className={navClass}
                 >
                   <SettingsIcon className="size-4" />
                   设置
@@ -142,7 +143,12 @@ export function Layout() {
             <ThemeToggle />
             {user ? (
               <>
-                <span className="text-muted-foreground hidden text-sm sm:inline">
+                <span
+                  className={cn(
+                    "hidden text-sm sm:inline",
+                    isStatusPage ? "text-[#bdc8d1]" : "text-muted-foreground"
+                  )}
+                >
                   {user.email}
                 </span>
                 <Button variant="ghost" size="sm" onClick={() => logout()}>
@@ -163,7 +169,11 @@ export function Layout() {
           </div>
         </div>
       </header>
-      <main className="mx-auto max-w-6xl px-4 py-6">
+      <main
+        className={cn(
+          isStatusPage ? "mx-0 max-w-none px-0 py-0" : "mx-auto max-w-6xl px-4 py-6"
+        )}
+      >
         <Outlet />
       </main>
     </div>
