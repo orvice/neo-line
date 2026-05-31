@@ -43,6 +43,8 @@ neo-line 的核心监控能力包括：
 - URL 和 TLS Port 探测支持自定义 SNI name
 - 记录每个监控项的健康状态和检查结果
 - 通过 monitor 分组聚合监控项并配置分组级告警策略，引用可复用通知组派发告警
+- 通过 MCP 工具使用本地 SSH 私钥连接服务器并执行远程命令（`ssh_exec` / `ssh_test_connection`）
+- 记录 REST API 和 MCP 操作的审计日志（`audit_logs` collection）
 
 ## 文档维护
 
