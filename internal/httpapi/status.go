@@ -109,6 +109,13 @@ func (api *API) buildStatusServers(ctx context.Context, monitors []store.Monitor
 		if !m.Enabled {
 			continue
 		}
+		server, err := api.lookupServer(ctx, m.ServerID, serverCache)
+		if err != nil {
+			return nil, err
+		}
+		if !server.Enabled {
+			continue
+		}
 		uptime, err := api.store.GetMonitorUptime(ctx, m.ServerID, m.ID)
 		if err != nil {
 			return nil, err

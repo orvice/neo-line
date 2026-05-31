@@ -51,10 +51,12 @@ func TestGetStatusOverview(t *testing.T) {
 					Certificate: &store.CertificateInfo{Subject: "CN=internal", DNSNames: []string{"internal.example.com"}, DaysRemaining: 20},
 				},
 				{ID: "m2", ServerID: "s1", Name: "disabled", Kind: "tcp", Enabled: false},
+				{ID: "m3", ServerID: "s2", Name: "paused-server-monitor", Kind: "tcp", Enabled: true},
 			},
 		},
 		serversByID: map[string]store.Server{
-			"s1": {ID: "s1", Name: "edge", Host: "10.0.0.5", Environment: "prod", SSH: &store.ServerSSH{Enabled: true, User: "root"}},
+			"s1": {ID: "s1", Name: "edge", Host: "10.0.0.5", Environment: "prod", Enabled: true, SSH: &store.ServerSSH{Enabled: true, User: "root"}},
+			"s2": {ID: "s2", Name: "paused", Host: "10.0.0.6", Environment: "prod", Enabled: false},
 		},
 		uptime: store.MonitorUptime{Windows: map[string]store.UptimeWindow{"24h": {Total: 10, Up: 10, Uptime: 1}}},
 	}
