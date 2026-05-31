@@ -206,16 +206,11 @@ export function StatusPage() {
     })),
   })
 
-  const sections = useMemo(
-    () =>
-      groups.map((group, i) => ({
-        group,
-        monitors: (monitorQueries[i]?.data?.monitors ?? []).filter(
-          (m) => m.enabled
-        ),
-      })),
-    [groups, monitorQueries]
-  )
+  const sections = groups.map((group, i) => ({
+    group,
+    isLoading: monitorQueries[i]?.isLoading ?? true,
+    monitors: (monitorQueries[i]?.data?.monitors ?? []).filter((m) => m.enabled),
+  }))
 
   const allMonitors = useMemo(
     () => sections.flatMap((s) => s.monitors),
@@ -436,7 +431,7 @@ export function StatusPage() {
               <EmptyState text="没有匹配的服务器或监控项。" />
             ) : (
               <div className="flex flex-col gap-8">
-                {filteredSections.map(({ group, monitors }) => {
+                {filteredSections.map(({ group, isLoading, monitors }) => {
                   const serverRows = groupMonitorsByServer(monitors, serverMap)
                   return (
                     <section key={group.id} className="flex flex-col gap-4">
@@ -462,7 +457,9 @@ export function StatusPage() {
                         </Link>
                       </div>
 
-                      {serverRows.length === 0 ? (
+                      {isLoading ? (
+                        <GroupLoading />
+                      ) : serverRows.length === 0 ? (
                         <EmptyState text="该分组下暂无启用的监控项。" compact />
                       ) : (
                         <div className="grid gap-4 xl:grid-cols-2">
@@ -513,6 +510,15 @@ function EmptyState({ text, compact = false }: { text: string; compact?: boolean
       )}
     >
       {text}
+    </div>
+  )
+}
+
+function GroupLoading() {
+  return (
+    <div className="grid gap-4 xl:grid-cols-2">
+      <Skeleton className="h-72 rounded-lg bg-[#102034]" />
+      <Skeleton className="h-72 rounded-lg bg-[#102034]" />
     </div>
   )
 }
@@ -866,12 +872,16 @@ function UptimeStrip({ beats }: { beats: Heartbeat[] }) {
 
 function monitorIcon(monitor: Monitor) {
   if (monitor.kind === "url") return Globe2
-  if (monitor.kind === "tls_port") return ShieldCheck
+  if (isTlsMonitor(monitor)) return ShieldCheck
   if (monitor.port === 3306 || monitor.port === 5432 || monitor.port === 6379) {
     return Database
   }
   if (monitor.kind === "tcp") return Wifi
   return Terminal
+}
+
+function isTlsMonitor(monitor: Monitor): boolean {
+  return monitor.kind === "tls" || monitor.kind === "tls_port"
 }
 
 function monitorTarget(monitor: Monitor): string {
