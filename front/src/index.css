@@ -25,24 +25,25 @@
 }
 
 .dark {
-  --background: oklch(0.141 0.005 285.823);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.21 0.006 285.885);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.21 0.006 285.885);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.92 0.004 286.32);
-  --primary-foreground: oklch(0.21 0.006 285.885);
-  --secondary: oklch(0.274 0.006 286.033);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.274 0.006 286.033);
-  --muted-foreground: oklch(0.705 0.015 286.067);
-  --accent: oklch(0.274 0.006 286.033);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.552 0.016 285.938);
+  /* Navy palette aligned with the public status page (status.tsx). */
+  --background: #031427;
+  --foreground: #d3e4fe;
+  --card: #102034;
+  --card-foreground: #d3e4fe;
+  --popover: #102034;
+  --popover-foreground: #d3e4fe;
+  --primary: #8ed5ff;
+  --primary-foreground: #031427;
+  --secondary: #1b2b3f;
+  --secondary-foreground: #d3e4fe;
+  --muted: #1b2b3f;
+  --muted-foreground: #bdc8d1;
+  --accent: #1b2b3f;
+  --accent-foreground: #8ed5ff;
+  --destructive: #ff6b6b;
+  --border: #3e484f;
+  --input: #3e484f;
+  --ring: #8ed5ff;
 }
 
 @theme inline {

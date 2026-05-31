@@ -53,40 +53,19 @@ export function Layout() {
   const navClass = ({ isActive }: { isActive: boolean }) =>
     cn(
       "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm transition",
-      isStatusPage
-        ? isActive
-          ? "bg-[#102034] text-[#8ed5ff]"
-          : "text-[#bdc8d1] hover:bg-[#102034] hover:text-[#8ed5ff]"
-        : isActive
-          ? "bg-accent text-accent-foreground"
-          : "text-muted-foreground hover:bg-accent"
+      isActive
+        ? "bg-accent text-accent-foreground"
+        : "text-muted-foreground hover:bg-accent"
     )
 
   return (
-    <div
-      className={cn(
-        "min-h-[100dvh]",
-        isStatusPage ? "bg-[#031427] text-[#d3e4fe]" : "bg-background"
-      )}
-    >
-      <header
-        className={cn(
-          "sticky top-0 z-40 border-b backdrop-blur",
-          isStatusPage
-            ? "border-[#3e484f] bg-[#031427]/90"
-            : "bg-background/80"
-        )}
-      >
+    <div className="min-h-[100dvh] bg-background">
+      <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur">
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
           <Link to="/" className="flex items-center gap-2 font-semibold">
             <Activity className="size-5 text-emerald-600 dark:text-emerald-400" />
             <span>{settings.site_name}</span>
-            <span
-              className={cn(
-                "text-sm font-normal",
-                isStatusPage ? "text-[#bdc8d1]" : "text-muted-foreground"
-              )}
-            >
+            <span className="text-sm font-normal text-muted-foreground">
               监控面板
             </span>
           </Link>
@@ -143,12 +122,7 @@ export function Layout() {
             <ThemeToggle />
             {user ? (
               <>
-                <span
-                  className={cn(
-                    "hidden text-sm sm:inline",
-                    isStatusPage ? "text-[#bdc8d1]" : "text-muted-foreground"
-                  )}
-                >
+                <span className="hidden text-sm text-muted-foreground sm:inline">
                   {user.email}
                 </span>
                 <Button variant="ghost" size="sm" onClick={() => logout()}>

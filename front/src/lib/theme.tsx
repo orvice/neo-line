@@ -21,11 +21,11 @@ interface ThemeContextValue {
 const ThemeContext = createContext<ThemeContextValue | null>(null)
 
 function readStored(): Theme {
-  if (typeof localStorage === "undefined") return "system"
+  if (typeof localStorage === "undefined") return "dark"
   const value = localStorage.getItem(STORAGE_KEY)
   return value === "light" || value === "dark" || value === "system"
     ? value
-    : "system"
+    : "dark"
 }
 
 function systemPrefersDark(): boolean {
