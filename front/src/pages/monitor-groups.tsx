@@ -7,8 +7,10 @@ import { toast } from "sonner"
 import { api, ApiError } from "@/lib/api"
 import type { MonitorGroup } from "@/lib/types"
 import { useAuth } from "@/lib/auth"
+import { bySortOrder, reorderByMove } from "@/lib/sort-order"
 import { ConfirmDialog } from "@/components/confirm-dialog"
 import { MonitorGroupForm } from "@/components/monitor-group-form"
+import { ReorderControls } from "@/components/reorder-controls"
 import { TableSkeleton } from "@/components/table-skeleton"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -36,16 +38,38 @@ export function MonitorGroupsPage() {
   })
 
   const groups = data?.groups ?? []
+  const sorted = useMemo(() => bySortOrder(groups), [groups])
 
+  const q = search.trim().toLowerCase()
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase()
-    if (!q) return groups
-    return groups.filter(
+    if (!q) return sorted
+    return sorted.filter(
       (g) =>
         g.name.toLowerCase().includes(q) ||
         (g.description ?? "").toLowerCase().includes(q)
     )
-  }, [groups, search])
+  }, [sorted, q])
+
+  const reorderMutation = useMutation({
+    mutationFn: (changed: MonitorGroup[]) =>
+      Promise.all(changed.map((g) => api.updateMonitorGroup(g.id, g))),
+    onError: (err) => {
+      toast.error(err instanceof ApiError ? err.message : "排序更新失败")
+      queryClient.invalidateQueries({ queryKey: ["monitor-groups"] })
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["monitor-groups"] })
+    },
+  })
+
+  function handleMove(index: number, dir: "up" | "down") {
+    const result = reorderByMove(sorted, index, dir)
+    if (!result || result.changed.length === 0) return
+    queryClient.setQueryData(["monitor-groups"], (old: typeof data) =>
+      old ? { ...old, groups: result.ordered } : old
+    )
+    reorderMutation.mutate(result.changed)
+  }
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.deleteMonitorGroup(id),
@@ -125,7 +149,7 @@ export function MonitorGroupsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.map((g) => (
+                {filtered.map((g, i) => (
                   <TableRow key={g.id}>
                     <TableCell className="font-medium">
                       <Link
@@ -138,8 +162,21 @@ export function MonitorGroupsPage() {
                     <TableCell className="text-muted-foreground text-sm">
                       {g.description || "-"}
                     </TableCell>
-                    <TableCell className="text-muted-foreground text-sm tabular-nums">
-                      {g.sort_order ?? 0}
+                    <TableCell className="text-sm">
+                      {user && !q ? (
+                        <ReorderControls
+                          order={g.sort_order ?? 0}
+                          canUp={i > 0}
+                          canDown={i < filtered.length - 1}
+                          disabled={reorderMutation.isPending}
+                          onUp={() => handleMove(i, "up")}
+                          onDown={() => handleMove(i, "down")}
+                        />
+                      ) : (
+                        <span className="text-muted-foreground tabular-nums">
+                          {g.sort_order ?? 0}
+                        </span>
+                      )}
                     </TableCell>
                     <TableCell>
                       {g.alert_policy?.enabled ? (

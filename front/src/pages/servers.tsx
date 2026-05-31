@@ -8,9 +8,11 @@ import { api, ApiError } from "@/lib/api"
 import type { HealthStatus, Server } from "@/lib/types"
 import { useAuth } from "@/lib/auth"
 import { formatRelative, statusLabels } from "@/lib/format"
+import { bySortOrder, reorderByMove } from "@/lib/sort-order"
 import { StatusBadge } from "@/components/status-badge"
 import { ServerForm } from "@/components/server-form"
 import { ConfirmDialog } from "@/components/confirm-dialog"
+import { ReorderControls } from "@/components/reorder-controls"
 import { TableSkeleton } from "@/components/table-skeleton"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -47,18 +49,19 @@ export function ServersPage() {
   })
 
   const servers = data?.servers ?? []
+  const sorted = useMemo(() => bySortOrder(servers), [servers])
 
+  const q = search.trim().toLowerCase()
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase()
-    if (!q) return servers
-    return servers.filter(
+    if (!q) return sorted
+    return sorted.filter(
       (s) =>
         s.name.toLowerCase().includes(q) ||
         s.host.toLowerCase().includes(q) ||
         (s.environment ?? "").toLowerCase().includes(q) ||
         (s.tags ?? []).some((t) => t.toLowerCase().includes(q))
     )
-  }, [servers, search])
+  }, [sorted, q])
 
   const summary = useMemo(() => {
     const counts: Record<HealthStatus, number> = {
@@ -86,6 +89,27 @@ export function ServersPage() {
       toast.error(err instanceof ApiError ? err.message : "删除失败")
     },
   })
+
+  const reorderMutation = useMutation({
+    mutationFn: (changed: Server[]) =>
+      Promise.all(changed.map((s) => api.updateServer(s.id, s))),
+    onError: (err) => {
+      toast.error(err instanceof ApiError ? err.message : "排序更新失败")
+      queryClient.invalidateQueries({ queryKey: ["servers"] })
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["servers"] })
+    },
+  })
+
+  function handleMove(index: number, dir: "up" | "down") {
+    const result = reorderByMove(sorted, index, dir)
+    if (!result || result.changed.length === 0) return
+    queryClient.setQueryData(["servers"], (old: typeof data) =>
+      old ? { ...old, servers: result.ordered } : old
+    )
+    reorderMutation.mutate(result.changed)
+  }
 
   return (
     <div className="animate-enter flex flex-col gap-6">
@@ -173,7 +197,7 @@ export function ServersPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.map((s) => (
+                {filtered.map((s, i) => (
                   <TableRow key={s.id}>
                     <TableCell>
                       <StatusBadge status={s.health_status} />
@@ -197,8 +221,21 @@ export function ServersPage() {
                     <TableCell className="text-muted-foreground text-sm">
                       {s.environment || "-"}
                     </TableCell>
-                    <TableCell className="text-muted-foreground text-sm tabular-nums">
-                      {s.sort_order ?? 0}
+                    <TableCell className="text-sm">
+                      {user && !q ? (
+                        <ReorderControls
+                          order={s.sort_order ?? 0}
+                          canUp={i > 0}
+                          canDown={i < filtered.length - 1}
+                          disabled={reorderMutation.isPending}
+                          onUp={() => handleMove(i, "up")}
+                          onDown={() => handleMove(i, "down")}
+                        />
+                      ) : (
+                        <span className="text-muted-foreground tabular-nums">
+                          {s.sort_order ?? 0}
+                        </span>
+                      )}
                     </TableCell>
                     <TableCell className="text-muted-foreground text-sm">
                       {formatRelative(s.last_check_at)}
