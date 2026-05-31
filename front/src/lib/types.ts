@@ -190,3 +190,45 @@ export interface CreateMcpTokenResponse {
   token: McpToken
   secret: string
 }
+
+// Status overview is the slim, public payload backing the anonymous status page.
+// It deliberately omits hosts, URLs, ports, headers, and certificate identity.
+export interface StatusCertificate {
+  not_before?: string
+  not_after?: string
+  days_remaining?: number
+}
+
+export interface StatusMonitor {
+  id: string
+  server_id: string
+  name: string
+  kind: MonitorKind
+  status: HealthStatus
+  interval_seconds: number
+  last_check_at?: string
+  warning_days?: number
+  critical_days?: number
+  certificate?: StatusCertificate
+  uptime: MonitorUptime
+}
+
+export interface StatusServer {
+  id: string
+  name: string
+  environment?: string
+  tags?: string[]
+  monitors: StatusMonitor[]
+}
+
+export interface StatusGroup {
+  id: string
+  name: string
+  description?: string
+  sort_order: number
+  servers: StatusServer[]
+}
+
+export interface StatusOverview {
+  groups: StatusGroup[]
+}

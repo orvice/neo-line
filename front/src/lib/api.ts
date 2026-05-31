@@ -11,6 +11,7 @@ import type {
   ServerEvent,
   ServerHealth,
   Settings,
+  StatusOverview,
   User,
 } from "./types"
 
@@ -101,6 +102,10 @@ export const api = {
   me: () => request<{ user: User }>("/auth/me"),
   logout: () => request<void>("/auth/logout", { method: "POST" }),
 
+  // Public status overview (slim, unauthenticated)
+  getStatusOverview: () =>
+    request<StatusOverview>("/status", { auth: false }),
+
   // Settings
   getSettings: () =>
     request<{ settings: Settings }>("/settings", { auth: false }),
@@ -109,8 +114,8 @@ export const api = {
 
   // Servers
   listServers: (query?: { environment?: string; tags?: string; page_token?: string; page_size?: number }) =>
-    request<ListResponse & { servers: Server[] }>("/servers", { query, auth: false }),
-  getServer: (id: string) => request<{ server: Server }>(`/servers/${id}`, { auth: false }),
+    request<ListResponse & { servers: Server[] }>("/servers", { query }),
+  getServer: (id: string) => request<{ server: Server }>(`/servers/${id}`),
   createServer: (body: Partial<Server>) =>
     request<{ server: Server }>("/servers", { method: "POST", body }),
   updateServer: (id: string, body: Partial<Server>) =>
@@ -118,15 +123,15 @@ export const api = {
   deleteServer: (id: string) =>
     request<void>(`/servers/${id}`, { method: "DELETE" }),
   getServerHealth: (id: string) =>
-    request<{ health: ServerHealth }>(`/servers/${id}/health`, { auth: false }),
+    request<{ health: ServerHealth }>(`/servers/${id}/health`),
   listServerEvents: (id: string, query?: { page_token?: string; page_size?: number }) =>
-    request<ListResponse & { events: ServerEvent[] }>(`/servers/${id}/events`, { query, auth: false }),
+    request<ListResponse & { events: ServerEvent[] }>(`/servers/${id}/events`, { query }),
 
   // Monitors
   listMonitors: (serverId: string, query?: { page_token?: string; page_size?: number }) =>
-    request<ListResponse & { monitors: Monitor[] }>(`/servers/${serverId}/monitors`, { query, auth: false }),
+    request<ListResponse & { monitors: Monitor[] }>(`/servers/${serverId}/monitors`, { query }),
   getMonitor: (serverId: string, monitorId: string) =>
-    request<{ monitor: Monitor }>(`/servers/${serverId}/monitors/${monitorId}`, { auth: false }),
+    request<{ monitor: Monitor }>(`/servers/${serverId}/monitors/${monitorId}`),
   createMonitor: (serverId: string, body: Partial<Monitor>) =>
     request<{ monitor: Monitor }>(`/servers/${serverId}/monitors`, { method: "POST", body }),
   updateMonitor: (serverId: string, monitorId: string, body: Partial<Monitor>) =>
@@ -136,15 +141,14 @@ export const api = {
 
   getMonitorUptime: (serverId: string, monitorId: string) =>
     request<{ uptime: MonitorUptime }>(
-      `/servers/${serverId}/monitors/${monitorId}/uptime`,
-      { auth: false }
+      `/servers/${serverId}/monitors/${monitorId}/uptime`
     ),
 
   // Monitor groups
   listMonitorGroups: (query?: { page_token?: string; page_size?: number }) =>
-    request<ListResponse & { groups: MonitorGroup[] }>("/monitor-groups", { query, auth: false }),
+    request<ListResponse & { groups: MonitorGroup[] }>("/monitor-groups", { query }),
   getMonitorGroup: (groupId: string) =>
-    request<{ group: MonitorGroup }>(`/monitor-groups/${groupId}`, { auth: false }),
+    request<{ group: MonitorGroup }>(`/monitor-groups/${groupId}`),
   createMonitorGroup: (body: Partial<MonitorGroup>) =>
     request<{ group: MonitorGroup }>("/monitor-groups", { method: "POST", body }),
   updateMonitorGroup: (groupId: string, body: Partial<MonitorGroup>) =>
@@ -152,13 +156,13 @@ export const api = {
   deleteMonitorGroup: (groupId: string) =>
     request<void>(`/monitor-groups/${groupId}`, { method: "DELETE" }),
   listMonitorsByGroup: (groupId: string, query?: { page_token?: string; page_size?: number }) =>
-    request<ListResponse & { monitors: Monitor[] }>(`/monitor-groups/${groupId}/monitors`, { query, auth: false }),
+    request<ListResponse & { monitors: Monitor[] }>(`/monitor-groups/${groupId}/monitors`, { query }),
 
   // Notify groups
   listNotifyGroups: (query?: { page_token?: string; page_size?: number }) =>
-    request<ListResponse & { groups: NotifyGroup[] }>("/notify-groups", { query, auth: false }),
+    request<ListResponse & { groups: NotifyGroup[] }>("/notify-groups", { query }),
   getNotifyGroup: (id: string) =>
-    request<{ group: NotifyGroup }>(`/notify-groups/${id}`, { auth: false }),
+    request<{ group: NotifyGroup }>(`/notify-groups/${id}`),
   createNotifyGroup: (body: Partial<NotifyGroup>) =>
     request<{ group: NotifyGroup }>("/notify-groups", { method: "POST", body }),
   updateNotifyGroup: (id: string, body: Partial<NotifyGroup>) =>
@@ -184,6 +188,6 @@ export const api = {
   ) =>
     request<ListResponse & { results: CheckResult[] }>(
       `/servers/${serverId}/monitors/${monitorId}/results`,
-      { query, auth: false }
+      { query }
     ),
 }

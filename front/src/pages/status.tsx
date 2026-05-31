@@ -1,13 +1,12 @@
 import { useEffect, useMemo, useState } from "react"
 import { Link } from "react-router-dom"
-import { useQueries, useQuery } from "@tanstack/react-query"
+import { useQuery } from "@tanstack/react-query"
 import {
   Activity,
   AlertTriangle,
   CheckCircle2,
   CircleDashed,
   Clock3,
-  Database,
   Gauge,
   Globe2,
   LayoutGrid,
@@ -24,12 +23,13 @@ import {
 
 import { api } from "@/lib/api"
 import type {
-  CertificateInfo,
   HealthStatus,
   Heartbeat,
-  Monitor,
   MonitorUptime,
-  Server,
+  StatusCertificate,
+  StatusGroup,
+  StatusMonitor,
+  StatusServer,
   UptimeWindow,
 } from "@/lib/types"
 import { useSettings } from "@/lib/settings"
@@ -201,59 +201,20 @@ export function StatusPage() {
   const [density, setDensity] = useDensity()
   const compact = density === "compact"
 
-  const groupsQuery = useQuery({
-    queryKey: ["status-groups"],
-    queryFn: () => api.listMonitorGroups({ page_size: 200 }),
+  const overviewQuery = useQuery({
+    queryKey: ["status-overview"],
+    queryFn: () => api.getStatusOverview(),
     refetchInterval: 60_000,
   })
-  const groups = groupsQuery.data?.groups ?? []
-
-  const serversQuery = useQuery({
-    queryKey: ["status-servers"],
-    queryFn: () => api.listServers({ page_size: 200 }),
-    refetchInterval: 60_000,
-  })
-  const serverMap = useMemo(() => {
-    const map = new Map<string, Server>()
-    for (const s of serversQuery.data?.servers ?? []) map.set(s.id, s)
-    return map
-  }, [serversQuery.data])
-
-  const monitorQueries = useQueries({
-    queries: groups.map((g) => ({
-      queryKey: ["status-group-monitors", g.id],
-      queryFn: () => api.listMonitorsByGroup(g.id, { page_size: 200 }),
-      refetchInterval: 60_000,
-    })),
-  })
-
-  const sections = groups.map((group, i) => ({
-    group,
-    isLoading: monitorQueries[i]?.isLoading ?? true,
-    monitors: (monitorQueries[i]?.data?.monitors ?? []).filter((m) => m.enabled),
-  }))
-
-  const allMonitors = useMemo(
-    () => sections.flatMap((s) => s.monitors),
-    [sections]
+  const groups = useMemo(
+    () => overviewQuery.data?.groups ?? [],
+    [overviewQuery.data]
   )
 
-  const uptimeQueries = useQueries({
-    queries: allMonitors.map((m) => ({
-      queryKey: ["status-uptime", m.server_id, m.id],
-      queryFn: () => api.getMonitorUptime(m.server_id, m.id),
-      refetchInterval: 60_000,
-    })),
-  })
-
-  const uptimeByMonitor = useMemo(() => {
-    const map = new Map<string, MonitorUptime>()
-    allMonitors.forEach((m, i) => {
-      const data = uptimeQueries[i]?.data?.uptime
-      if (data) map.set(m.id, data)
-    })
-    return map
-  }, [allMonitors, uptimeQueries])
+  const allMonitors = useMemo(
+    () => groups.flatMap((g) => g.servers.flatMap((s) => s.monitors)),
+    [groups]
+  )
 
   const statusCounts = useMemo(() => {
     const counts: Record<HealthStatus, number> = {
@@ -278,7 +239,7 @@ export function StatusPage() {
   const activeIncidents =
     statusCounts.Warning + statusCounts.Critical + statusCounts.Down
   const globalUptime = formatUptimeAverage(
-    allMonitors.map((m) => uptimeValue(uptimeByMonitor.get(m.id)))
+    allMonitors.map((m) => uptimeValue(m.uptime))
   )
   const serverCount = new Set(allMonitors.map((m) => m.server_id)).size
 
@@ -293,32 +254,13 @@ export function StatusPage() {
     return latest ? new Date(latest).toISOString() : undefined
   }, [allMonitors])
 
-  const filteredSections = useMemo(() => {
-    const query = searchTerm.trim().toLowerCase()
-    if (!query) return sections
-    return sections
-      .map((section) => {
-        const groupMatch = [section.group.name, section.group.description]
-          .filter(Boolean)
-          .some((value) => value!.toLowerCase().includes(query))
+  const filteredGroups = useMemo(
+    () => filterGroups(groups, searchTerm),
+    [groups, searchTerm]
+  )
 
-        const monitors = groupMatch
-          ? section.monitors
-          : section.monitors.filter((monitor) =>
-              monitorMatchesSearch(monitor, serverMap, query)
-            )
-
-        return { ...section, monitors }
-      })
-      .filter((section) => section.monitors.length > 0)
-  }, [searchTerm, sections, serverMap])
-
-  const loading = groupsQuery.isLoading || serversQuery.isLoading
-  const isFetching =
-    groupsQuery.isFetching ||
-    serversQuery.isFetching ||
-    monitorQueries.some((q) => q.isFetching) ||
-    uptimeQueries.some((q) => q.isFetching)
+  const loading = overviewQuery.isLoading
+  const isFetching = overviewQuery.isFetching
 
   return (
     <div className="relative isolate min-h-[calc(100dvh-3.5rem)] overflow-hidden bg-[#031427] text-[#d3e4fe]">
@@ -387,12 +329,7 @@ export function StatusPage() {
             </div>
             <button
               type="button"
-              onClick={() => {
-                groupsQuery.refetch()
-                serversQuery.refetch()
-                monitorQueries.forEach((q) => q.refetch())
-                uptimeQueries.forEach((q) => q.refetch())
-              }}
+              onClick={() => overviewQuery.refetch()}
               className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-[#38bdf8]/35 bg-[#38bdf8]/10 px-3 text-sm font-semibold text-[#8ed5ff] transition hover:border-[#8ed5ff] hover:bg-[#38bdf8]/15"
             >
               <RefreshCw className={cn("size-4", isFetching && "animate-spin")} />
@@ -478,64 +415,58 @@ export function StatusPage() {
               )}
             </section>
 
-            {sections.length === 0 ? (
+            {groups.length === 0 ? (
               <EmptyState text="暂无监控分组，请在分组中添加监控项后展示在状态页。" />
-            ) : filteredSections.length === 0 ? (
+            ) : filteredGroups.length === 0 ? (
               <EmptyState text="没有匹配的服务器或监控项。" />
             ) : (
               <div className="flex flex-col gap-8">
-                {filteredSections.map(({ group, isLoading, monitors }) => {
-                  const serverRows = groupMonitorsByServer(monitors, serverMap)
-                  return (
-                    <section key={group.id} className="flex flex-col gap-4">
-                      <div className="flex flex-col gap-2 border-b border-[#3e484f] pb-3 sm:flex-row sm:items-end sm:justify-between">
-                        <div>
-                          <div className="text-xs font-semibold uppercase tracking-normal text-[#8ed5ff]">
-                            Monitor Group
-                          </div>
-                          <h2 className="mt-1 text-xl font-semibold tracking-normal text-white">
-                            {group.name}
-                          </h2>
-                          {group.description && (
-                            <p className="mt-1 max-w-2xl text-sm text-[#bdc8d1]">
-                              {group.description}
-                            </p>
-                          )}
+                {filteredGroups.map((group) => (
+                  <section key={group.id} className="flex flex-col gap-4">
+                    <div className="flex flex-col gap-2 border-b border-[#3e484f] pb-3 sm:flex-row sm:items-end sm:justify-between">
+                      <div>
+                        <div className="text-xs font-semibold uppercase tracking-normal text-[#8ed5ff]">
+                          Monitor Group
                         </div>
-                        <Link
-                          to={`/monitor-groups/${group.id}`}
-                          className="inline-flex items-center text-sm font-medium text-[#8ed5ff] transition hover:text-white"
-                        >
-                          分组详情
-                        </Link>
+                        <h2 className="mt-1 text-xl font-semibold tracking-normal text-white">
+                          {group.name}
+                        </h2>
+                        {group.description && (
+                          <p className="mt-1 max-w-2xl text-sm text-[#bdc8d1]">
+                            {group.description}
+                          </p>
+                        )}
                       </div>
+                      <Link
+                        to={`/monitor-groups/${group.id}`}
+                        className="inline-flex items-center text-sm font-medium text-[#8ed5ff] transition hover:text-white"
+                      >
+                        分组详情
+                      </Link>
+                    </div>
 
-                      {isLoading ? (
-                        <GroupLoading />
-                      ) : serverRows.length === 0 ? (
-                        <EmptyState text="该分组下暂无启用的监控项。" compact />
-                      ) : (
-                        <div
-                          className={cn(
-                            "grid",
-                            compact
-                              ? "gap-3 sm:grid-cols-2 xl:grid-cols-3"
-                              : "gap-4 xl:grid-cols-2"
-                          )}
-                        >
-                          {serverRows.map((row) => (
-                            <ServerCard
-                              key={row.serverId}
-                              row={row}
-                              uptimeByMonitor={uptimeByMonitor}
-                              compact={compact}
-                            />
-                          ))}
-                        </div>
-                      )}
-                    </section>
-                  )
-                })}
+                    {group.servers.length === 0 ? (
+                      <EmptyState text="该分组下暂无启用的监控项。" compact />
+                    ) : (
+                      <div
+                        className={cn(
+                          "grid",
+                          compact
+                            ? "gap-3 sm:grid-cols-2 xl:grid-cols-3"
+                            : "gap-4 xl:grid-cols-2"
+                        )}
+                      >
+                        {group.servers.map((server) => (
+                          <ServerCard
+                            key={server.id}
+                            server={server}
+                            compact={compact}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </section>
+                ))}
               </div>
             )}
           </>
@@ -571,15 +502,6 @@ function EmptyState({ text, compact = false }: { text: string; compact?: boolean
       )}
     >
       {text}
-    </div>
-  )
-}
-
-function GroupLoading() {
-  return (
-    <div className="grid gap-4 xl:grid-cols-2">
-      <Skeleton className="h-72 rounded-lg bg-[#102034]" />
-      <Skeleton className="h-72 rounded-lg bg-[#102034]" />
     </div>
   )
 }
@@ -629,47 +551,19 @@ function StatusCounter({ status, count }: { status: HealthStatus; count: number 
   )
 }
 
-interface ServerRowData {
-  serverId: string
-  server?: Server
-  monitors: Monitor[]
-}
-
-function groupMonitorsByServer(
-  monitors: Monitor[],
-  serverMap: Map<string, Server>
-): ServerRowData[] {
-  const order: string[] = []
-  const byServer = new Map<string, Monitor[]>()
-  for (const m of monitors) {
-    if (!byServer.has(m.server_id)) {
-      byServer.set(m.server_id, [])
-      order.push(m.server_id)
-    }
-    byServer.get(m.server_id)!.push(m)
-  }
-  return order.map((serverId) => ({
-    serverId,
-    server: serverMap.get(serverId),
-    monitors: byServer.get(serverId)!,
-  }))
-}
-
 function ServerCard({
-  row,
-  uptimeByMonitor,
+  server,
   compact = false,
 }: {
-  row: ServerRowData
-  uptimeByMonitor: Map<string, MonitorUptime>
+  server: StatusServer
   compact?: boolean
 }) {
-  const serverStatus = worst(row.monitors.map((m) => normalizeStatus(m.status)))
+  const serverStatus = worst(server.monitors.map((m) => normalizeStatus(m.status)))
   const tone = STATUS_TONES[serverStatus]
-  const serverName = row.server?.name ?? row.serverId
-  const env = row.server?.environment || row.server?.tags?.[0]
+  const serverName = server.name || server.id
+  const env = server.environment || server.tags?.[0]
   const serverUptime = formatUptimeAverage(
-    row.monitors.map((monitor) => uptimeValue(uptimeByMonitor.get(monitor.id)))
+    server.monitors.map((monitor) => uptimeValue(monitor.uptime))
   )
 
   return (
@@ -702,7 +596,7 @@ function ServerCard({
           </div>
           <div className="min-w-0">
             <Link
-              to={`/servers/${row.serverId}`}
+              to={`/servers/${server.id}`}
               className={cn(
                 "block truncate font-semibold tracking-normal text-white hover:text-[#8ed5ff]",
                 compact ? "text-base" : "text-lg"
@@ -711,7 +605,7 @@ function ServerCard({
               {serverName}
             </Link>
             <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-[#bdc8d1]">
-              <span className="font-mono">{row.server?.host ?? row.serverId}</span>
+              <span>{server.monitors.length} 个监控</span>
               {env && (
                 <span className="rounded border border-[#3e484f] bg-[#26364a] px-1.5 py-0.5 font-mono uppercase text-[#bdc8d1]">
                   {env}
@@ -744,22 +638,14 @@ function ServerCard({
         {!compact && (
           <div className="grid grid-cols-2 gap-3">
             <ServerMiniStat label="24h 可用性" value={serverUptime} />
-            <ServerMiniStat label="监控项" value={String(row.monitors.length)} />
+            <ServerMiniStat label="监控项" value={String(server.monitors.length)} />
           </div>
         )}
-        {row.monitors.map((monitor) =>
+        {server.monitors.map((monitor) =>
           compact ? (
-            <CompactMonitorRow
-              key={monitor.id}
-              monitor={monitor}
-              uptime={uptimeByMonitor.get(monitor.id)}
-            />
+            <CompactMonitorRow key={monitor.id} monitor={monitor} />
           ) : (
-            <MonitorPanel
-              key={monitor.id}
-              monitor={monitor}
-              uptime={uptimeByMonitor.get(monitor.id)}
-            />
+            <MonitorPanel key={monitor.id} monitor={monitor} />
           )
         )}
       </div>
@@ -767,18 +653,11 @@ function ServerCard({
   )
 }
 
-function CompactMonitorRow({
-  monitor,
-  uptime,
-}: {
-  monitor: Monitor
-  uptime?: MonitorUptime
-}) {
+function CompactMonitorRow({ monitor }: { monitor: StatusMonitor }) {
   const status = normalizeStatus(monitor.status)
   const tone = STATUS_TONES[status]
-  const window24h = uptime?.windows?.["24h"]
+  const window24h = monitor.uptime?.windows?.["24h"]
   const Icon = monitorIcon(monitor)
-  const target = monitorTarget(monitor)
 
   return (
     <Link
@@ -795,13 +674,17 @@ function CompactMonitorRow({
         <div className="truncate text-sm font-medium text-white">
           {monitor.name}
         </div>
-        <div className="truncate font-mono text-xs text-[#87929a]">{target}</div>
+        <div className="truncate font-mono text-xs text-[#87929a]">
+          {monitorKindLabels[monitor.kind] ?? monitor.kind}
+        </div>
       </div>
       <div className="hidden w-24 shrink-0 sm:block">
-        <CompactHeartbeats beats={uptime?.heartbeats ?? []} />
+        <CompactHeartbeats beats={monitor.uptime?.heartbeats ?? []} />
       </div>
       <div className="w-16 shrink-0 text-right">
-        <div className="font-mono text-sm text-[#d3e4fe]">{uptimePct(uptime)}</div>
+        <div className="font-mono text-sm text-[#d3e4fe]">
+          {uptimePct(monitor.uptime)}
+        </div>
         <div className="font-mono text-[11px] text-[#87929a]">
           {formatLatency(window24h)}
         </div>
@@ -850,19 +733,12 @@ function ServerMiniStat({ label, value }: { label: string; value: string }) {
   )
 }
 
-function MonitorPanel({
-  monitor,
-  uptime,
-}: {
-  monitor: Monitor
-  uptime?: MonitorUptime
-}) {
+function MonitorPanel({ monitor }: { monitor: StatusMonitor }) {
   const status = normalizeStatus(monitor.status)
   const tone = STATUS_TONES[status]
-  const window24h = uptime?.windows?.["24h"]
+  const window24h = monitor.uptime?.windows?.["24h"]
   const Icon = monitorIcon(monitor)
   const cert = monitor.certificate
-  const target = monitorTarget(monitor)
 
   return (
     <Link
@@ -883,8 +759,6 @@ function MonitorPanel({
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-[#bdc8d1]">
             <span>{monitorKindLabels[monitor.kind] ?? monitor.kind}</span>
-            <span className="text-[#3e484f]">/</span>
-            <span className="break-all font-mono">{target}</span>
           </div>
         </div>
         <div
@@ -903,22 +777,18 @@ function MonitorPanel({
       <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
         <div className="grid grid-cols-2 gap-3">
           <MonitorFact label="响应时间" value={formatLatency(window24h)} />
-          <MonitorFact label="24h 可用性" value={uptimePct(uptime)} />
+          <MonitorFact label="24h 可用性" value={uptimePct(monitor.uptime)} />
           <MonitorFact label="检查间隔" value={formatSeconds(monitor.interval_seconds)} />
           <MonitorFact label="最近检查" value={formatRelative(monitor.last_check_at)} />
         </div>
-        {cert ? (
-          <CertificateRing cert={cert} monitor={monitor} />
-        ) : (
-          <MonitorTargetMeta monitor={monitor} />
-        )}
+        {cert && <CertificateRing cert={cert} monitor={monitor} />}
       </div>
 
       <div className="mt-3">
         <div className="mb-1 text-xs font-semibold uppercase tracking-normal text-[#87929a]">
           最近心跳
         </div>
-        <UptimeStrip beats={uptime?.heartbeats ?? []} />
+        <UptimeStrip beats={monitor.uptime?.heartbeats ?? []} />
       </div>
     </Link>
   )
@@ -937,29 +807,12 @@ function MonitorFact({ label, value }: { label: string; value: string }) {
   )
 }
 
-function MonitorTargetMeta({ monitor }: { monitor: Monitor }) {
-  const meta =
-    monitor.kind === "url"
-      ? monitor.method || "GET"
-      : monitor.port
-        ? `:${monitor.port}`
-        : "-"
-  return (
-    <div className="rounded-lg border border-[#3e484f] bg-[#0b1c30] px-3 py-2 text-right">
-      <div className="text-xs font-semibold uppercase tracking-normal text-[#87929a]">
-        探测参数
-      </div>
-      <div className="mt-1 font-mono text-sm text-[#d3e4fe]">{meta}</div>
-    </div>
-  )
-}
-
 function CertificateRing({
   cert,
   monitor,
 }: {
-  cert: CertificateInfo
-  monitor: Monitor
+  cert: StatusCertificate
+  monitor: StatusMonitor
 }) {
   const days = cert.days_remaining
   const warningDays = monitor.warning_days || 30
@@ -1033,46 +886,47 @@ function UptimeStrip({ beats }: { beats: Heartbeat[] }) {
   )
 }
 
-function monitorIcon(monitor: Monitor) {
+function monitorIcon(monitor: StatusMonitor) {
   if (monitor.kind === "url") return Globe2
   if (isTlsMonitor(monitor)) return ShieldCheck
-  if (monitor.port === 3306 || monitor.port === 5432 || monitor.port === 6379) {
-    return Database
-  }
   if (monitor.kind === "tcp") return Wifi
   return Terminal
 }
 
-function isTlsMonitor(monitor: Monitor): boolean {
+function isTlsMonitor(monitor: StatusMonitor): boolean {
   return monitor.kind === "tls" || monitor.kind === "tls_port"
 }
 
-function monitorTarget(monitor: Monitor): string {
-  if (monitor.url) return monitor.url
-  const host = monitor.host || monitor.sni_name || "default"
-  if (monitor.port) return `${host}:${monitor.port}`
-  return host
+function filterGroups(groups: StatusGroup[], term: string): StatusGroup[] {
+  const query = term.trim().toLowerCase()
+  if (!query) return groups
+  return groups
+    .map((group) => {
+      const groupMatch = [group.name, group.description]
+        .filter(Boolean)
+        .some((value) => value!.toLowerCase().includes(query))
+      if (groupMatch) return group
+
+      const servers = group.servers
+        .map((server) => {
+          const serverMatch = [server.name, server.environment, ...(server.tags ?? [])]
+            .filter(Boolean)
+            .some((value) => value!.toLowerCase().includes(query))
+          if (serverMatch) return server
+          const monitors = server.monitors.filter((monitor) =>
+            monitorMatchesSearch(monitor, query)
+          )
+          return { ...server, monitors }
+        })
+        .filter((server) => server.monitors.length > 0)
+
+      return { ...group, servers }
+    })
+    .filter((group) => group.servers.length > 0)
 }
 
-function monitorMatchesSearch(
-  monitor: Monitor,
-  serverMap: Map<string, Server>,
-  query: string
-): boolean {
-  const server = serverMap.get(monitor.server_id)
-  const values = [
-    monitor.name,
-    monitor.kind,
-    monitor.url,
-    monitor.host,
-    monitor.sni_name,
-    monitor.port?.toString(),
-    server?.name,
-    server?.host,
-    server?.environment,
-    ...(server?.tags ?? []),
-  ]
-  return values
+function monitorMatchesSearch(monitor: StatusMonitor, query: string): boolean {
+  return [monitor.name, monitor.kind, monitorKindLabels[monitor.kind]]
     .filter((value): value is string => Boolean(value))
     .some((value) => value.toLowerCase().includes(query))
 }

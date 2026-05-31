@@ -23,26 +23,15 @@ func Register(r *gin.Engine, st store.Store) {
 		// Public authentication endpoint.
 		v1.POST("/auth/login", api.login)
 
-		// Public read endpoints.
+		// Public, unauthenticated surface. Only what the status page renders is
+		// exposed: site settings and a slim, aggregated status overview. The
+		// overview omits hosts, URLs, ports, headers, SSH config, and other
+		// connection details. Everything else requires authentication.
 		v1.GET("/settings", api.getSettings)
+		v1.GET("/status", api.getStatusOverview)
 
-		v1.GET("/servers", api.listServers)
-		v1.GET("/servers/:id", api.getServer)
-		v1.GET("/servers/:id/health", api.getServerHealth)
-		v1.GET("/servers/:id/events", api.listServerEvents)
-		v1.GET("/servers/:id/monitors", api.listMonitors)
-		v1.GET("/servers/:id/monitors/:monitor_id", api.getMonitor)
-		v1.GET("/servers/:id/monitors/:monitor_id/results", api.listCheckResults)
-		v1.GET("/servers/:id/monitors/:monitor_id/uptime", api.getMonitorUptime)
-
-		v1.GET("/monitor-groups", api.listMonitorGroups)
-		v1.GET("/monitor-groups/:group_id", api.getMonitorGroup)
-		v1.GET("/monitor-groups/:group_id/monitors", api.listMonitorsByGroup)
-
-		v1.GET("/notify-groups", api.listNotifyGroups)
-		v1.GET("/notify-groups/:notify_group_id", api.getNotifyGroup)
-
-		// Admin endpoints require authentication.
+		// Authenticated endpoints. The dashboard is fully gated behind login, so
+		// the detailed read and write endpoints all live here.
 		admin := v1.Group("")
 		admin.Use(api.authRequired())
 		{
@@ -51,19 +40,32 @@ func Register(r *gin.Engine, st store.Store) {
 
 			admin.PUT("/settings", api.updateSettings)
 
+			admin.GET("/servers", api.listServers)
 			admin.POST("/servers", api.createServer)
+			admin.GET("/servers/:id", api.getServer)
 			admin.PUT("/servers/:id", api.updateServer)
 			admin.DELETE("/servers/:id", api.deleteServer)
+			admin.GET("/servers/:id/health", api.getServerHealth)
+			admin.GET("/servers/:id/events", api.listServerEvents)
 
+			admin.GET("/servers/:id/monitors", api.listMonitors)
 			admin.POST("/servers/:id/monitors", api.createMonitor)
+			admin.GET("/servers/:id/monitors/:monitor_id", api.getMonitor)
 			admin.PUT("/servers/:id/monitors/:monitor_id", api.updateMonitor)
 			admin.DELETE("/servers/:id/monitors/:monitor_id", api.deleteMonitor)
+			admin.GET("/servers/:id/monitors/:monitor_id/results", api.listCheckResults)
+			admin.GET("/servers/:id/monitors/:monitor_id/uptime", api.getMonitorUptime)
 
+			admin.GET("/monitor-groups", api.listMonitorGroups)
 			admin.POST("/monitor-groups", api.createMonitorGroup)
+			admin.GET("/monitor-groups/:group_id", api.getMonitorGroup)
 			admin.PUT("/monitor-groups/:group_id", api.updateMonitorGroup)
 			admin.DELETE("/monitor-groups/:group_id", api.deleteMonitorGroup)
+			admin.GET("/monitor-groups/:group_id/monitors", api.listMonitorsByGroup)
 
+			admin.GET("/notify-groups", api.listNotifyGroups)
 			admin.POST("/notify-groups", api.createNotifyGroup)
+			admin.GET("/notify-groups/:notify_group_id", api.getNotifyGroup)
 			admin.PUT("/notify-groups/:notify_group_id", api.updateNotifyGroup)
 			admin.DELETE("/notify-groups/:notify_group_id", api.deleteNotifyGroup)
 
