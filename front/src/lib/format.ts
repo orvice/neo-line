@@ -70,5 +70,6 @@ export const statusLabels: Record<HealthStatus, string> = {
 export const monitorKindLabels: Record<string, string> = {
   tcp: "TCP 端口",
   url: "URL 探测",
+  tls: "TLS 证书",
   tls_port: "TLS 证书",
 }
