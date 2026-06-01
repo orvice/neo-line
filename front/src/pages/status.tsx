@@ -89,24 +89,24 @@ const STATUS_TONES: Record<
   },
   Critical: {
     icon: AlertTriangle,
-    dot: "bg-orange-500",
-    bar: "bg-orange-500",
-    text: "text-orange-600 dark:text-orange-400",
-    border: "border-orange-500/35",
-    bg: "bg-orange-500/10",
-    softBg: "bg-orange-500/5",
-    ring: "#f97316",
+    dot: "bg-rose-500",
+    bar: "bg-rose-500",
+    text: "text-rose-600 dark:text-rose-400",
+    border: "border-rose-500/35",
+    bg: "bg-rose-500/10",
+    softBg: "bg-rose-500/5",
+    ring: "#f43f5e",
     code: "CRIT",
   },
   Down: {
     icon: XCircle,
-    dot: "bg-red-500",
-    bar: "bg-red-500",
+    dot: "bg-red-600",
+    bar: "bg-red-600",
     text: "text-red-600 dark:text-red-400",
-    border: "border-red-500/40",
-    bg: "bg-red-500/10",
-    softBg: "bg-red-500/5",
-    ring: "#ef4444",
+    border: "border-red-600/40",
+    bg: "bg-red-600/10",
+    softBg: "bg-red-600/5",
+    ring: "#dc2626",
     code: "DOWN",
   },
   Unknown: {
@@ -305,7 +305,7 @@ export function StatusPage() {
                   "inline-flex h-full items-center gap-1.5 rounded-md px-2.5 text-sm font-semibold transition",
                   !compact
                     ? "bg-primary/15 text-primary"
-                    : "text-muted-foreground hover:text-muted-foreground"
+                    : "text-muted-foreground hover:text-foreground"
                 )}
               >
                 <LayoutGrid className="size-4" />
@@ -320,7 +320,7 @@ export function StatusPage() {
                   "inline-flex h-full items-center gap-1.5 rounded-md px-2.5 text-sm font-semibold transition",
                   compact
                     ? "bg-primary/15 text-primary"
-                    : "text-muted-foreground hover:text-muted-foreground"
+                    : "text-muted-foreground hover:text-foreground"
                 )}
               >
                 <Rows3 className="size-4" />
@@ -834,7 +834,7 @@ function CertificateRing({
       <div
         className="grid size-12 shrink-0 place-items-center rounded-full"
         style={{
-          background: `conic-gradient(${tone.ring} ${progress}%, rgba(62,72,79,0.78) 0)`,
+          background: `conic-gradient(${tone.ring} ${progress}%, var(--color-hairline) 0)`,
         }}
       >
         <div className="grid size-9 place-items-center rounded-full bg-background">
