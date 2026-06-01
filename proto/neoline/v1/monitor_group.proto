@@ -2,7 +2,6 @@ syntax = "proto3";
 
 package neoline.v1;
 
-import "google/api/annotations.proto";
 import "google/protobuf/timestamp.proto";
 import "neoline/v1/monitor.proto";
 
@@ -12,15 +11,11 @@ option go_package = "github.com/orvice/neo-line/pkg/proto/neoline/v1;neolinev1";
 // any monitor in the group transitions between health states.
 message AlertPolicy {
   bool enabled = 1;
-  // notify_group_ids references the NotifyGroups whose channels receive the
-  // alert. Dispatch fans out to every channel of every referenced group.
   repeated string notify_group_ids = 2;
   bool on_down = 3;
   bool on_recover = 4;
   bool on_warning = 5;
   bool on_critical = 6;
-  // min_interval_seconds throttles alerts so the same (group, monitor) pair
-  // does not fire more often than this window. Zero disables throttling.
   uint32 min_interval_seconds = 7;
 }
 
@@ -30,11 +25,10 @@ message MonitorGroup {
   string id = 1;
   string name = 2;
   string description = 3;
-  AlertPolicy alert_policy = 4;
-  google.protobuf.Timestamp created_at = 5;
-  google.protobuf.Timestamp updated_at = 6;
-  // sort_order controls display order. Smaller values are listed first.
-  uint32 sort_order = 7;
+  uint32 sort_order = 4;
+  AlertPolicy alert_policy = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
 }
 
 message ListMonitorGroupsRequest {
@@ -91,28 +85,10 @@ message ListMonitorsByGroupResponse {
 
 // MonitorGroupService manages monitor groups and lists their members.
 service MonitorGroupService {
-  rpc ListMonitorGroups(ListMonitorGroupsRequest) returns (ListMonitorGroupsResponse) {
-    option (google.api.http) = {get: "/v1/monitor-groups"};
-  }
-  rpc CreateMonitorGroup(CreateMonitorGroupRequest) returns (CreateMonitorGroupResponse) {
-    option (google.api.http) = {
-      post: "/v1/monitor-groups"
-      body: "group"
-    };
-  }
-  rpc GetMonitorGroup(GetMonitorGroupRequest) returns (GetMonitorGroupResponse) {
-    option (google.api.http) = {get: "/v1/monitor-groups/{group_id}"};
-  }
-  rpc UpdateMonitorGroup(UpdateMonitorGroupRequest) returns (UpdateMonitorGroupResponse) {
-    option (google.api.http) = {
-      put: "/v1/monitor-groups/{group_id}"
-      body: "group"
-    };
-  }
-  rpc DeleteMonitorGroup(DeleteMonitorGroupRequest) returns (DeleteMonitorGroupResponse) {
-    option (google.api.http) = {delete: "/v1/monitor-groups/{group_id}"};
-  }
-  rpc ListMonitorsByGroup(ListMonitorsByGroupRequest) returns (ListMonitorsByGroupResponse) {
-    option (google.api.http) = {get: "/v1/monitor-groups/{group_id}/monitors"};
-  }
+  rpc ListMonitorGroups(ListMonitorGroupsRequest) returns (ListMonitorGroupsResponse) {}
+  rpc CreateMonitorGroup(CreateMonitorGroupRequest) returns (CreateMonitorGroupResponse) {}
+  rpc GetMonitorGroup(GetMonitorGroupRequest) returns (GetMonitorGroupResponse) {}
+  rpc UpdateMonitorGroup(UpdateMonitorGroupRequest) returns (UpdateMonitorGroupResponse) {}
+  rpc DeleteMonitorGroup(DeleteMonitorGroupRequest) returns (DeleteMonitorGroupResponse) {}
+  rpc ListMonitorsByGroup(ListMonitorsByGroupRequest) returns (ListMonitorsByGroupResponse) {}
 }

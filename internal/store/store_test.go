@@ -143,6 +143,28 @@ func TestNormalizeLimit(t *testing.T) {
 	}
 }
 
+func TestApplyServerHostFallback(t *testing.T) {
+	monitors := []Monitor{
+		{ID: "mon_inherit", ServerID: "srv_1", Kind: "tcp"},
+		{ID: "mon_override", ServerID: "srv_1", Kind: "tcp", Host: "monitor.example.com"},
+		{ID: "mon_unknown_server", ServerID: "srv_missing", Kind: "tcp"},
+	}
+
+	applyServerHostFallback(monitors, map[string]string{
+		"srv_1": "server.example.com",
+	})
+
+	if got := monitors[0].Host; got != "server.example.com" {
+		t.Fatalf("inherited Host = %q, want server.example.com", got)
+	}
+	if got := monitors[1].Host; got != "monitor.example.com" {
+		t.Fatalf("override Host = %q, want monitor.example.com", got)
+	}
+	if got := monitors[2].Host; got != "" {
+		t.Fatalf("missing server Host = %q, want empty", got)
+	}
+}
+
 func TestParsePageToken(t *testing.T) {
 	tests := []struct {
 		name    string

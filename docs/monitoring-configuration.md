@@ -62,6 +62,7 @@ ssh:
 - API 创建、更新或删除配置时，写入 MongoDB。
 - 调度器从 MongoDB 读取启用状态为 `true` 的 server 和 monitor。
 - 探测 worker 执行时使用 MongoDB 中当前有效的 monitor 配置。
+- TCP 和 TLS Port monitor 的 `host` 为空时，运行时探测目标会回落到所属 server 的 `host`。该回落只影响运行时探测配置，不会把回落值写回 monitor 文档。
 - 探测结果、当前状态、状态变化事件和证书信息写回 MongoDB。
 - 本地文件不作为 server / monitor 配置来源。
 
@@ -165,9 +166,17 @@ port: 22
 timeout_seconds: 3
 ```
 
+如果 `host` 留空，运行时使用该 monitor 所属 server 的 `host`：
+
+```yaml
+kind: tcp
+port: 22
+timeout_seconds: 3
+```
+
 字段说明：
 
-- `host`：目标 hostname 或 IP
+- `host`：目标 hostname 或 IP；为空时回落到所属 server 的 `host`
 - `port`：目标 TCP 端口
 - `timeout_seconds`：连接超时时间
 
@@ -266,9 +275,18 @@ critical_days: 7
 timeout_seconds: 5
 ```
 
+如果 `host` 留空，运行时使用该 monitor 所属 server 的 `host`：
+
+```yaml
+kind: tls_port
+port: 443
+sni_name: api.example.com
+tls_verify: true
+```
+
 字段说明：
 
-- `host`：目标 hostname 或 IP
+- `host`：目标 hostname 或 IP；为空时回落到所属 server 的 `host`
 - `port`：目标 TLS 端口，默认 `443`
 - `sni_name`：自定义 TLS server name
 - `tls_verify`：是否校验证书
