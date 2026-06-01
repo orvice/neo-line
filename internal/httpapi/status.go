@@ -2,11 +2,26 @@ package httpapi
 
 import (
 	"context"
+	"encoding/json"
+	"log/slog"
 	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/orvice/neo-line/internal/store"
+	"golang.org/x/sync/errgroup"
+)
+
+// uptimeFetchConcurrency bounds the parallel uptime reads the status overview
+// issues so a large monitor set does not overwhelm the Mongo connection pool.
+const uptimeFetchConcurrency = 16
+
+// statusOverviewCacheKey and statusOverviewCacheTTL back the short-lived cache for
+// the public overview. The page polls frequently and monitor data only changes at
+// probe intervals, so a brief TTL slashes Mongo load with negligible staleness.
+const (
+	statusOverviewCacheKey = "status:overview"
+	statusOverviewCacheTTL = 10 * time.Second
 )
 
 // statusPageLimit bounds how many groups and monitors the public overview reads.
@@ -65,6 +80,13 @@ type publicCertificate struct {
 func (api *API) getStatusOverview(c *gin.Context) {
 	ctx := c.Request.Context()
 
+	if cached, found, err := api.store.CacheGet(ctx, statusOverviewCacheKey); err != nil {
+		slog.WarnContext(ctx, "status overview cache read failed", "error", err)
+	} else if found {
+		c.Data(http.StatusOK, "application/json; charset=utf-8", cached)
+		return
+	}
+
 	groups, _, err := api.store.ListMonitorGroups(ctx, statusPageLimit, "")
 	if err != nil {
 		respondError(c, err)
@@ -96,15 +118,23 @@ func (api *API) getStatusOverview(c *gin.Context) {
 		})
 	}
 
-	c.JSON(http.StatusOK, out)
+	payload, err := json.Marshal(out)
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	if err := api.store.CacheSet(ctx, statusOverviewCacheKey, payload, statusOverviewCacheTTL); err != nil {
+		slog.WarnContext(ctx, "status overview cache write failed", "error", err)
+	}
+
+	c.Data(http.StatusOK, "application/json; charset=utf-8", payload)
 }
 
 // buildStatusServers groups enabled monitors by server (preserving first-seen
-// order) and attaches uptime for each monitor.
+// order) and attaches uptime for each monitor. Uptime reads are the dominant
+// cost, so they are fetched concurrently with a bounded worker count.
 func (api *API) buildStatusServers(ctx context.Context, monitors []store.Monitor, serverCache map[string]store.Server) ([]publicStatusServer, error) {
-	order := make([]string, 0)
-	byServer := make(map[string][]publicStatusMonitor)
-
+	visible := make([]store.Monitor, 0, len(monitors))
 	for _, m := range monitors {
 		if !m.Enabled {
 			continue
@@ -116,10 +146,29 @@ func (api *API) buildStatusServers(ctx context.Context, monitors []store.Monitor
 		if !server.Enabled {
 			continue
 		}
-		uptime, err := api.store.GetMonitorUptime(ctx, m.ServerID, m.ID)
-		if err != nil {
-			return nil, err
-		}
+		visible = append(visible, m)
+	}
+
+	uptimes := make([]store.MonitorUptime, len(visible))
+	g, gctx := errgroup.WithContext(ctx)
+	g.SetLimit(uptimeFetchConcurrency)
+	for i, m := range visible {
+		g.Go(func() error {
+			uptime, err := api.store.GetMonitorUptime(gctx, m.ServerID, m.ID)
+			if err != nil {
+				return err
+			}
+			uptimes[i] = uptime
+			return nil
+		})
+	}
+	if err := g.Wait(); err != nil {
+		return nil, err
+	}
+
+	order := make([]string, 0)
+	byServer := make(map[string][]publicStatusMonitor)
+	for i, m := range visible {
 		if _, seen := byServer[m.ServerID]; !seen {
 			order = append(order, m.ServerID)
 		}
@@ -134,7 +183,7 @@ func (api *API) buildStatusServers(ctx context.Context, monitors []store.Monitor
 			WarningDays:     m.WarningDays,
 			CriticalDays:    m.CriticalDays,
 			Certificate:     publicCert(m.Certificate),
-			Uptime:          uptime,
+			Uptime:          uptimes[i],
 		})
 	}
 

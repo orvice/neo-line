@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/orvice/neo-line/internal/store"
@@ -36,6 +37,14 @@ func (s *statusFakeStore) GetServer(_ context.Context, id string) (store.Server,
 
 func (s *statusFakeStore) GetMonitorUptime(context.Context, string, string) (store.MonitorUptime, error) {
 	return s.uptime, nil
+}
+
+func (s *statusFakeStore) CacheGet(context.Context, string) ([]byte, bool, error) {
+	return nil, false, nil
+}
+
+func (s *statusFakeStore) CacheSet(context.Context, string, []byte, time.Duration) error {
+	return nil
 }
 
 func TestGetStatusOverview(t *testing.T) {

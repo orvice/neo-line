@@ -6,8 +6,27 @@ import (
 	"time"
 
 	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
+
+// EnsureResultIndexes creates the index backing uptime aggregation. monitor_results
+// is the fastest-growing collection (one document per probe), and GetMonitorUptime
+// filters by (server_id, monitor_id) over a started_at window with a started_at sort.
+// Without this index every uptime read is a full collection scan.
+func (s *MongoStore) EnsureResultIndexes(ctx context.Context) error {
+	if _, err := s.results().Indexes().CreateOne(ctx, mongo.IndexModel{
+		Keys: bson.D{
+			{Key: "server_id", Value: 1},
+			{Key: "monitor_id", Value: 1},
+			{Key: "started_at", Value: -1},
+		},
+		Options: options.Index().SetName("by_server_monitor_started_at"),
+	}); err != nil {
+		return err
+	}
+	return nil
+}
 
 // uptimeMaxWindow bounds how far back uptime aggregation reads check results.
 const uptimeMaxWindow = 24 * time.Hour
