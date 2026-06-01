@@ -24,6 +24,18 @@ message Server {
   google.protobuf.Timestamp updated_at = 12;
   // sort_order controls display order. Smaller values are listed first.
   uint32 sort_order = 13;
+  // ssh controls MCP SSH remote execution for this server. Private keys are
+  // configured globally at runtime and are never stored here.
+  ServerSSH ssh = 14;
+}
+
+// ServerSSH stores per-server SSH execution settings. Empty host/port/user
+// values inherit from the server host and global runtime SSH defaults.
+message ServerSSH {
+  bool enabled = 1;
+  string host = 2;
+  uint32 port = 3;
+  string user = 4;
 }
 
 // ServerEvent records a server health-status transition.
