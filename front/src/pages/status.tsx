@@ -67,57 +67,57 @@ const STATUS_TONES: Record<
 > = {
   Healthy: {
     icon: CheckCircle2,
-    dot: "bg-[#4edea3]",
-    bar: "bg-[#4edea3]",
-    text: "text-[#4edea3]",
-    border: "border-[#4edea3]/30",
-    bg: "bg-[#4edea3]/10",
-    softBg: "bg-[#4edea3]/5",
-    ring: "#4edea3",
+    dot: "bg-emerald-500",
+    bar: "bg-emerald-500",
+    text: "text-emerald-600 dark:text-emerald-400",
+    border: "border-emerald-500/30",
+    bg: "bg-emerald-500/10",
+    softBg: "bg-emerald-500/5",
+    ring: "#10b981",
     code: "UP",
   },
   Warning: {
     icon: AlertTriangle,
-    dot: "bg-[#f59e0b]",
-    bar: "bg-[#f59e0b]",
-    text: "text-[#ffc174]",
-    border: "border-[#f59e0b]/35",
-    bg: "bg-[#f59e0b]/12",
-    softBg: "bg-[#f59e0b]/6",
+    dot: "bg-amber-500",
+    bar: "bg-amber-500",
+    text: "text-amber-600 dark:text-amber-300",
+    border: "border-amber-500/35",
+    bg: "bg-amber-500/10",
+    softBg: "bg-amber-500/5",
     ring: "#f59e0b",
     code: "WARN",
   },
   Critical: {
     icon: AlertTriangle,
-    dot: "bg-[#fb7185]",
-    bar: "bg-[#fb7185]",
-    text: "text-[#fb7185]",
-    border: "border-[#fb7185]/35",
-    bg: "bg-[#fb7185]/12",
-    softBg: "bg-[#fb7185]/6",
-    ring: "#fb7185",
+    dot: "bg-orange-500",
+    bar: "bg-orange-500",
+    text: "text-orange-600 dark:text-orange-400",
+    border: "border-orange-500/35",
+    bg: "bg-orange-500/10",
+    softBg: "bg-orange-500/5",
+    ring: "#f97316",
     code: "CRIT",
   },
   Down: {
     icon: XCircle,
-    dot: "bg-[#ff6b6b]",
-    bar: "bg-[#ff6b6b]",
-    text: "text-[#ffb4ab]",
-    border: "border-[#ff6b6b]/40",
-    bg: "bg-[#ff6b6b]/12",
-    softBg: "bg-[#ff6b6b]/6",
-    ring: "#ff6b6b",
+    dot: "bg-red-500",
+    bar: "bg-red-500",
+    text: "text-red-600 dark:text-red-400",
+    border: "border-red-500/40",
+    bg: "bg-red-500/10",
+    softBg: "bg-red-500/5",
+    ring: "#ef4444",
     code: "DOWN",
   },
   Unknown: {
     icon: CircleDashed,
-    dot: "bg-[#87929a]",
-    bar: "bg-[#64748b]",
-    text: "text-[#bdc8d1]",
-    border: "border-[#87929a]/30",
-    bg: "bg-[#87929a]/10",
-    softBg: "bg-[#87929a]/5",
-    ring: "#87929a",
+    dot: "bg-neutral-400",
+    bar: "bg-neutral-500",
+    text: "text-muted-foreground",
+    border: "border-neutral-500/30",
+    bg: "bg-neutral-400/10",
+    softBg: "bg-neutral-400/5",
+    ring: "#737373",
     code: "UNK",
   },
 }
@@ -263,12 +263,12 @@ export function StatusPage() {
   const isFetching = overviewQuery.isFetching
 
   return (
-    <div className="relative isolate min-h-[calc(100dvh-3.5rem)] overflow-hidden bg-[#031427] text-[#d3e4fe]">
+    <div className="relative isolate min-h-[calc(100dvh-3.5rem)] overflow-hidden bg-background text-foreground">
       <div
         className="pointer-events-none absolute inset-0 opacity-[0.18]"
         style={{
           backgroundImage:
-            "linear-gradient(rgba(142,213,255,0.16) 1px, transparent 1px), linear-gradient(90deg, rgba(142,213,255,0.16) 1px, transparent 1px)",
+            "linear-gradient(color-mix(in oklch, var(--color-primary) 18%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in oklch, var(--color-primary) 18%, transparent) 1px, transparent 1px)",
           backgroundSize: "48px 48px",
           maskImage:
             "linear-gradient(to bottom, black 0%, transparent 72%), linear-gradient(to right, transparent 0%, black 18%, black 82%, transparent 100%)",
@@ -277,25 +277,25 @@ export function StatusPage() {
       <div className="relative mx-auto flex w-full max-w-[1200px] flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-normal text-[#8ed5ff]">
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-normal text-primary">
               <Activity className="size-4" />
               Neo Line Status
             </div>
-            <h1 className="mt-2 text-2xl font-semibold tracking-normal text-white sm:text-3xl">
+            <h1 className="mt-2 text-2xl font-semibold tracking-normal text-foreground sm:text-3xl">
               {settings.status_page_title}
             </h1>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <label className="flex h-10 min-w-0 items-center gap-2 rounded-lg border border-[#3e484f] bg-[#102034]/90 px-3 text-[#bdc8d1] transition focus-within:border-[#8ed5ff]">
+            <label className="flex h-10 min-w-0 items-center gap-2 rounded-lg border border-border bg-card/90 px-3 text-muted-foreground transition focus-within:border-primary">
               <Search className="size-4 shrink-0" />
               <input
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
                 placeholder="搜索服务器或监控"
-                className="min-w-0 flex-1 border-0 bg-transparent text-sm text-[#d3e4fe] outline-none placeholder:text-[#87929a]"
+                className="min-w-0 flex-1 border-0 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
               />
             </label>
-            <div className="flex h-10 items-center rounded-lg border border-[#3e484f] bg-[#102034]/90 p-1">
+            <div className="flex h-10 items-center rounded-lg border border-border bg-card/90 p-1">
               <button
                 type="button"
                 onClick={() => setDensity("comfortable")}
@@ -304,8 +304,8 @@ export function StatusPage() {
                 className={cn(
                   "inline-flex h-full items-center gap-1.5 rounded-md px-2.5 text-sm font-semibold transition",
                   !compact
-                    ? "bg-[#38bdf8]/15 text-[#8ed5ff]"
-                    : "text-[#87929a] hover:text-[#bdc8d1]"
+                    ? "bg-primary/15 text-primary"
+                    : "text-muted-foreground hover:text-muted-foreground"
                 )}
               >
                 <LayoutGrid className="size-4" />
@@ -319,8 +319,8 @@ export function StatusPage() {
                 className={cn(
                   "inline-flex h-full items-center gap-1.5 rounded-md px-2.5 text-sm font-semibold transition",
                   compact
-                    ? "bg-[#38bdf8]/15 text-[#8ed5ff]"
-                    : "text-[#87929a] hover:text-[#bdc8d1]"
+                    ? "bg-primary/15 text-primary"
+                    : "text-muted-foreground hover:text-muted-foreground"
                 )}
               >
                 <Rows3 className="size-4" />
@@ -330,7 +330,7 @@ export function StatusPage() {
             <button
               type="button"
               onClick={() => overviewQuery.refetch()}
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-[#38bdf8]/35 bg-[#38bdf8]/10 px-3 text-sm font-semibold text-[#8ed5ff] transition hover:border-[#8ed5ff] hover:bg-[#38bdf8]/15"
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-primary/35 bg-primary/10 px-3 text-sm font-semibold text-primary transition hover:border-primary hover:bg-primary/15"
             >
               <RefreshCw className={cn("size-4", isFetching && "animate-spin")} />
               <span>刷新状态</span>
@@ -344,11 +344,11 @@ export function StatusPage() {
           <>
             <section
               className={cn(
-                "relative overflow-hidden rounded-lg border bg-[#1b2b3f]/90 p-6 shadow-[0_24px_70px_rgba(0,15,33,0.34)] sm:p-8",
+                "relative overflow-hidden rounded-lg border bg-card p-6 shadow-[0_24px_70px_rgba(0,0,0,0.12)] sm:p-8 dark:bg-surface-recessed",
                 overallTone.border
               )}
             >
-              <div className="absolute inset-x-0 top-0 h-px bg-[#8ed5ff]/40" />
+              <div className="absolute inset-x-0 top-0 h-px bg-primary/40" />
               <div className="relative flex flex-col items-center gap-4 text-center">
                 <div
                   className={cn(
@@ -371,10 +371,10 @@ export function StatusPage() {
                     <span className={cn("size-2 rounded-full", overallTone.dot)} />
                     {statusLabels[overallStatus]}
                   </div>
-                  <h2 className="text-3xl font-bold tracking-normal text-white sm:text-4xl">
+                  <h2 className="text-3xl font-bold tracking-normal text-foreground sm:text-4xl">
                     {overallTitle(overallStatus, allMonitors.length)}
                   </h2>
-                  <p className="mt-2 flex flex-wrap items-center justify-center gap-2 text-sm text-[#bdc8d1]">
+                  <p className="mt-2 flex flex-wrap items-center justify-center gap-2 text-sm text-muted-foreground">
                     <Clock3 className="size-4" />
                     最近更新：{formatRelative(lastUpdated)}
                   </p>
@@ -423,23 +423,23 @@ export function StatusPage() {
               <div className="flex flex-col gap-8">
                 {filteredGroups.map((group) => (
                   <section key={group.id} className="flex flex-col gap-4">
-                    <div className="flex flex-col gap-2 border-b border-[#3e484f] pb-3 sm:flex-row sm:items-end sm:justify-between">
+                    <div className="flex flex-col gap-2 border-b border-border pb-3 sm:flex-row sm:items-end sm:justify-between">
                       <div>
-                        <div className="text-xs font-semibold uppercase tracking-normal text-[#8ed5ff]">
+                        <div className="text-xs font-semibold uppercase tracking-normal text-primary">
                           Monitor Group
                         </div>
-                        <h2 className="mt-1 text-xl font-semibold tracking-normal text-white">
+                        <h2 className="mt-1 text-xl font-semibold tracking-normal text-foreground">
                           {group.name}
                         </h2>
                         {group.description && (
-                          <p className="mt-1 max-w-2xl text-sm text-[#bdc8d1]">
+                          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
                             {group.description}
                           </p>
                         )}
                       </div>
                       <Link
                         to={`/monitor-groups/${group.id}`}
-                        className="inline-flex items-center text-sm font-medium text-[#8ed5ff] transition hover:text-white"
+                        className="inline-flex items-center text-sm font-medium text-primary transition hover:text-foreground"
                       >
                         分组详情
                       </Link>
@@ -479,15 +479,15 @@ export function StatusPage() {
 function StatusLoading() {
   return (
     <div className="flex flex-col gap-4">
-      <Skeleton className="h-52 rounded-lg bg-[#1b2b3f]" />
+      <Skeleton className="h-52 rounded-lg bg-surface-recessed" />
       <div className="grid gap-3 md:grid-cols-3">
-        <Skeleton className="h-24 rounded-lg bg-[#102034]" />
-        <Skeleton className="h-24 rounded-lg bg-[#102034]" />
-        <Skeleton className="h-24 rounded-lg bg-[#102034]" />
+        <Skeleton className="h-24 rounded-lg bg-card" />
+        <Skeleton className="h-24 rounded-lg bg-card" />
+        <Skeleton className="h-24 rounded-lg bg-card" />
       </div>
       <div className="grid gap-4 xl:grid-cols-2">
-        <Skeleton className="h-72 rounded-lg bg-[#102034]" />
-        <Skeleton className="h-72 rounded-lg bg-[#102034]" />
+        <Skeleton className="h-72 rounded-lg bg-card" />
+        <Skeleton className="h-72 rounded-lg bg-card" />
       </div>
     </div>
   )
@@ -497,7 +497,7 @@ function EmptyState({ text, compact = false }: { text: string; compact?: boolean
   return (
     <div
       className={cn(
-        "rounded-lg border border-dashed border-[#3e484f] bg-[#102034]/70 text-center text-sm text-[#bdc8d1]",
+        "rounded-lg border border-dashed border-border bg-card/70 text-center text-sm text-muted-foreground",
         compact ? "px-4 py-6" : "px-6 py-12"
       )}
     >
@@ -519,15 +519,15 @@ function MetricCard({
 }) {
   const toneClass =
     tone === "good"
-      ? "text-[#4edea3]"
+      ? "text-emerald-600 dark:text-emerald-400"
       : tone === "warn"
-        ? "text-[#ffc174]"
-        : "text-white"
+        ? "text-amber-600 dark:text-amber-300"
+        : "text-foreground"
   return (
-    <div className="rounded-lg border border-[#3e484f] bg-[#102034] p-4">
-      <div className="flex items-center justify-between gap-3 text-xs font-semibold uppercase tracking-normal text-[#bdc8d1]">
+    <div className="rounded-lg border border-border bg-card p-4">
+      <div className="flex items-center justify-between gap-3 text-xs font-semibold uppercase tracking-normal text-muted-foreground">
         <span>{label}</span>
-        <Icon className="size-4 text-[#8ed5ff]" />
+        <Icon className="size-4 text-primary" />
       </div>
       <div className={cn("mt-2 font-mono text-2xl font-semibold", toneClass)}>
         {value}
@@ -539,10 +539,10 @@ function MetricCard({
 function StatusCounter({ status, count }: { status: HealthStatus; count: number }) {
   const tone = STATUS_TONES[status]
   return (
-    <div className="flex items-center justify-between rounded-lg border border-[#3e484f] bg-[#0b1c30] px-3 py-2">
+    <div className="flex items-center justify-between rounded-lg border border-border bg-surface-elevated px-3 py-2">
       <div className="flex min-w-0 items-center gap-2">
         <span className={cn("size-2 rounded-full", tone.dot)} />
-        <span className="truncate text-sm text-[#bdc8d1]">{statusLabels[status]}</span>
+        <span className="truncate text-sm text-muted-foreground">{statusLabels[status]}</span>
       </div>
       <span className={cn("font-mono text-sm font-semibold", tone.text)}>
         {count}
@@ -569,26 +569,26 @@ function ServerCard({
   return (
     <article
       className={cn(
-        "overflow-hidden rounded-lg border bg-[#102034] shadow-[0_18px_45px_rgba(0,15,33,0.35)] transition hover:border-[#8ed5ff]/60",
+        "overflow-hidden rounded-lg border bg-card shadow-[0_18px_45px_rgba(0,0,0,0.12)] transition hover:border-primary/60",
         tone.border
       )}
     >
       <div
         className={cn(
           "h-1 w-full",
-          serverStatus === "Healthy" ? "bg-[#4edea3]" : tone.bar
+          serverStatus === "Healthy" ? "bg-emerald-500" : tone.bar
         )}
       />
       <header
         className={cn(
-          "flex flex-col gap-3 border-b border-[#3e484f] bg-[#1b2b3f] sm:flex-row sm:items-center sm:justify-between",
+          "flex flex-col gap-3 border-b border-border bg-surface-recessed sm:flex-row sm:items-center sm:justify-between",
           compact ? "p-3" : "p-4"
         )}
       >
         <div className="flex min-w-0 items-center gap-3">
           <div
             className={cn(
-              "flex shrink-0 items-center justify-center rounded-lg border border-[#3e484f] bg-[#031427] text-[#8ed5ff]",
+              "flex shrink-0 items-center justify-center rounded-lg border border-border bg-background text-primary",
               compact ? "size-8" : "size-9"
             )}
           >
@@ -598,16 +598,16 @@ function ServerCard({
             <Link
               to={`/servers/${server.id}`}
               className={cn(
-                "block truncate font-semibold tracking-normal text-white hover:text-[#8ed5ff]",
+                "block truncate font-semibold tracking-normal text-foreground hover:text-primary",
                 compact ? "text-base" : "text-lg"
               )}
             >
               {serverName}
             </Link>
-            <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-[#bdc8d1]">
+            <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
               <span>{server.monitors.length} 个监控</span>
               {env && (
-                <span className="rounded border border-[#3e484f] bg-[#26364a] px-1.5 py-0.5 font-mono uppercase text-[#bdc8d1]">
+                <span className="rounded border border-border bg-accent px-1.5 py-0.5 font-mono uppercase text-muted-foreground">
                   {env}
                 </span>
               )}
@@ -616,7 +616,7 @@ function ServerCard({
         </div>
         <div className="flex shrink-0 items-center gap-2">
           {compact && (
-            <span className="font-mono text-xs font-semibold text-[#bdc8d1]">
+            <span className="font-mono text-xs font-semibold text-muted-foreground">
               {serverUptime}
             </span>
           )}
@@ -663,18 +663,18 @@ function CompactMonitorRow({ monitor }: { monitor: StatusMonitor }) {
     <Link
       to={`/servers/${monitor.server_id}/monitors/${monitor.id}`}
       className={cn(
-        "group flex items-center gap-3 rounded-md border bg-[#031427] px-2.5 py-2 transition hover:border-[#8ed5ff]/70",
-        status === "Healthy" ? "border-[#3e484f]/70" : tone.border,
+        "group flex items-center gap-3 rounded-md border bg-background px-2.5 py-2 transition hover:border-primary/70",
+        status === "Healthy" ? "border-border/70" : tone.border,
         status !== "Healthy" && tone.softBg
       )}
     >
       <span className={cn("size-2 shrink-0 rounded-full", tone.dot)} />
       <Icon className={cn("size-4 shrink-0", tone.text)} />
       <div className="min-w-0 flex-1">
-        <div className="truncate text-sm font-medium text-white">
+        <div className="truncate text-sm font-medium text-foreground">
           {monitor.name}
         </div>
-        <div className="truncate font-mono text-xs text-[#87929a]">
+        <div className="truncate font-mono text-xs text-muted-foreground">
           {monitorKindLabels[monitor.kind] ?? monitor.kind}
         </div>
       </div>
@@ -682,10 +682,10 @@ function CompactMonitorRow({ monitor }: { monitor: StatusMonitor }) {
         <CompactHeartbeats beats={monitor.uptime?.heartbeats ?? []} />
       </div>
       <div className="w-16 shrink-0 text-right">
-        <div className="font-mono text-sm text-[#d3e4fe]">
+        <div className="font-mono text-sm text-foreground">
           {uptimePct(monitor.uptime)}
         </div>
-        <div className="font-mono text-[11px] text-[#87929a]">
+        <div className="font-mono text-[11px] text-muted-foreground">
           {formatLatency(window24h)}
         </div>
       </div>
@@ -697,12 +697,12 @@ function CompactHeartbeats({ beats }: { beats: Heartbeat[] }) {
   const recent = beats.slice(-20)
 
   if (recent.length === 0) {
-    return <div className="h-4 rounded bg-[#0b1c30]" />
+    return <div className="h-4 rounded bg-surface-elevated" />
   }
 
   return (
     <div
-      className="grid h-4 gap-[2px] overflow-hidden rounded bg-[#0b1c30] p-[2px]"
+      className="grid h-4 gap-[2px] overflow-hidden rounded bg-surface-elevated p-[2px]"
       style={{ gridTemplateColumns: `repeat(${recent.length}, minmax(0, 1fr))` }}
     >
       {recent.map((beat, i) => {
@@ -722,11 +722,11 @@ function CompactHeartbeats({ beats }: { beats: Heartbeat[] }) {
 
 function ServerMiniStat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-md border border-[#3e484f]/80 bg-[#031427] px-3 py-2">
-      <div className="text-xs font-semibold uppercase tracking-normal text-[#87929a]">
+    <div className="rounded-md border border-border/80 bg-background px-3 py-2">
+      <div className="text-xs font-semibold uppercase tracking-normal text-muted-foreground">
         {label}
       </div>
-      <div className="mt-1 font-mono text-sm font-semibold text-[#d3e4fe]">
+      <div className="mt-1 font-mono text-sm font-semibold text-foreground">
         {value}
       </div>
     </div>
@@ -744,8 +744,8 @@ function MonitorPanel({ monitor }: { monitor: StatusMonitor }) {
     <Link
       to={`/servers/${monitor.server_id}/monitors/${monitor.id}`}
       className={cn(
-        "group block rounded-lg border bg-[#031427] p-3 transition hover:border-[#8ed5ff]/70",
-        status === "Healthy" ? "border-[#3e484f]/70" : tone.border,
+        "group block rounded-lg border bg-background p-3 transition hover:border-primary/70",
+        status === "Healthy" ? "border-border/70" : tone.border,
         status !== "Healthy" && tone.softBg
       )}
     >
@@ -753,11 +753,11 @@ function MonitorPanel({ monitor }: { monitor: StatusMonitor }) {
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-center gap-2">
             <Icon className={cn("size-4 shrink-0", tone.text)} />
-            <span className="truncate text-sm font-medium text-white">
+            <span className="truncate text-sm font-medium text-foreground">
               {monitor.name}
             </span>
           </div>
-          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-[#bdc8d1]">
+          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
             <span>{monitorKindLabels[monitor.kind] ?? monitor.kind}</span>
           </div>
         </div>
@@ -785,7 +785,7 @@ function MonitorPanel({ monitor }: { monitor: StatusMonitor }) {
       </div>
 
       <div className="mt-3">
-        <div className="mb-1 text-xs font-semibold uppercase tracking-normal text-[#87929a]">
+        <div className="mb-1 text-xs font-semibold uppercase tracking-normal text-muted-foreground">
           最近心跳
         </div>
         <UptimeStrip beats={monitor.uptime?.heartbeats ?? []} />
@@ -797,10 +797,10 @@ function MonitorPanel({ monitor }: { monitor: StatusMonitor }) {
 function MonitorFact({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <div className="text-xs font-semibold uppercase tracking-normal text-[#87929a]">
+      <div className="text-xs font-semibold uppercase tracking-normal text-muted-foreground">
         {label}
       </div>
-      <div className="mt-1 truncate font-mono text-sm text-[#d3e4fe]" title={value}>
+      <div className="mt-1 truncate font-mono text-sm text-foreground" title={value}>
         {value}
       </div>
     </div>
@@ -830,19 +830,19 @@ function CertificateRing({
     days === undefined ? 0 : Math.max(0, Math.min(100, (days / warningDays) * 100))
 
   return (
-    <div className="flex items-center justify-end gap-3 rounded-lg border border-[#3e484f] bg-[#0b1c30] px-3 py-2">
+    <div className="flex items-center justify-end gap-3 rounded-lg border border-border bg-surface-elevated px-3 py-2">
       <div
         className="grid size-12 shrink-0 place-items-center rounded-full"
         style={{
           background: `conic-gradient(${tone.ring} ${progress}%, rgba(62,72,79,0.78) 0)`,
         }}
       >
-        <div className="grid size-9 place-items-center rounded-full bg-[#031427]">
+        <div className="grid size-9 place-items-center rounded-full bg-background">
           <LockKeyhole className={cn("size-4", tone.text)} />
         </div>
       </div>
       <div className="min-w-0 text-right">
-        <div className="text-xs font-semibold uppercase tracking-normal text-[#87929a]">
+        <div className="text-xs font-semibold uppercase tracking-normal text-muted-foreground">
           TLS 证书
         </div>
         <div className={cn("mt-1 truncate font-mono text-sm", tone.text)}>
@@ -858,7 +858,7 @@ function UptimeStrip({ beats }: { beats: Heartbeat[] }) {
 
   if (recent.length === 0) {
     return (
-      <div className="h-6 rounded bg-[#0b1c30] px-2 text-xs leading-6 text-[#87929a]">
+      <div className="h-6 rounded bg-surface-elevated px-2 text-xs leading-6 text-muted-foreground">
         暂无心跳数据
       </div>
     )
@@ -866,7 +866,7 @@ function UptimeStrip({ beats }: { beats: Heartbeat[] }) {
 
   return (
     <div
-      className="grid h-6 gap-[2px] overflow-hidden rounded bg-[#0b1c30] p-[2px]"
+      className="grid h-6 gap-[2px] overflow-hidden rounded bg-surface-elevated p-[2px]"
       style={{
         gridTemplateColumns: `repeat(${recent.length}, minmax(0, 1fr))`,
       }}

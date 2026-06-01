@@ -52,18 +52,18 @@ export function Layout() {
 
   const navClass = ({ isActive }: { isActive: boolean }) =>
     cn(
-      "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm transition",
+      "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition",
       isActive
-        ? "bg-accent text-accent-foreground"
-        : "text-muted-foreground hover:bg-accent"
+        ? "bg-card text-foreground shadow-xs ring ring-hairline"
+        : "text-muted-foreground hover:bg-accent hover:text-foreground"
     )
 
   return (
     <div className="min-h-[100dvh] bg-background">
-      <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur">
+      <header className="sticky top-0 z-40 border-b bg-surface-elevated/85 backdrop-blur">
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
           <Link to="/" className="flex items-center gap-2 font-semibold">
-            <Activity className="size-5 text-emerald-600 dark:text-emerald-400" />
+            <Activity className="size-5 text-brand" />
             <span>{settings.site_name}</span>
             <span className="text-sm font-normal text-muted-foreground">
               监控面板
