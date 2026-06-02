@@ -86,7 +86,7 @@ export class ApiError extends Error {
   }
 }
 
-// Connect transport. gRPC-Web is mounted under /grpc on the Go server; the dev
+// Connect transport. gRPC-Web is mounted under /api/grpc on the Go server; the dev
 // proxy and production nginx forward that prefix to the backend.
 const authInterceptor: Interceptor = (next) => async (req) => {
   const token = getToken()
@@ -95,7 +95,7 @@ const authInterceptor: Interceptor = (next) => async (req) => {
 }
 
 const transport = createGrpcWebTransport({
-  baseUrl: "/grpc",
+  baseUrl: "/api/grpc",
   interceptors: [authInterceptor],
 })
 

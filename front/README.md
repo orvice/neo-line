@@ -1,6 +1,6 @@
 # neo-line 前端
 
-neo-line 监控服务的管理面板，基于 React + Vite + Tailwind v4 + shadcn/ui 构建，消费后端 `/api/v1` REST API。
+neo-line 监控服务的管理面板，基于 React + Vite + Tailwind v4 + shadcn/ui 构建，消费后端 `/api/grpc` Connect gRPC-Web API。
 
 ## 开发
 
@@ -9,7 +9,7 @@ pnpm install
 pnpm dev
 ```
 
-开发服务器默认运行在 `http://localhost:5173`，并将 `/api/v1` 与 `/ping` 代理到后端。后端地址可通过环境变量覆盖：
+开发服务器默认运行在 `http://localhost:5173`，并将 `/api` 与 `/ping` 代理到后端。后端地址可通过环境变量覆盖：
 
 ```bash
 VITE_API_TARGET=http://localhost:8080 pnpm dev

@@ -13,6 +13,7 @@ MongoDB 是监控业务配置和运行状态的主要数据源；Redis 用于登
 - 公开状态页、管理后台、站点展示设置
 - 可复用通知组（webhook / Telegram / Discord / Mastodon）与分组级告警策略引用
 - 可选 S3 / S3 兼容对象存储归档检查结果
+- Connect gRPC-Web API 端点：`/api/grpc`
 - MCP Streamable HTTP 端点：`/api/mcp`
 
 ## 项目结构
@@ -122,7 +123,7 @@ docker build -t neo-line .
 docker build -t neo-line-front ./front
 ```
 
-前端镜像通过 Nginx 提供静态资源，并把 `/api/v1`、`/ping` 反向代理到后端。运行时可用 `BACKEND_URL` 覆盖默认后端地址。
+前端镜像通过 Nginx 提供静态资源，并把 `/api`、`/ping` 反向代理到后端。Connect gRPC-Web API 挂载在 `/api/grpc`，MCP 挂载在 `/api/mcp`。运行时可用 `BACKEND_URL` 覆盖默认后端地址。
 
 ## 文档
 
