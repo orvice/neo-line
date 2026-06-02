@@ -225,7 +225,7 @@ export function McpPage() {
           <CardTitle>工具列表</CardTitle>
           <CardDescription>
             工具的输入 / 输出 schema 由 Go struct 通过 <code className="bg-muted rounded px-1">jsonschema</code>{" "}
-            tag 自动推导，与 REST API 行为一致。
+            tag 自动推导，与 Connect API 行为一致。
           </CardDescription>
         </CardHeader>
         <CardContent>

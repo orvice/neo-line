@@ -1,6 +1,6 @@
 // Package connectapi serves the neo-line API over Connect (gRPC, gRPC-Web, and
 // the Connect protocol) backed by the same store layer the dashboard uses. It
-// is mounted on the existing Gin engine under the /grpc path prefix.
+// is mounted on the existing Gin engine under the /api/grpc path prefix.
 package connectapi
 
 import (
@@ -14,7 +14,7 @@ import (
 
 // BasePath is the URL prefix the Connect handlers are mounted under. Browser
 // clients point their transport baseUrl here.
-const BasePath = "/grpc"
+const BasePath = "/api/grpc"
 
 // Service implements every neoline.v1 Connect handler against the store.
 type Service struct {
