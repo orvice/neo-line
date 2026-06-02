@@ -7,10 +7,8 @@
 package neolinev1
 
 import (
-	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	durationpb "google.golang.org/protobuf/types/known/durationpb"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
@@ -23,531 +21,6 @@ const (
 	// Verify that runtime/protoimpl is sufficiently up-to-date.
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
-
-// TcpConfig holds TCP-monitor-specific options. TCP monitors only need the
-// shared host/port/timeout fields, so this message is reserved for future use.
-type TcpConfig struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *TcpConfig) Reset() {
-	*x = TcpConfig{}
-	mi := &file_neoline_v1_monitor_proto_msgTypes[0]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *TcpConfig) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*TcpConfig) ProtoMessage() {}
-
-func (x *TcpConfig) ProtoReflect() protoreflect.Message {
-	mi := &file_neoline_v1_monitor_proto_msgTypes[0]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use TcpConfig.ProtoReflect.Descriptor instead.
-func (*TcpConfig) Descriptor() ([]byte, []int) {
-	return file_neoline_v1_monitor_proto_rawDescGZIP(), []int{0}
-}
-
-// HttpConfig holds HTTP-monitor-specific options.
-type HttpConfig struct {
-	state   protoimpl.MessageState `protogen:"open.v1"`
-	Path    string                 `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`
-	Method  string                 `protobuf:"bytes,2,opt,name=method,proto3" json:"method,omitempty"`
-	Headers map[string]string      `protobuf:"bytes,3,rep,name=headers,proto3" json:"headers,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	// expected_status_codes is a comma-separated list of accepted codes and
-	// inclusive ranges, for example "200-299,301,302". Empty accepts only 200.
-	ExpectedStatusCodes string `protobuf:"bytes,4,opt,name=expected_status_codes,json=expectedStatusCodes,proto3" json:"expected_status_codes,omitempty"`
-	unknownFields       protoimpl.UnknownFields
-	sizeCache           protoimpl.SizeCache
-}
-
-func (x *HttpConfig) Reset() {
-	*x = HttpConfig{}
-	mi := &file_neoline_v1_monitor_proto_msgTypes[1]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *HttpConfig) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*HttpConfig) ProtoMessage() {}
-
-func (x *HttpConfig) ProtoReflect() protoreflect.Message {
-	mi := &file_neoline_v1_monitor_proto_msgTypes[1]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use HttpConfig.ProtoReflect.Descriptor instead.
-func (*HttpConfig) Descriptor() ([]byte, []int) {
-	return file_neoline_v1_monitor_proto_rawDescGZIP(), []int{1}
-}
-
-func (x *HttpConfig) GetPath() string {
-	if x != nil {
-		return x.Path
-	}
-	return ""
-}
-
-func (x *HttpConfig) GetMethod() string {
-	if x != nil {
-		return x.Method
-	}
-	return ""
-}
-
-func (x *HttpConfig) GetHeaders() map[string]string {
-	if x != nil {
-		return x.Headers
-	}
-	return nil
-}
-
-func (x *HttpConfig) GetExpectedStatusCodes() string {
-	if x != nil {
-		return x.ExpectedStatusCodes
-	}
-	return ""
-}
-
-// HttpsConfig holds HTTPS-monitor-specific options. Includes TLS handshake
-// behavior on top of standard HTTP fields.
-type HttpsConfig struct {
-	state   protoimpl.MessageState `protogen:"open.v1"`
-	Path    string                 `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`
-	Method  string                 `protobuf:"bytes,2,opt,name=method,proto3" json:"method,omitempty"`
-	Headers map[string]string      `protobuf:"bytes,3,rep,name=headers,proto3" json:"headers,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	// expected_status_codes is a comma-separated list of accepted codes and
-	// inclusive ranges, for example "200-299,301,302". Empty accepts only 200.
-	ExpectedStatusCodes string `protobuf:"bytes,4,opt,name=expected_status_codes,json=expectedStatusCodes,proto3" json:"expected_status_codes,omitempty"`
-	// sni_name overrides the TLS ServerName sent during handshake.
-	SniName string `protobuf:"bytes,5,opt,name=sni_name,json=sniName,proto3" json:"sni_name,omitempty"`
-	// tls_verify enables peer certificate verification.
-	TlsVerify     bool `protobuf:"varint,6,opt,name=tls_verify,json=tlsVerify,proto3" json:"tls_verify,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *HttpsConfig) Reset() {
-	*x = HttpsConfig{}
-	mi := &file_neoline_v1_monitor_proto_msgTypes[2]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *HttpsConfig) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*HttpsConfig) ProtoMessage() {}
-
-func (x *HttpsConfig) ProtoReflect() protoreflect.Message {
-	mi := &file_neoline_v1_monitor_proto_msgTypes[2]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use HttpsConfig.ProtoReflect.Descriptor instead.
-func (*HttpsConfig) Descriptor() ([]byte, []int) {
-	return file_neoline_v1_monitor_proto_rawDescGZIP(), []int{2}
-}
-
-func (x *HttpsConfig) GetPath() string {
-	if x != nil {
-		return x.Path
-	}
-	return ""
-}
-
-func (x *HttpsConfig) GetMethod() string {
-	if x != nil {
-		return x.Method
-	}
-	return ""
-}
-
-func (x *HttpsConfig) GetHeaders() map[string]string {
-	if x != nil {
-		return x.Headers
-	}
-	return nil
-}
-
-func (x *HttpsConfig) GetExpectedStatusCodes() string {
-	if x != nil {
-		return x.ExpectedStatusCodes
-	}
-	return ""
-}
-
-func (x *HttpsConfig) GetSniName() string {
-	if x != nil {
-		return x.SniName
-	}
-	return ""
-}
-
-func (x *HttpsConfig) GetTlsVerify() bool {
-	if x != nil {
-		return x.TlsVerify
-	}
-	return false
-}
-
-// TlsCertificateConfig holds TLS-certificate-monitor-specific options.
-type TlsCertificateConfig struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	SniName       string                 `protobuf:"bytes,1,opt,name=sni_name,json=sniName,proto3" json:"sni_name,omitempty"`
-	TlsVerify     bool                   `protobuf:"varint,2,opt,name=tls_verify,json=tlsVerify,proto3" json:"tls_verify,omitempty"`
-	WarningDays   uint32                 `protobuf:"varint,3,opt,name=warning_days,json=warningDays,proto3" json:"warning_days,omitempty"`
-	CriticalDays  uint32                 `protobuf:"varint,4,opt,name=critical_days,json=criticalDays,proto3" json:"critical_days,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *TlsCertificateConfig) Reset() {
-	*x = TlsCertificateConfig{}
-	mi := &file_neoline_v1_monitor_proto_msgTypes[3]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *TlsCertificateConfig) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*TlsCertificateConfig) ProtoMessage() {}
-
-func (x *TlsCertificateConfig) ProtoReflect() protoreflect.Message {
-	mi := &file_neoline_v1_monitor_proto_msgTypes[3]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use TlsCertificateConfig.ProtoReflect.Descriptor instead.
-func (*TlsCertificateConfig) Descriptor() ([]byte, []int) {
-	return file_neoline_v1_monitor_proto_rawDescGZIP(), []int{3}
-}
-
-func (x *TlsCertificateConfig) GetSniName() string {
-	if x != nil {
-		return x.SniName
-	}
-	return ""
-}
-
-func (x *TlsCertificateConfig) GetTlsVerify() bool {
-	if x != nil {
-		return x.TlsVerify
-	}
-	return false
-}
-
-func (x *TlsCertificateConfig) GetWarningDays() uint32 {
-	if x != nil {
-		return x.WarningDays
-	}
-	return 0
-}
-
-func (x *TlsCertificateConfig) GetCriticalDays() uint32 {
-	if x != nil {
-		return x.CriticalDays
-	}
-	return 0
-}
-
-// Monitor describes a single configured check attached to a server.
-type Monitor struct {
-	state              protoimpl.MessageState `protogen:"open.v1"`
-	Id                 string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	ServerId           string                 `protobuf:"bytes,2,opt,name=server_id,json=serverId,proto3" json:"server_id,omitempty"`
-	Name               string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
-	Kind               MonitorKind            `protobuf:"varint,4,opt,name=kind,proto3,enum=neoline.v1.MonitorKind" json:"kind,omitempty"`
-	Enabled            bool                   `protobuf:"varint,5,opt,name=enabled,proto3" json:"enabled,omitempty"`
-	Host               string                 `protobuf:"bytes,6,opt,name=host,proto3" json:"host,omitempty"`
-	Port               uint32                 `protobuf:"varint,7,opt,name=port,proto3" json:"port,omitempty"`
-	IntervalSeconds    uint32                 `protobuf:"varint,8,opt,name=interval_seconds,json=intervalSeconds,proto3" json:"interval_seconds,omitempty"`
-	TimeoutSeconds     uint32                 `protobuf:"varint,9,opt,name=timeout_seconds,json=timeoutSeconds,proto3" json:"timeout_seconds,omitempty"`
-	Retries            uint32                 `protobuf:"varint,10,opt,name=retries,proto3" json:"retries,omitempty"`
-	Status             HealthStatus           `protobuf:"varint,11,opt,name=status,proto3,enum=neoline.v1.HealthStatus" json:"status,omitempty"`
-	LastCheckAt        *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=last_check_at,json=lastCheckAt,proto3" json:"last_check_at,omitempty"`
-	LastStatusChangeAt *timestamppb.Timestamp `protobuf:"bytes,13,opt,name=last_status_change_at,json=lastStatusChangeAt,proto3" json:"last_status_change_at,omitempty"`
-	CreatedAt          *timestamppb.Timestamp `protobuf:"bytes,14,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt          *timestamppb.Timestamp `protobuf:"bytes,15,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	// group_ids lists the monitor groups this monitor belongs to. Used for UI
-	// grouping and to drive group-level alert policies.
-	GroupIds []string `protobuf:"bytes,16,rep,name=group_ids,json=groupIds,proto3" json:"group_ids,omitempty"`
-	// certificate holds the most recently observed peer certificate metadata for
-	// TLS-based monitors. Updated after each probe that reads a certificate.
-	Certificate *CertificateInfo `protobuf:"bytes,17,opt,name=certificate,proto3" json:"certificate,omitempty"`
-	// Per-kind configuration. The set member should match `kind`.
-	//
-	// Types that are valid to be assigned to Config:
-	//
-	//	*Monitor_Tcp
-	//	*Monitor_Http
-	//	*Monitor_Https
-	//	*Monitor_TlsCertificate
-	Config        isMonitor_Config `protobuf_oneof:"config"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *Monitor) Reset() {
-	*x = Monitor{}
-	mi := &file_neoline_v1_monitor_proto_msgTypes[4]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *Monitor) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*Monitor) ProtoMessage() {}
-
-func (x *Monitor) ProtoReflect() protoreflect.Message {
-	mi := &file_neoline_v1_monitor_proto_msgTypes[4]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use Monitor.ProtoReflect.Descriptor instead.
-func (*Monitor) Descriptor() ([]byte, []int) {
-	return file_neoline_v1_monitor_proto_rawDescGZIP(), []int{4}
-}
-
-func (x *Monitor) GetId() string {
-	if x != nil {
-		return x.Id
-	}
-	return ""
-}
-
-func (x *Monitor) GetServerId() string {
-	if x != nil {
-		return x.ServerId
-	}
-	return ""
-}
-
-func (x *Monitor) GetName() string {
-	if x != nil {
-		return x.Name
-	}
-	return ""
-}
-
-func (x *Monitor) GetKind() MonitorKind {
-	if x != nil {
-		return x.Kind
-	}
-	return MonitorKind_MONITOR_KIND_UNSPECIFIED
-}
-
-func (x *Monitor) GetEnabled() bool {
-	if x != nil {
-		return x.Enabled
-	}
-	return false
-}
-
-func (x *Monitor) GetHost() string {
-	if x != nil {
-		return x.Host
-	}
-	return ""
-}
-
-func (x *Monitor) GetPort() uint32 {
-	if x != nil {
-		return x.Port
-	}
-	return 0
-}
-
-func (x *Monitor) GetIntervalSeconds() uint32 {
-	if x != nil {
-		return x.IntervalSeconds
-	}
-	return 0
-}
-
-func (x *Monitor) GetTimeoutSeconds() uint32 {
-	if x != nil {
-		return x.TimeoutSeconds
-	}
-	return 0
-}
-
-func (x *Monitor) GetRetries() uint32 {
-	if x != nil {
-		return x.Retries
-	}
-	return 0
-}
-
-func (x *Monitor) GetStatus() HealthStatus {
-	if x != nil {
-		return x.Status
-	}
-	return HealthStatus_HEALTH_STATUS_UNSPECIFIED
-}
-
-func (x *Monitor) GetLastCheckAt() *timestamppb.Timestamp {
-	if x != nil {
-		return x.LastCheckAt
-	}
-	return nil
-}
-
-func (x *Monitor) GetLastStatusChangeAt() *timestamppb.Timestamp {
-	if x != nil {
-		return x.LastStatusChangeAt
-	}
-	return nil
-}
-
-func (x *Monitor) GetCreatedAt() *timestamppb.Timestamp {
-	if x != nil {
-		return x.CreatedAt
-	}
-	return nil
-}
-
-func (x *Monitor) GetUpdatedAt() *timestamppb.Timestamp {
-	if x != nil {
-		return x.UpdatedAt
-	}
-	return nil
-}
-
-func (x *Monitor) GetGroupIds() []string {
-	if x != nil {
-		return x.GroupIds
-	}
-	return nil
-}
-
-func (x *Monitor) GetCertificate() *CertificateInfo {
-	if x != nil {
-		return x.Certificate
-	}
-	return nil
-}
-
-func (x *Monitor) GetConfig() isMonitor_Config {
-	if x != nil {
-		return x.Config
-	}
-	return nil
-}
-
-func (x *Monitor) GetTcp() *TcpConfig {
-	if x != nil {
-		if x, ok := x.Config.(*Monitor_Tcp); ok {
-			return x.Tcp
-		}
-	}
-	return nil
-}
-
-func (x *Monitor) GetHttp() *HttpConfig {
-	if x != nil {
-		if x, ok := x.Config.(*Monitor_Http); ok {
-			return x.Http
-		}
-	}
-	return nil
-}
-
-func (x *Monitor) GetHttps() *HttpsConfig {
-	if x != nil {
-		if x, ok := x.Config.(*Monitor_Https); ok {
-			return x.Https
-		}
-	}
-	return nil
-}
-
-func (x *Monitor) GetTlsCertificate() *TlsCertificateConfig {
-	if x != nil {
-		if x, ok := x.Config.(*Monitor_TlsCertificate); ok {
-			return x.TlsCertificate
-		}
-	}
-	return nil
-}
-
-type isMonitor_Config interface {
-	isMonitor_Config()
-}
-
-type Monitor_Tcp struct {
-	Tcp *TcpConfig `protobuf:"bytes,20,opt,name=tcp,proto3,oneof"`
-}
-
-type Monitor_Http struct {
-	Http *HttpConfig `protobuf:"bytes,21,opt,name=http,proto3,oneof"`
-}
-
-type Monitor_Https struct {
-	Https *HttpsConfig `protobuf:"bytes,22,opt,name=https,proto3,oneof"`
-}
-
-type Monitor_TlsCertificate struct {
-	TlsCertificate *TlsCertificateConfig `protobuf:"bytes,23,opt,name=tls_certificate,json=tlsCertificate,proto3,oneof"`
-}
-
-func (*Monitor_Tcp) isMonitor_Config() {}
-
-func (*Monitor_Http) isMonitor_Config() {}
-
-func (*Monitor_Https) isMonitor_Config() {}
-
-func (*Monitor_TlsCertificate) isMonitor_Config() {}
 
 // CertificateInfo captures peer certificate metadata observed during a probe.
 type CertificateInfo struct {
@@ -565,7 +38,7 @@ type CertificateInfo struct {
 
 func (x *CertificateInfo) Reset() {
 	*x = CertificateInfo{}
-	mi := &file_neoline_v1_monitor_proto_msgTypes[5]
+	mi := &file_neoline_v1_monitor_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -577,7 +50,7 @@ func (x *CertificateInfo) String() string {
 func (*CertificateInfo) ProtoMessage() {}
 
 func (x *CertificateInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_neoline_v1_monitor_proto_msgTypes[5]
+	mi := &file_neoline_v1_monitor_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -590,7 +63,7 @@ func (x *CertificateInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CertificateInfo.ProtoReflect.Descriptor instead.
 func (*CertificateInfo) Descriptor() ([]byte, []int) {
-	return file_neoline_v1_monitor_proto_rawDescGZIP(), []int{5}
+	return file_neoline_v1_monitor_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *CertificateInfo) GetSubject() string {
@@ -642,17 +115,263 @@ func (x *CertificateInfo) GetDaysRemaining() int32 {
 	return 0
 }
 
+// Monitor describes a single configured check attached to a server.
+type Monitor struct {
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	Id       string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	ServerId string                 `protobuf:"bytes,2,opt,name=server_id,json=serverId,proto3" json:"server_id,omitempty"`
+	GroupIds []string               `protobuf:"bytes,3,rep,name=group_ids,json=groupIds,proto3" json:"group_ids,omitempty"`
+	Name     string                 `protobuf:"bytes,4,opt,name=name,proto3" json:"name,omitempty"`
+	// kind is one of "tcp", "url", "tls_port".
+	Kind                string                 `protobuf:"bytes,5,opt,name=kind,proto3" json:"kind,omitempty"`
+	Enabled             bool                   `protobuf:"varint,6,opt,name=enabled,proto3" json:"enabled,omitempty"`
+	Host                string                 `protobuf:"bytes,7,opt,name=host,proto3" json:"host,omitempty"`
+	Port                uint32                 `protobuf:"varint,8,opt,name=port,proto3" json:"port,omitempty"`
+	Url                 string                 `protobuf:"bytes,9,opt,name=url,proto3" json:"url,omitempty"`
+	Method              string                 `protobuf:"bytes,10,opt,name=method,proto3" json:"method,omitempty"`
+	Path                string                 `protobuf:"bytes,11,opt,name=path,proto3" json:"path,omitempty"`
+	Headers             map[string]string      `protobuf:"bytes,12,rep,name=headers,proto3" json:"headers,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	ExpectedStatusCodes string                 `protobuf:"bytes,13,opt,name=expected_status_codes,json=expectedStatusCodes,proto3" json:"expected_status_codes,omitempty"`
+	TlsVerify           bool                   `protobuf:"varint,14,opt,name=tls_verify,json=tlsVerify,proto3" json:"tls_verify,omitempty"`
+	SniName             string                 `protobuf:"bytes,15,opt,name=sni_name,json=sniName,proto3" json:"sni_name,omitempty"`
+	WarningDays         uint32                 `protobuf:"varint,16,opt,name=warning_days,json=warningDays,proto3" json:"warning_days,omitempty"`
+	CriticalDays        uint32                 `protobuf:"varint,17,opt,name=critical_days,json=criticalDays,proto3" json:"critical_days,omitempty"`
+	IntervalSeconds     uint32                 `protobuf:"varint,18,opt,name=interval_seconds,json=intervalSeconds,proto3" json:"interval_seconds,omitempty"`
+	TimeoutSeconds      uint32                 `protobuf:"varint,19,opt,name=timeout_seconds,json=timeoutSeconds,proto3" json:"timeout_seconds,omitempty"`
+	Retries             uint32                 `protobuf:"varint,20,opt,name=retries,proto3" json:"retries,omitempty"`
+	Status              string                 `protobuf:"bytes,21,opt,name=status,proto3" json:"status,omitempty"`
+	LastCheckAt         *timestamppb.Timestamp `protobuf:"bytes,22,opt,name=last_check_at,json=lastCheckAt,proto3" json:"last_check_at,omitempty"`
+	LastStatusChangeAt  *timestamppb.Timestamp `protobuf:"bytes,23,opt,name=last_status_change_at,json=lastStatusChangeAt,proto3" json:"last_status_change_at,omitempty"`
+	Certificate         *CertificateInfo       `protobuf:"bytes,24,opt,name=certificate,proto3" json:"certificate,omitempty"`
+	CreatedAt           *timestamppb.Timestamp `protobuf:"bytes,25,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt           *timestamppb.Timestamp `protobuf:"bytes,26,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
+}
+
+func (x *Monitor) Reset() {
+	*x = Monitor{}
+	mi := &file_neoline_v1_monitor_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Monitor) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Monitor) ProtoMessage() {}
+
+func (x *Monitor) ProtoReflect() protoreflect.Message {
+	mi := &file_neoline_v1_monitor_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Monitor.ProtoReflect.Descriptor instead.
+func (*Monitor) Descriptor() ([]byte, []int) {
+	return file_neoline_v1_monitor_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *Monitor) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *Monitor) GetServerId() string {
+	if x != nil {
+		return x.ServerId
+	}
+	return ""
+}
+
+func (x *Monitor) GetGroupIds() []string {
+	if x != nil {
+		return x.GroupIds
+	}
+	return nil
+}
+
+func (x *Monitor) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *Monitor) GetKind() string {
+	if x != nil {
+		return x.Kind
+	}
+	return ""
+}
+
+func (x *Monitor) GetEnabled() bool {
+	if x != nil {
+		return x.Enabled
+	}
+	return false
+}
+
+func (x *Monitor) GetHost() string {
+	if x != nil {
+		return x.Host
+	}
+	return ""
+}
+
+func (x *Monitor) GetPort() uint32 {
+	if x != nil {
+		return x.Port
+	}
+	return 0
+}
+
+func (x *Monitor) GetUrl() string {
+	if x != nil {
+		return x.Url
+	}
+	return ""
+}
+
+func (x *Monitor) GetMethod() string {
+	if x != nil {
+		return x.Method
+	}
+	return ""
+}
+
+func (x *Monitor) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
+}
+
+func (x *Monitor) GetHeaders() map[string]string {
+	if x != nil {
+		return x.Headers
+	}
+	return nil
+}
+
+func (x *Monitor) GetExpectedStatusCodes() string {
+	if x != nil {
+		return x.ExpectedStatusCodes
+	}
+	return ""
+}
+
+func (x *Monitor) GetTlsVerify() bool {
+	if x != nil {
+		return x.TlsVerify
+	}
+	return false
+}
+
+func (x *Monitor) GetSniName() string {
+	if x != nil {
+		return x.SniName
+	}
+	return ""
+}
+
+func (x *Monitor) GetWarningDays() uint32 {
+	if x != nil {
+		return x.WarningDays
+	}
+	return 0
+}
+
+func (x *Monitor) GetCriticalDays() uint32 {
+	if x != nil {
+		return x.CriticalDays
+	}
+	return 0
+}
+
+func (x *Monitor) GetIntervalSeconds() uint32 {
+	if x != nil {
+		return x.IntervalSeconds
+	}
+	return 0
+}
+
+func (x *Monitor) GetTimeoutSeconds() uint32 {
+	if x != nil {
+		return x.TimeoutSeconds
+	}
+	return 0
+}
+
+func (x *Monitor) GetRetries() uint32 {
+	if x != nil {
+		return x.Retries
+	}
+	return 0
+}
+
+func (x *Monitor) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *Monitor) GetLastCheckAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.LastCheckAt
+	}
+	return nil
+}
+
+func (x *Monitor) GetLastStatusChangeAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.LastStatusChangeAt
+	}
+	return nil
+}
+
+func (x *Monitor) GetCertificate() *CertificateInfo {
+	if x != nil {
+		return x.Certificate
+	}
+	return nil
+}
+
+func (x *Monitor) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *Monitor) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return nil
+}
+
 // CheckResult is the outcome of a single monitor execution.
 type CheckResult struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	ServerId       string                 `protobuf:"bytes,2,opt,name=server_id,json=serverId,proto3" json:"server_id,omitempty"`
 	MonitorId      string                 `protobuf:"bytes,3,opt,name=monitor_id,json=monitorId,proto3" json:"monitor_id,omitempty"`
-	Status         HealthStatus           `protobuf:"varint,4,opt,name=status,proto3,enum=neoline.v1.HealthStatus" json:"status,omitempty"`
+	Status         string                 `protobuf:"bytes,4,opt,name=status,proto3" json:"status,omitempty"`
 	StartedAt      *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=started_at,json=startedAt,proto3" json:"started_at,omitempty"`
 	EndedAt        *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=ended_at,json=endedAt,proto3" json:"ended_at,omitempty"`
-	Duration       *durationpb.Duration   `protobuf:"bytes,7,opt,name=duration,proto3" json:"duration,omitempty"`
-	ErrorStage     ErrorStage             `protobuf:"varint,8,opt,name=error_stage,json=errorStage,proto3,enum=neoline.v1.ErrorStage" json:"error_stage,omitempty"`
+	DurationMs     int64                  `protobuf:"varint,7,opt,name=duration_ms,json=durationMs,proto3" json:"duration_ms,omitempty"`
+	ErrorStage     string                 `protobuf:"bytes,8,opt,name=error_stage,json=errorStage,proto3" json:"error_stage,omitempty"`
 	ErrorMessage   string                 `protobuf:"bytes,9,opt,name=error_message,json=errorMessage,proto3" json:"error_message,omitempty"`
 	RemoteAddress  string                 `protobuf:"bytes,10,opt,name=remote_address,json=remoteAddress,proto3" json:"remote_address,omitempty"`
 	Port           uint32                 `protobuf:"varint,11,opt,name=port,proto3" json:"port,omitempty"`
@@ -664,7 +383,7 @@ type CheckResult struct {
 
 func (x *CheckResult) Reset() {
 	*x = CheckResult{}
-	mi := &file_neoline_v1_monitor_proto_msgTypes[6]
+	mi := &file_neoline_v1_monitor_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -676,7 +395,7 @@ func (x *CheckResult) String() string {
 func (*CheckResult) ProtoMessage() {}
 
 func (x *CheckResult) ProtoReflect() protoreflect.Message {
-	mi := &file_neoline_v1_monitor_proto_msgTypes[6]
+	mi := &file_neoline_v1_monitor_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -689,7 +408,7 @@ func (x *CheckResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CheckResult.ProtoReflect.Descriptor instead.
 func (*CheckResult) Descriptor() ([]byte, []int) {
-	return file_neoline_v1_monitor_proto_rawDescGZIP(), []int{6}
+	return file_neoline_v1_monitor_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *CheckResult) GetId() string {
@@ -713,11 +432,11 @@ func (x *CheckResult) GetMonitorId() string {
 	return ""
 }
 
-func (x *CheckResult) GetStatus() HealthStatus {
+func (x *CheckResult) GetStatus() string {
 	if x != nil {
 		return x.Status
 	}
-	return HealthStatus_HEALTH_STATUS_UNSPECIFIED
+	return ""
 }
 
 func (x *CheckResult) GetStartedAt() *timestamppb.Timestamp {
@@ -734,18 +453,18 @@ func (x *CheckResult) GetEndedAt() *timestamppb.Timestamp {
 	return nil
 }
 
-func (x *CheckResult) GetDuration() *durationpb.Duration {
+func (x *CheckResult) GetDurationMs() int64 {
 	if x != nil {
-		return x.Duration
+		return x.DurationMs
 	}
-	return nil
+	return 0
 }
 
-func (x *CheckResult) GetErrorStage() ErrorStage {
+func (x *CheckResult) GetErrorStage() string {
 	if x != nil {
 		return x.ErrorStage
 	}
-	return ErrorStage_ERROR_STAGE_UNSPECIFIED
+	return ""
 }
 
 func (x *CheckResult) GetErrorMessage() string {
@@ -783,6 +502,205 @@ func (x *CheckResult) GetCertificate() *CertificateInfo {
 	return nil
 }
 
+// UptimeWindow summarizes availability over a single rolling time window.
+type UptimeWindow struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	WindowSeconds int64                  `protobuf:"varint,1,opt,name=window_seconds,json=windowSeconds,proto3" json:"window_seconds,omitempty"`
+	Total         int32                  `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"`
+	Up            int32                  `protobuf:"varint,3,opt,name=up,proto3" json:"up,omitempty"`
+	Down          int32                  `protobuf:"varint,4,opt,name=down,proto3" json:"down,omitempty"`
+	Uptime        float64                `protobuf:"fixed64,5,opt,name=uptime,proto3" json:"uptime,omitempty"`
+	AvgLatencyMs  float64                `protobuf:"fixed64,6,opt,name=avg_latency_ms,json=avgLatencyMs,proto3" json:"avg_latency_ms,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UptimeWindow) Reset() {
+	*x = UptimeWindow{}
+	mi := &file_neoline_v1_monitor_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UptimeWindow) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UptimeWindow) ProtoMessage() {}
+
+func (x *UptimeWindow) ProtoReflect() protoreflect.Message {
+	mi := &file_neoline_v1_monitor_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UptimeWindow.ProtoReflect.Descriptor instead.
+func (*UptimeWindow) Descriptor() ([]byte, []int) {
+	return file_neoline_v1_monitor_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *UptimeWindow) GetWindowSeconds() int64 {
+	if x != nil {
+		return x.WindowSeconds
+	}
+	return 0
+}
+
+func (x *UptimeWindow) GetTotal() int32 {
+	if x != nil {
+		return x.Total
+	}
+	return 0
+}
+
+func (x *UptimeWindow) GetUp() int32 {
+	if x != nil {
+		return x.Up
+	}
+	return 0
+}
+
+func (x *UptimeWindow) GetDown() int32 {
+	if x != nil {
+		return x.Down
+	}
+	return 0
+}
+
+func (x *UptimeWindow) GetUptime() float64 {
+	if x != nil {
+		return x.Uptime
+	}
+	return 0
+}
+
+func (x *UptimeWindow) GetAvgLatencyMs() float64 {
+	if x != nil {
+		return x.AvgLatencyMs
+	}
+	return 0
+}
+
+// Heartbeat is a compact view of one check, ordered oldest to newest.
+type Heartbeat struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Status        string                 `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"`
+	StartedAt     *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=started_at,json=startedAt,proto3" json:"started_at,omitempty"`
+	DurationMs    int64                  `protobuf:"varint,3,opt,name=duration_ms,json=durationMs,proto3" json:"duration_ms,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Heartbeat) Reset() {
+	*x = Heartbeat{}
+	mi := &file_neoline_v1_monitor_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Heartbeat) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Heartbeat) ProtoMessage() {}
+
+func (x *Heartbeat) ProtoReflect() protoreflect.Message {
+	mi := &file_neoline_v1_monitor_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Heartbeat.ProtoReflect.Descriptor instead.
+func (*Heartbeat) Descriptor() ([]byte, []int) {
+	return file_neoline_v1_monitor_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *Heartbeat) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *Heartbeat) GetStartedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.StartedAt
+	}
+	return nil
+}
+
+func (x *Heartbeat) GetDurationMs() int64 {
+	if x != nil {
+		return x.DurationMs
+	}
+	return 0
+}
+
+// MonitorUptime is the Kuma-style availability summary for one monitor.
+type MonitorUptime struct {
+	state         protoimpl.MessageState   `protogen:"open.v1"`
+	Windows       map[string]*UptimeWindow `protobuf:"bytes,1,rep,name=windows,proto3" json:"windows,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Heartbeats    []*Heartbeat             `protobuf:"bytes,2,rep,name=heartbeats,proto3" json:"heartbeats,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MonitorUptime) Reset() {
+	*x = MonitorUptime{}
+	mi := &file_neoline_v1_monitor_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MonitorUptime) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MonitorUptime) ProtoMessage() {}
+
+func (x *MonitorUptime) ProtoReflect() protoreflect.Message {
+	mi := &file_neoline_v1_monitor_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MonitorUptime.ProtoReflect.Descriptor instead.
+func (*MonitorUptime) Descriptor() ([]byte, []int) {
+	return file_neoline_v1_monitor_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *MonitorUptime) GetWindows() map[string]*UptimeWindow {
+	if x != nil {
+		return x.Windows
+	}
+	return nil
+}
+
+func (x *MonitorUptime) GetHeartbeats() []*Heartbeat {
+	if x != nil {
+		return x.Heartbeats
+	}
+	return nil
+}
+
 type ListMonitorsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ServerId      string                 `protobuf:"bytes,1,opt,name=server_id,json=serverId,proto3" json:"server_id,omitempty"`
@@ -794,7 +712,7 @@ type ListMonitorsRequest struct {
 
 func (x *ListMonitorsRequest) Reset() {
 	*x = ListMonitorsRequest{}
-	mi := &file_neoline_v1_monitor_proto_msgTypes[7]
+	mi := &file_neoline_v1_monitor_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -806,7 +724,7 @@ func (x *ListMonitorsRequest) String() string {
 func (*ListMonitorsRequest) ProtoMessage() {}
 
 func (x *ListMonitorsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_neoline_v1_monitor_proto_msgTypes[7]
+	mi := &file_neoline_v1_monitor_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -819,7 +737,7 @@ func (x *ListMonitorsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListMonitorsRequest.ProtoReflect.Descriptor instead.
 func (*ListMonitorsRequest) Descriptor() ([]byte, []int) {
-	return file_neoline_v1_monitor_proto_rawDescGZIP(), []int{7}
+	return file_neoline_v1_monitor_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *ListMonitorsRequest) GetServerId() string {
@@ -853,7 +771,7 @@ type ListMonitorsResponse struct {
 
 func (x *ListMonitorsResponse) Reset() {
 	*x = ListMonitorsResponse{}
-	mi := &file_neoline_v1_monitor_proto_msgTypes[8]
+	mi := &file_neoline_v1_monitor_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -865,7 +783,7 @@ func (x *ListMonitorsResponse) String() string {
 func (*ListMonitorsResponse) ProtoMessage() {}
 
 func (x *ListMonitorsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_neoline_v1_monitor_proto_msgTypes[8]
+	mi := &file_neoline_v1_monitor_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -878,7 +796,7 @@ func (x *ListMonitorsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListMonitorsResponse.ProtoReflect.Descriptor instead.
 func (*ListMonitorsResponse) Descriptor() ([]byte, []int) {
-	return file_neoline_v1_monitor_proto_rawDescGZIP(), []int{8}
+	return file_neoline_v1_monitor_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *ListMonitorsResponse) GetMonitors() []*Monitor {
@@ -905,7 +823,7 @@ type CreateMonitorRequest struct {
 
 func (x *CreateMonitorRequest) Reset() {
 	*x = CreateMonitorRequest{}
-	mi := &file_neoline_v1_monitor_proto_msgTypes[9]
+	mi := &file_neoline_v1_monitor_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -917,7 +835,7 @@ func (x *CreateMonitorRequest) String() string {
 func (*CreateMonitorRequest) ProtoMessage() {}
 
 func (x *CreateMonitorRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_neoline_v1_monitor_proto_msgTypes[9]
+	mi := &file_neoline_v1_monitor_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -930,7 +848,7 @@ func (x *CreateMonitorRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateMonitorRequest.ProtoReflect.Descriptor instead.
 func (*CreateMonitorRequest) Descriptor() ([]byte, []int) {
-	return file_neoline_v1_monitor_proto_rawDescGZIP(), []int{9}
+	return file_neoline_v1_monitor_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *CreateMonitorRequest) GetServerId() string {
@@ -956,7 +874,7 @@ type CreateMonitorResponse struct {
 
 func (x *CreateMonitorResponse) Reset() {
 	*x = CreateMonitorResponse{}
-	mi := &file_neoline_v1_monitor_proto_msgTypes[10]
+	mi := &file_neoline_v1_monitor_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -968,7 +886,7 @@ func (x *CreateMonitorResponse) String() string {
 func (*CreateMonitorResponse) ProtoMessage() {}
 
 func (x *CreateMonitorResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_neoline_v1_monitor_proto_msgTypes[10]
+	mi := &file_neoline_v1_monitor_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -981,7 +899,7 @@ func (x *CreateMonitorResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateMonitorResponse.ProtoReflect.Descriptor instead.
 func (*CreateMonitorResponse) Descriptor() ([]byte, []int) {
-	return file_neoline_v1_monitor_proto_rawDescGZIP(), []int{10}
+	return file_neoline_v1_monitor_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *CreateMonitorResponse) GetMonitor() *Monitor {
@@ -1001,7 +919,7 @@ type GetMonitorRequest struct {
 
 func (x *GetMonitorRequest) Reset() {
 	*x = GetMonitorRequest{}
-	mi := &file_neoline_v1_monitor_proto_msgTypes[11]
+	mi := &file_neoline_v1_monitor_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1013,7 +931,7 @@ func (x *GetMonitorRequest) String() string {
 func (*GetMonitorRequest) ProtoMessage() {}
 
 func (x *GetMonitorRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_neoline_v1_monitor_proto_msgTypes[11]
+	mi := &file_neoline_v1_monitor_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1026,7 +944,7 @@ func (x *GetMonitorRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetMonitorRequest.ProtoReflect.Descriptor instead.
 func (*GetMonitorRequest) Descriptor() ([]byte, []int) {
-	return file_neoline_v1_monitor_proto_rawDescGZIP(), []int{11}
+	return file_neoline_v1_monitor_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *GetMonitorRequest) GetServerId() string {
@@ -1052,7 +970,7 @@ type GetMonitorResponse struct {
 
 func (x *GetMonitorResponse) Reset() {
 	*x = GetMonitorResponse{}
-	mi := &file_neoline_v1_monitor_proto_msgTypes[12]
+	mi := &file_neoline_v1_monitor_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1064,7 +982,7 @@ func (x *GetMonitorResponse) String() string {
 func (*GetMonitorResponse) ProtoMessage() {}
 
 func (x *GetMonitorResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_neoline_v1_monitor_proto_msgTypes[12]
+	mi := &file_neoline_v1_monitor_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1077,7 +995,7 @@ func (x *GetMonitorResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetMonitorResponse.ProtoReflect.Descriptor instead.
 func (*GetMonitorResponse) Descriptor() ([]byte, []int) {
-	return file_neoline_v1_monitor_proto_rawDescGZIP(), []int{12}
+	return file_neoline_v1_monitor_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *GetMonitorResponse) GetMonitor() *Monitor {
@@ -1098,7 +1016,7 @@ type UpdateMonitorRequest struct {
 
 func (x *UpdateMonitorRequest) Reset() {
 	*x = UpdateMonitorRequest{}
-	mi := &file_neoline_v1_monitor_proto_msgTypes[13]
+	mi := &file_neoline_v1_monitor_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1110,7 +1028,7 @@ func (x *UpdateMonitorRequest) String() string {
 func (*UpdateMonitorRequest) ProtoMessage() {}
 
 func (x *UpdateMonitorRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_neoline_v1_monitor_proto_msgTypes[13]
+	mi := &file_neoline_v1_monitor_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1123,7 +1041,7 @@ func (x *UpdateMonitorRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateMonitorRequest.ProtoReflect.Descriptor instead.
 func (*UpdateMonitorRequest) Descriptor() ([]byte, []int) {
-	return file_neoline_v1_monitor_proto_rawDescGZIP(), []int{13}
+	return file_neoline_v1_monitor_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *UpdateMonitorRequest) GetServerId() string {
@@ -1156,7 +1074,7 @@ type UpdateMonitorResponse struct {
 
 func (x *UpdateMonitorResponse) Reset() {
 	*x = UpdateMonitorResponse{}
-	mi := &file_neoline_v1_monitor_proto_msgTypes[14]
+	mi := &file_neoline_v1_monitor_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1168,7 +1086,7 @@ func (x *UpdateMonitorResponse) String() string {
 func (*UpdateMonitorResponse) ProtoMessage() {}
 
 func (x *UpdateMonitorResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_neoline_v1_monitor_proto_msgTypes[14]
+	mi := &file_neoline_v1_monitor_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1181,7 +1099,7 @@ func (x *UpdateMonitorResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateMonitorResponse.ProtoReflect.Descriptor instead.
 func (*UpdateMonitorResponse) Descriptor() ([]byte, []int) {
-	return file_neoline_v1_monitor_proto_rawDescGZIP(), []int{14}
+	return file_neoline_v1_monitor_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *UpdateMonitorResponse) GetMonitor() *Monitor {
@@ -1201,7 +1119,7 @@ type DeleteMonitorRequest struct {
 
 func (x *DeleteMonitorRequest) Reset() {
 	*x = DeleteMonitorRequest{}
-	mi := &file_neoline_v1_monitor_proto_msgTypes[15]
+	mi := &file_neoline_v1_monitor_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1213,7 +1131,7 @@ func (x *DeleteMonitorRequest) String() string {
 func (*DeleteMonitorRequest) ProtoMessage() {}
 
 func (x *DeleteMonitorRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_neoline_v1_monitor_proto_msgTypes[15]
+	mi := &file_neoline_v1_monitor_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1226,7 +1144,7 @@ func (x *DeleteMonitorRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteMonitorRequest.ProtoReflect.Descriptor instead.
 func (*DeleteMonitorRequest) Descriptor() ([]byte, []int) {
-	return file_neoline_v1_monitor_proto_rawDescGZIP(), []int{15}
+	return file_neoline_v1_monitor_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *DeleteMonitorRequest) GetServerId() string {
@@ -1251,7 +1169,7 @@ type DeleteMonitorResponse struct {
 
 func (x *DeleteMonitorResponse) Reset() {
 	*x = DeleteMonitorResponse{}
-	mi := &file_neoline_v1_monitor_proto_msgTypes[16]
+	mi := &file_neoline_v1_monitor_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1263,7 +1181,7 @@ func (x *DeleteMonitorResponse) String() string {
 func (*DeleteMonitorResponse) ProtoMessage() {}
 
 func (x *DeleteMonitorResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_neoline_v1_monitor_proto_msgTypes[16]
+	mi := &file_neoline_v1_monitor_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1276,7 +1194,7 @@ func (x *DeleteMonitorResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteMonitorResponse.ProtoReflect.Descriptor instead.
 func (*DeleteMonitorResponse) Descriptor() ([]byte, []int) {
-	return file_neoline_v1_monitor_proto_rawDescGZIP(), []int{16}
+	return file_neoline_v1_monitor_proto_rawDescGZIP(), []int{15}
 }
 
 type ListCheckResultsRequest struct {
@@ -1293,7 +1211,7 @@ type ListCheckResultsRequest struct {
 
 func (x *ListCheckResultsRequest) Reset() {
 	*x = ListCheckResultsRequest{}
-	mi := &file_neoline_v1_monitor_proto_msgTypes[17]
+	mi := &file_neoline_v1_monitor_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1305,7 +1223,7 @@ func (x *ListCheckResultsRequest) String() string {
 func (*ListCheckResultsRequest) ProtoMessage() {}
 
 func (x *ListCheckResultsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_neoline_v1_monitor_proto_msgTypes[17]
+	mi := &file_neoline_v1_monitor_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1318,7 +1236,7 @@ func (x *ListCheckResultsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCheckResultsRequest.ProtoReflect.Descriptor instead.
 func (*ListCheckResultsRequest) Descriptor() ([]byte, []int) {
-	return file_neoline_v1_monitor_proto_rawDescGZIP(), []int{17}
+	return file_neoline_v1_monitor_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *ListCheckResultsRequest) GetServerId() string {
@@ -1373,7 +1291,7 @@ type ListCheckResultsResponse struct {
 
 func (x *ListCheckResultsResponse) Reset() {
 	*x = ListCheckResultsResponse{}
-	mi := &file_neoline_v1_monitor_proto_msgTypes[18]
+	mi := &file_neoline_v1_monitor_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1385,7 +1303,7 @@ func (x *ListCheckResultsResponse) String() string {
 func (*ListCheckResultsResponse) ProtoMessage() {}
 
 func (x *ListCheckResultsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_neoline_v1_monitor_proto_msgTypes[18]
+	mi := &file_neoline_v1_monitor_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1398,7 +1316,7 @@ func (x *ListCheckResultsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCheckResultsResponse.ProtoReflect.Descriptor instead.
 func (*ListCheckResultsResponse) Descriptor() ([]byte, []int) {
-	return file_neoline_v1_monitor_proto_rawDescGZIP(), []int{18}
+	return file_neoline_v1_monitor_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *ListCheckResultsResponse) GetResults() []*CheckResult {
@@ -1415,65 +1333,108 @@ func (x *ListCheckResultsResponse) GetNextPageToken() string {
 	return ""
 }
 
+type GetMonitorUptimeRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ServerId      string                 `protobuf:"bytes,1,opt,name=server_id,json=serverId,proto3" json:"server_id,omitempty"`
+	MonitorId     string                 `protobuf:"bytes,2,opt,name=monitor_id,json=monitorId,proto3" json:"monitor_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetMonitorUptimeRequest) Reset() {
+	*x = GetMonitorUptimeRequest{}
+	mi := &file_neoline_v1_monitor_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetMonitorUptimeRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetMonitorUptimeRequest) ProtoMessage() {}
+
+func (x *GetMonitorUptimeRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_neoline_v1_monitor_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetMonitorUptimeRequest.ProtoReflect.Descriptor instead.
+func (*GetMonitorUptimeRequest) Descriptor() ([]byte, []int) {
+	return file_neoline_v1_monitor_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *GetMonitorUptimeRequest) GetServerId() string {
+	if x != nil {
+		return x.ServerId
+	}
+	return ""
+}
+
+func (x *GetMonitorUptimeRequest) GetMonitorId() string {
+	if x != nil {
+		return x.MonitorId
+	}
+	return ""
+}
+
+type GetMonitorUptimeResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Uptime        *MonitorUptime         `protobuf:"bytes,1,opt,name=uptime,proto3" json:"uptime,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetMonitorUptimeResponse) Reset() {
+	*x = GetMonitorUptimeResponse{}
+	mi := &file_neoline_v1_monitor_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetMonitorUptimeResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetMonitorUptimeResponse) ProtoMessage() {}
+
+func (x *GetMonitorUptimeResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_neoline_v1_monitor_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetMonitorUptimeResponse.ProtoReflect.Descriptor instead.
+func (*GetMonitorUptimeResponse) Descriptor() ([]byte, []int) {
+	return file_neoline_v1_monitor_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *GetMonitorUptimeResponse) GetUptime() *MonitorUptime {
+	if x != nil {
+		return x.Uptime
+	}
+	return nil
+}
+
 var File_neoline_v1_monitor_proto protoreflect.FileDescriptor
 
 const file_neoline_v1_monitor_proto_rawDesc = "" +
 	"\n" +
 	"\x18neoline/v1/monitor.proto\x12\n" +
-	"neoline.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1egoogle/protobuf/duration.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x17neoline/v1/common.proto\"\v\n" +
-	"\tTcpConfig\"\xe7\x01\n" +
-	"\n" +
-	"HttpConfig\x12\x12\n" +
-	"\x04path\x18\x01 \x01(\tR\x04path\x12\x16\n" +
-	"\x06method\x18\x02 \x01(\tR\x06method\x12=\n" +
-	"\aheaders\x18\x03 \x03(\v2#.neoline.v1.HttpConfig.HeadersEntryR\aheaders\x122\n" +
-	"\x15expected_status_codes\x18\x04 \x01(\tR\x13expectedStatusCodes\x1a:\n" +
-	"\fHeadersEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xa3\x02\n" +
-	"\vHttpsConfig\x12\x12\n" +
-	"\x04path\x18\x01 \x01(\tR\x04path\x12\x16\n" +
-	"\x06method\x18\x02 \x01(\tR\x06method\x12>\n" +
-	"\aheaders\x18\x03 \x03(\v2$.neoline.v1.HttpsConfig.HeadersEntryR\aheaders\x122\n" +
-	"\x15expected_status_codes\x18\x04 \x01(\tR\x13expectedStatusCodes\x12\x19\n" +
-	"\bsni_name\x18\x05 \x01(\tR\asniName\x12\x1d\n" +
-	"\n" +
-	"tls_verify\x18\x06 \x01(\bR\ttlsVerify\x1a:\n" +
-	"\fHeadersEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x98\x01\n" +
-	"\x14TlsCertificateConfig\x12\x19\n" +
-	"\bsni_name\x18\x01 \x01(\tR\asniName\x12\x1d\n" +
-	"\n" +
-	"tls_verify\x18\x02 \x01(\bR\ttlsVerify\x12!\n" +
-	"\fwarning_days\x18\x03 \x01(\rR\vwarningDays\x12#\n" +
-	"\rcritical_days\x18\x04 \x01(\rR\fcriticalDays\"\x9b\a\n" +
-	"\aMonitor\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
-	"\tserver_id\x18\x02 \x01(\tR\bserverId\x12\x12\n" +
-	"\x04name\x18\x03 \x01(\tR\x04name\x12+\n" +
-	"\x04kind\x18\x04 \x01(\x0e2\x17.neoline.v1.MonitorKindR\x04kind\x12\x18\n" +
-	"\aenabled\x18\x05 \x01(\bR\aenabled\x12\x12\n" +
-	"\x04host\x18\x06 \x01(\tR\x04host\x12\x12\n" +
-	"\x04port\x18\a \x01(\rR\x04port\x12)\n" +
-	"\x10interval_seconds\x18\b \x01(\rR\x0fintervalSeconds\x12'\n" +
-	"\x0ftimeout_seconds\x18\t \x01(\rR\x0etimeoutSeconds\x12\x18\n" +
-	"\aretries\x18\n" +
-	" \x01(\rR\aretries\x120\n" +
-	"\x06status\x18\v \x01(\x0e2\x18.neoline.v1.HealthStatusR\x06status\x12>\n" +
-	"\rlast_check_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampR\vlastCheckAt\x12M\n" +
-	"\x15last_status_change_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampR\x12lastStatusChangeAt\x129\n" +
-	"\n" +
-	"created_at\x18\x0e \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
-	"\n" +
-	"updated_at\x18\x0f \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x1b\n" +
-	"\tgroup_ids\x18\x10 \x03(\tR\bgroupIds\x12=\n" +
-	"\vcertificate\x18\x11 \x01(\v2\x1b.neoline.v1.CertificateInfoR\vcertificate\x12)\n" +
-	"\x03tcp\x18\x14 \x01(\v2\x15.neoline.v1.TcpConfigH\x00R\x03tcp\x12,\n" +
-	"\x04http\x18\x15 \x01(\v2\x16.neoline.v1.HttpConfigH\x00R\x04http\x12/\n" +
-	"\x05https\x18\x16 \x01(\v2\x17.neoline.v1.HttpsConfigH\x00R\x05https\x12K\n" +
-	"\x0ftls_certificate\x18\x17 \x01(\v2 .neoline.v1.TlsCertificateConfigH\x00R\x0etlsCertificateB\b\n" +
-	"\x06config\"\xa0\x02\n" +
+	"neoline.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xa0\x02\n" +
 	"\x0fCertificateInfo\x12\x18\n" +
 	"\asubject\x18\x01 \x01(\tR\asubject\x12\x16\n" +
 	"\x06issuer\x18\x02 \x01(\tR\x06issuer\x12\x1b\n" +
@@ -1482,25 +1443,81 @@ const file_neoline_v1_monitor_proto_rawDesc = "" +
 	"\n" +
 	"not_before\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tnotBefore\x127\n" +
 	"\tnot_after\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\bnotAfter\x12%\n" +
-	"\x0edays_remaining\x18\a \x01(\x05R\rdaysRemaining\"\xb6\x04\n" +
+	"\x0edays_remaining\x18\a \x01(\x05R\rdaysRemaining\"\xf3\a\n" +
+	"\aMonitor\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
+	"\tserver_id\x18\x02 \x01(\tR\bserverId\x12\x1b\n" +
+	"\tgroup_ids\x18\x03 \x03(\tR\bgroupIds\x12\x12\n" +
+	"\x04name\x18\x04 \x01(\tR\x04name\x12\x12\n" +
+	"\x04kind\x18\x05 \x01(\tR\x04kind\x12\x18\n" +
+	"\aenabled\x18\x06 \x01(\bR\aenabled\x12\x12\n" +
+	"\x04host\x18\a \x01(\tR\x04host\x12\x12\n" +
+	"\x04port\x18\b \x01(\rR\x04port\x12\x10\n" +
+	"\x03url\x18\t \x01(\tR\x03url\x12\x16\n" +
+	"\x06method\x18\n" +
+	" \x01(\tR\x06method\x12\x12\n" +
+	"\x04path\x18\v \x01(\tR\x04path\x12:\n" +
+	"\aheaders\x18\f \x03(\v2 .neoline.v1.Monitor.HeadersEntryR\aheaders\x122\n" +
+	"\x15expected_status_codes\x18\r \x01(\tR\x13expectedStatusCodes\x12\x1d\n" +
+	"\n" +
+	"tls_verify\x18\x0e \x01(\bR\ttlsVerify\x12\x19\n" +
+	"\bsni_name\x18\x0f \x01(\tR\asniName\x12!\n" +
+	"\fwarning_days\x18\x10 \x01(\rR\vwarningDays\x12#\n" +
+	"\rcritical_days\x18\x11 \x01(\rR\fcriticalDays\x12)\n" +
+	"\x10interval_seconds\x18\x12 \x01(\rR\x0fintervalSeconds\x12'\n" +
+	"\x0ftimeout_seconds\x18\x13 \x01(\rR\x0etimeoutSeconds\x12\x18\n" +
+	"\aretries\x18\x14 \x01(\rR\aretries\x12\x16\n" +
+	"\x06status\x18\x15 \x01(\tR\x06status\x12>\n" +
+	"\rlast_check_at\x18\x16 \x01(\v2\x1a.google.protobuf.TimestampR\vlastCheckAt\x12M\n" +
+	"\x15last_status_change_at\x18\x17 \x01(\v2\x1a.google.protobuf.TimestampR\x12lastStatusChangeAt\x12=\n" +
+	"\vcertificate\x18\x18 \x01(\v2\x1b.neoline.v1.CertificateInfoR\vcertificate\x129\n" +
+	"\n" +
+	"created_at\x18\x19 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
+	"\n" +
+	"updated_at\x18\x1a \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x1a:\n" +
+	"\fHeadersEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xee\x03\n" +
 	"\vCheckResult\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\tserver_id\x18\x02 \x01(\tR\bserverId\x12\x1d\n" +
 	"\n" +
-	"monitor_id\x18\x03 \x01(\tR\tmonitorId\x120\n" +
-	"\x06status\x18\x04 \x01(\x0e2\x18.neoline.v1.HealthStatusR\x06status\x129\n" +
+	"monitor_id\x18\x03 \x01(\tR\tmonitorId\x12\x16\n" +
+	"\x06status\x18\x04 \x01(\tR\x06status\x129\n" +
 	"\n" +
 	"started_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tstartedAt\x125\n" +
-	"\bended_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\aendedAt\x125\n" +
-	"\bduration\x18\a \x01(\v2\x19.google.protobuf.DurationR\bduration\x127\n" +
-	"\verror_stage\x18\b \x01(\x0e2\x16.neoline.v1.ErrorStageR\n" +
+	"\bended_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\aendedAt\x12\x1f\n" +
+	"\vduration_ms\x18\a \x01(\x03R\n" +
+	"durationMs\x12\x1f\n" +
+	"\verror_stage\x18\b \x01(\tR\n" +
 	"errorStage\x12#\n" +
 	"\rerror_message\x18\t \x01(\tR\ferrorMessage\x12%\n" +
 	"\x0eremote_address\x18\n" +
 	" \x01(\tR\rremoteAddress\x12\x12\n" +
 	"\x04port\x18\v \x01(\rR\x04port\x12(\n" +
 	"\x10http_status_code\x18\f \x01(\rR\x0ehttpStatusCode\x12=\n" +
-	"\vcertificate\x18\r \x01(\v2\x1b.neoline.v1.CertificateInfoR\vcertificate\"n\n" +
+	"\vcertificate\x18\r \x01(\v2\x1b.neoline.v1.CertificateInfoR\vcertificate\"\xad\x01\n" +
+	"\fUptimeWindow\x12%\n" +
+	"\x0ewindow_seconds\x18\x01 \x01(\x03R\rwindowSeconds\x12\x14\n" +
+	"\x05total\x18\x02 \x01(\x05R\x05total\x12\x0e\n" +
+	"\x02up\x18\x03 \x01(\x05R\x02up\x12\x12\n" +
+	"\x04down\x18\x04 \x01(\x05R\x04down\x12\x16\n" +
+	"\x06uptime\x18\x05 \x01(\x01R\x06uptime\x12$\n" +
+	"\x0eavg_latency_ms\x18\x06 \x01(\x01R\favgLatencyMs\"\x7f\n" +
+	"\tHeartbeat\x12\x16\n" +
+	"\x06status\x18\x01 \x01(\tR\x06status\x129\n" +
+	"\n" +
+	"started_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\tstartedAt\x12\x1f\n" +
+	"\vduration_ms\x18\x03 \x01(\x03R\n" +
+	"durationMs\"\xde\x01\n" +
+	"\rMonitorUptime\x12@\n" +
+	"\awindows\x18\x01 \x03(\v2&.neoline.v1.MonitorUptime.WindowsEntryR\awindows\x125\n" +
+	"\n" +
+	"heartbeats\x18\x02 \x03(\v2\x15.neoline.v1.HeartbeatR\n" +
+	"heartbeats\x1aT\n" +
+	"\fWindowsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12.\n" +
+	"\x05value\x18\x02 \x01(\v2\x18.neoline.v1.UptimeWindowR\x05value:\x028\x01\"n\n" +
 	"\x13ListMonitorsRequest\x12\x1b\n" +
 	"\tserver_id\x18\x01 \x01(\tR\bserverId\x12\x1b\n" +
 	"\tpage_size\x18\x02 \x01(\rR\bpageSize\x12\x1d\n" +
@@ -1544,15 +1561,22 @@ const file_neoline_v1_monitor_proto_rawDesc = "" +
 	"\bend_time\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\aendTime\"u\n" +
 	"\x18ListCheckResultsResponse\x121\n" +
 	"\aresults\x18\x01 \x03(\v2\x17.neoline.v1.CheckResultR\aresults\x12&\n" +
-	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken2\xe0\x06\n" +
-	"\x0eMonitorService\x12{\n" +
-	"\fListMonitors\x12\x1f.neoline.v1.ListMonitorsRequest\x1a .neoline.v1.ListMonitorsResponse\"(\x82\xd3\xe4\x93\x02\"\x12 /v1/servers/{server_id}/monitors\x12\x87\x01\n" +
-	"\rCreateMonitor\x12 .neoline.v1.CreateMonitorRequest\x1a!.neoline.v1.CreateMonitorResponse\"1\x82\xd3\xe4\x93\x02+:\amonitor\" /v1/servers/{server_id}/monitors\x12\x82\x01\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"U\n" +
+	"\x17GetMonitorUptimeRequest\x12\x1b\n" +
+	"\tserver_id\x18\x01 \x01(\tR\bserverId\x12\x1d\n" +
 	"\n" +
-	"GetMonitor\x12\x1d.neoline.v1.GetMonitorRequest\x1a\x1e.neoline.v1.GetMonitorResponse\"5\x82\xd3\xe4\x93\x02/\x12-/v1/servers/{server_id}/monitors/{monitor_id}\x12\x94\x01\n" +
-	"\rUpdateMonitor\x12 .neoline.v1.UpdateMonitorRequest\x1a!.neoline.v1.UpdateMonitorResponse\">\x82\xd3\xe4\x93\x028:\amonitor\x1a-/v1/servers/{server_id}/monitors/{monitor_id}\x12\x8b\x01\n" +
-	"\rDeleteMonitor\x12 .neoline.v1.DeleteMonitorRequest\x1a!.neoline.v1.DeleteMonitorResponse\"5\x82\xd3\xe4\x93\x02/*-/v1/servers/{server_id}/monitors/{monitor_id}\x12\x9c\x01\n" +
-	"\x10ListCheckResults\x12#.neoline.v1.ListCheckResultsRequest\x1a$.neoline.v1.ListCheckResultsResponse\"=\x82\xd3\xe4\x93\x027\x125/v1/servers/{server_id}/monitors/{monitor_id}/resultsB;Z9github.com/orvice/neo-line/pkg/proto/neoline/v1;neolinev1b\x06proto3"
+	"monitor_id\x18\x02 \x01(\tR\tmonitorId\"M\n" +
+	"\x18GetMonitorUptimeResponse\x121\n" +
+	"\x06uptime\x18\x01 \x01(\v2\x19.neoline.v1.MonitorUptimeR\x06uptime2\xfe\x04\n" +
+	"\x0eMonitorService\x12S\n" +
+	"\fListMonitors\x12\x1f.neoline.v1.ListMonitorsRequest\x1a .neoline.v1.ListMonitorsResponse\"\x00\x12V\n" +
+	"\rCreateMonitor\x12 .neoline.v1.CreateMonitorRequest\x1a!.neoline.v1.CreateMonitorResponse\"\x00\x12M\n" +
+	"\n" +
+	"GetMonitor\x12\x1d.neoline.v1.GetMonitorRequest\x1a\x1e.neoline.v1.GetMonitorResponse\"\x00\x12V\n" +
+	"\rUpdateMonitor\x12 .neoline.v1.UpdateMonitorRequest\x1a!.neoline.v1.UpdateMonitorResponse\"\x00\x12V\n" +
+	"\rDeleteMonitor\x12 .neoline.v1.DeleteMonitorRequest\x1a!.neoline.v1.DeleteMonitorResponse\"\x00\x12_\n" +
+	"\x10ListCheckResults\x12#.neoline.v1.ListCheckResultsRequest\x1a$.neoline.v1.ListCheckResultsResponse\"\x00\x12_\n" +
+	"\x10GetMonitorUptime\x12#.neoline.v1.GetMonitorUptimeRequest\x1a$.neoline.v1.GetMonitorUptimeResponse\"\x00B;Z9github.com/orvice/neo-line/pkg/proto/neoline/v1;neolinev1b\x06proto3"
 
 var (
 	file_neoline_v1_monitor_proto_rawDescOnce sync.Once
@@ -1566,83 +1590,77 @@ func file_neoline_v1_monitor_proto_rawDescGZIP() []byte {
 	return file_neoline_v1_monitor_proto_rawDescData
 }
 
-var file_neoline_v1_monitor_proto_msgTypes = make([]protoimpl.MessageInfo, 21)
+var file_neoline_v1_monitor_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
 var file_neoline_v1_monitor_proto_goTypes = []any{
-	(*TcpConfig)(nil),                // 0: neoline.v1.TcpConfig
-	(*HttpConfig)(nil),               // 1: neoline.v1.HttpConfig
-	(*HttpsConfig)(nil),              // 2: neoline.v1.HttpsConfig
-	(*TlsCertificateConfig)(nil),     // 3: neoline.v1.TlsCertificateConfig
-	(*Monitor)(nil),                  // 4: neoline.v1.Monitor
-	(*CertificateInfo)(nil),          // 5: neoline.v1.CertificateInfo
-	(*CheckResult)(nil),              // 6: neoline.v1.CheckResult
-	(*ListMonitorsRequest)(nil),      // 7: neoline.v1.ListMonitorsRequest
-	(*ListMonitorsResponse)(nil),     // 8: neoline.v1.ListMonitorsResponse
-	(*CreateMonitorRequest)(nil),     // 9: neoline.v1.CreateMonitorRequest
-	(*CreateMonitorResponse)(nil),    // 10: neoline.v1.CreateMonitorResponse
-	(*GetMonitorRequest)(nil),        // 11: neoline.v1.GetMonitorRequest
-	(*GetMonitorResponse)(nil),       // 12: neoline.v1.GetMonitorResponse
-	(*UpdateMonitorRequest)(nil),     // 13: neoline.v1.UpdateMonitorRequest
-	(*UpdateMonitorResponse)(nil),    // 14: neoline.v1.UpdateMonitorResponse
-	(*DeleteMonitorRequest)(nil),     // 15: neoline.v1.DeleteMonitorRequest
-	(*DeleteMonitorResponse)(nil),    // 16: neoline.v1.DeleteMonitorResponse
-	(*ListCheckResultsRequest)(nil),  // 17: neoline.v1.ListCheckResultsRequest
-	(*ListCheckResultsResponse)(nil), // 18: neoline.v1.ListCheckResultsResponse
-	nil,                              // 19: neoline.v1.HttpConfig.HeadersEntry
-	nil,                              // 20: neoline.v1.HttpsConfig.HeadersEntry
-	(MonitorKind)(0),                 // 21: neoline.v1.MonitorKind
-	(HealthStatus)(0),                // 22: neoline.v1.HealthStatus
-	(*timestamppb.Timestamp)(nil),    // 23: google.protobuf.Timestamp
-	(*durationpb.Duration)(nil),      // 24: google.protobuf.Duration
-	(ErrorStage)(0),                  // 25: neoline.v1.ErrorStage
+	(*CertificateInfo)(nil),          // 0: neoline.v1.CertificateInfo
+	(*Monitor)(nil),                  // 1: neoline.v1.Monitor
+	(*CheckResult)(nil),              // 2: neoline.v1.CheckResult
+	(*UptimeWindow)(nil),             // 3: neoline.v1.UptimeWindow
+	(*Heartbeat)(nil),                // 4: neoline.v1.Heartbeat
+	(*MonitorUptime)(nil),            // 5: neoline.v1.MonitorUptime
+	(*ListMonitorsRequest)(nil),      // 6: neoline.v1.ListMonitorsRequest
+	(*ListMonitorsResponse)(nil),     // 7: neoline.v1.ListMonitorsResponse
+	(*CreateMonitorRequest)(nil),     // 8: neoline.v1.CreateMonitorRequest
+	(*CreateMonitorResponse)(nil),    // 9: neoline.v1.CreateMonitorResponse
+	(*GetMonitorRequest)(nil),        // 10: neoline.v1.GetMonitorRequest
+	(*GetMonitorResponse)(nil),       // 11: neoline.v1.GetMonitorResponse
+	(*UpdateMonitorRequest)(nil),     // 12: neoline.v1.UpdateMonitorRequest
+	(*UpdateMonitorResponse)(nil),    // 13: neoline.v1.UpdateMonitorResponse
+	(*DeleteMonitorRequest)(nil),     // 14: neoline.v1.DeleteMonitorRequest
+	(*DeleteMonitorResponse)(nil),    // 15: neoline.v1.DeleteMonitorResponse
+	(*ListCheckResultsRequest)(nil),  // 16: neoline.v1.ListCheckResultsRequest
+	(*ListCheckResultsResponse)(nil), // 17: neoline.v1.ListCheckResultsResponse
+	(*GetMonitorUptimeRequest)(nil),  // 18: neoline.v1.GetMonitorUptimeRequest
+	(*GetMonitorUptimeResponse)(nil), // 19: neoline.v1.GetMonitorUptimeResponse
+	nil,                              // 20: neoline.v1.Monitor.HeadersEntry
+	nil,                              // 21: neoline.v1.MonitorUptime.WindowsEntry
+	(*timestamppb.Timestamp)(nil),    // 22: google.protobuf.Timestamp
 }
 var file_neoline_v1_monitor_proto_depIdxs = []int32{
-	19, // 0: neoline.v1.HttpConfig.headers:type_name -> neoline.v1.HttpConfig.HeadersEntry
-	20, // 1: neoline.v1.HttpsConfig.headers:type_name -> neoline.v1.HttpsConfig.HeadersEntry
-	21, // 2: neoline.v1.Monitor.kind:type_name -> neoline.v1.MonitorKind
-	22, // 3: neoline.v1.Monitor.status:type_name -> neoline.v1.HealthStatus
-	23, // 4: neoline.v1.Monitor.last_check_at:type_name -> google.protobuf.Timestamp
-	23, // 5: neoline.v1.Monitor.last_status_change_at:type_name -> google.protobuf.Timestamp
-	23, // 6: neoline.v1.Monitor.created_at:type_name -> google.protobuf.Timestamp
-	23, // 7: neoline.v1.Monitor.updated_at:type_name -> google.protobuf.Timestamp
-	5,  // 8: neoline.v1.Monitor.certificate:type_name -> neoline.v1.CertificateInfo
-	0,  // 9: neoline.v1.Monitor.tcp:type_name -> neoline.v1.TcpConfig
-	1,  // 10: neoline.v1.Monitor.http:type_name -> neoline.v1.HttpConfig
-	2,  // 11: neoline.v1.Monitor.https:type_name -> neoline.v1.HttpsConfig
-	3,  // 12: neoline.v1.Monitor.tls_certificate:type_name -> neoline.v1.TlsCertificateConfig
-	23, // 13: neoline.v1.CertificateInfo.not_before:type_name -> google.protobuf.Timestamp
-	23, // 14: neoline.v1.CertificateInfo.not_after:type_name -> google.protobuf.Timestamp
-	22, // 15: neoline.v1.CheckResult.status:type_name -> neoline.v1.HealthStatus
-	23, // 16: neoline.v1.CheckResult.started_at:type_name -> google.protobuf.Timestamp
-	23, // 17: neoline.v1.CheckResult.ended_at:type_name -> google.protobuf.Timestamp
-	24, // 18: neoline.v1.CheckResult.duration:type_name -> google.protobuf.Duration
-	25, // 19: neoline.v1.CheckResult.error_stage:type_name -> neoline.v1.ErrorStage
-	5,  // 20: neoline.v1.CheckResult.certificate:type_name -> neoline.v1.CertificateInfo
-	4,  // 21: neoline.v1.ListMonitorsResponse.monitors:type_name -> neoline.v1.Monitor
-	4,  // 22: neoline.v1.CreateMonitorRequest.monitor:type_name -> neoline.v1.Monitor
-	4,  // 23: neoline.v1.CreateMonitorResponse.monitor:type_name -> neoline.v1.Monitor
-	4,  // 24: neoline.v1.GetMonitorResponse.monitor:type_name -> neoline.v1.Monitor
-	4,  // 25: neoline.v1.UpdateMonitorRequest.monitor:type_name -> neoline.v1.Monitor
-	4,  // 26: neoline.v1.UpdateMonitorResponse.monitor:type_name -> neoline.v1.Monitor
-	23, // 27: neoline.v1.ListCheckResultsRequest.start_time:type_name -> google.protobuf.Timestamp
-	23, // 28: neoline.v1.ListCheckResultsRequest.end_time:type_name -> google.protobuf.Timestamp
-	6,  // 29: neoline.v1.ListCheckResultsResponse.results:type_name -> neoline.v1.CheckResult
-	7,  // 30: neoline.v1.MonitorService.ListMonitors:input_type -> neoline.v1.ListMonitorsRequest
-	9,  // 31: neoline.v1.MonitorService.CreateMonitor:input_type -> neoline.v1.CreateMonitorRequest
-	11, // 32: neoline.v1.MonitorService.GetMonitor:input_type -> neoline.v1.GetMonitorRequest
-	13, // 33: neoline.v1.MonitorService.UpdateMonitor:input_type -> neoline.v1.UpdateMonitorRequest
-	15, // 34: neoline.v1.MonitorService.DeleteMonitor:input_type -> neoline.v1.DeleteMonitorRequest
-	17, // 35: neoline.v1.MonitorService.ListCheckResults:input_type -> neoline.v1.ListCheckResultsRequest
-	8,  // 36: neoline.v1.MonitorService.ListMonitors:output_type -> neoline.v1.ListMonitorsResponse
-	10, // 37: neoline.v1.MonitorService.CreateMonitor:output_type -> neoline.v1.CreateMonitorResponse
-	12, // 38: neoline.v1.MonitorService.GetMonitor:output_type -> neoline.v1.GetMonitorResponse
-	14, // 39: neoline.v1.MonitorService.UpdateMonitor:output_type -> neoline.v1.UpdateMonitorResponse
-	16, // 40: neoline.v1.MonitorService.DeleteMonitor:output_type -> neoline.v1.DeleteMonitorResponse
-	18, // 41: neoline.v1.MonitorService.ListCheckResults:output_type -> neoline.v1.ListCheckResultsResponse
-	36, // [36:42] is the sub-list for method output_type
-	30, // [30:36] is the sub-list for method input_type
-	30, // [30:30] is the sub-list for extension type_name
-	30, // [30:30] is the sub-list for extension extendee
-	0,  // [0:30] is the sub-list for field type_name
+	22, // 0: neoline.v1.CertificateInfo.not_before:type_name -> google.protobuf.Timestamp
+	22, // 1: neoline.v1.CertificateInfo.not_after:type_name -> google.protobuf.Timestamp
+	20, // 2: neoline.v1.Monitor.headers:type_name -> neoline.v1.Monitor.HeadersEntry
+	22, // 3: neoline.v1.Monitor.last_check_at:type_name -> google.protobuf.Timestamp
+	22, // 4: neoline.v1.Monitor.last_status_change_at:type_name -> google.protobuf.Timestamp
+	0,  // 5: neoline.v1.Monitor.certificate:type_name -> neoline.v1.CertificateInfo
+	22, // 6: neoline.v1.Monitor.created_at:type_name -> google.protobuf.Timestamp
+	22, // 7: neoline.v1.Monitor.updated_at:type_name -> google.protobuf.Timestamp
+	22, // 8: neoline.v1.CheckResult.started_at:type_name -> google.protobuf.Timestamp
+	22, // 9: neoline.v1.CheckResult.ended_at:type_name -> google.protobuf.Timestamp
+	0,  // 10: neoline.v1.CheckResult.certificate:type_name -> neoline.v1.CertificateInfo
+	22, // 11: neoline.v1.Heartbeat.started_at:type_name -> google.protobuf.Timestamp
+	21, // 12: neoline.v1.MonitorUptime.windows:type_name -> neoline.v1.MonitorUptime.WindowsEntry
+	4,  // 13: neoline.v1.MonitorUptime.heartbeats:type_name -> neoline.v1.Heartbeat
+	1,  // 14: neoline.v1.ListMonitorsResponse.monitors:type_name -> neoline.v1.Monitor
+	1,  // 15: neoline.v1.CreateMonitorRequest.monitor:type_name -> neoline.v1.Monitor
+	1,  // 16: neoline.v1.CreateMonitorResponse.monitor:type_name -> neoline.v1.Monitor
+	1,  // 17: neoline.v1.GetMonitorResponse.monitor:type_name -> neoline.v1.Monitor
+	1,  // 18: neoline.v1.UpdateMonitorRequest.monitor:type_name -> neoline.v1.Monitor
+	1,  // 19: neoline.v1.UpdateMonitorResponse.monitor:type_name -> neoline.v1.Monitor
+	22, // 20: neoline.v1.ListCheckResultsRequest.start_time:type_name -> google.protobuf.Timestamp
+	22, // 21: neoline.v1.ListCheckResultsRequest.end_time:type_name -> google.protobuf.Timestamp
+	2,  // 22: neoline.v1.ListCheckResultsResponse.results:type_name -> neoline.v1.CheckResult
+	5,  // 23: neoline.v1.GetMonitorUptimeResponse.uptime:type_name -> neoline.v1.MonitorUptime
+	3,  // 24: neoline.v1.MonitorUptime.WindowsEntry.value:type_name -> neoline.v1.UptimeWindow
+	6,  // 25: neoline.v1.MonitorService.ListMonitors:input_type -> neoline.v1.ListMonitorsRequest
+	8,  // 26: neoline.v1.MonitorService.CreateMonitor:input_type -> neoline.v1.CreateMonitorRequest
+	10, // 27: neoline.v1.MonitorService.GetMonitor:input_type -> neoline.v1.GetMonitorRequest
+	12, // 28: neoline.v1.MonitorService.UpdateMonitor:input_type -> neoline.v1.UpdateMonitorRequest
+	14, // 29: neoline.v1.MonitorService.DeleteMonitor:input_type -> neoline.v1.DeleteMonitorRequest
+	16, // 30: neoline.v1.MonitorService.ListCheckResults:input_type -> neoline.v1.ListCheckResultsRequest
+	18, // 31: neoline.v1.MonitorService.GetMonitorUptime:input_type -> neoline.v1.GetMonitorUptimeRequest
+	7,  // 32: neoline.v1.MonitorService.ListMonitors:output_type -> neoline.v1.ListMonitorsResponse
+	9,  // 33: neoline.v1.MonitorService.CreateMonitor:output_type -> neoline.v1.CreateMonitorResponse
+	11, // 34: neoline.v1.MonitorService.GetMonitor:output_type -> neoline.v1.GetMonitorResponse
+	13, // 35: neoline.v1.MonitorService.UpdateMonitor:output_type -> neoline.v1.UpdateMonitorResponse
+	15, // 36: neoline.v1.MonitorService.DeleteMonitor:output_type -> neoline.v1.DeleteMonitorResponse
+	17, // 37: neoline.v1.MonitorService.ListCheckResults:output_type -> neoline.v1.ListCheckResultsResponse
+	19, // 38: neoline.v1.MonitorService.GetMonitorUptime:output_type -> neoline.v1.GetMonitorUptimeResponse
+	32, // [32:39] is the sub-list for method output_type
+	25, // [25:32] is the sub-list for method input_type
+	25, // [25:25] is the sub-list for extension type_name
+	25, // [25:25] is the sub-list for extension extendee
+	0,  // [0:25] is the sub-list for field type_name
 }
 
 func init() { file_neoline_v1_monitor_proto_init() }
@@ -1650,20 +1668,13 @@ func file_neoline_v1_monitor_proto_init() {
 	if File_neoline_v1_monitor_proto != nil {
 		return
 	}
-	file_neoline_v1_common_proto_init()
-	file_neoline_v1_monitor_proto_msgTypes[4].OneofWrappers = []any{
-		(*Monitor_Tcp)(nil),
-		(*Monitor_Http)(nil),
-		(*Monitor_Https)(nil),
-		(*Monitor_TlsCertificate)(nil),
-	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_neoline_v1_monitor_proto_rawDesc), len(file_neoline_v1_monitor_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   21,
+			NumMessages:   22,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

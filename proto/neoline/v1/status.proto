@@ -1,0 +1,58 @@
+syntax = "proto3";
+
+package neoline.v1;
+
+import "google/protobuf/timestamp.proto";
+import "neoline/v1/monitor.proto";
+
+option go_package = "github.com/orvice/neo-line/pkg/proto/neoline/v1;neolinev1";
+
+// PublicCertificate carries only certificate validity timing, never the
+// subject, issuer, DNS names, or serial that would reveal hostnames.
+message PublicCertificate {
+  google.protobuf.Timestamp not_before = 1;
+  google.protobuf.Timestamp not_after = 2;
+  int32 days_remaining = 3;
+}
+
+// StatusMonitor is the slim, anonymous view of one monitor on the status page.
+message StatusMonitor {
+  string id = 1;
+  string server_id = 2;
+  string name = 3;
+  string kind = 4;
+  string status = 5;
+  uint32 interval_seconds = 6;
+  google.protobuf.Timestamp last_check_at = 7;
+  uint32 warning_days = 8;
+  uint32 critical_days = 9;
+  PublicCertificate certificate = 10;
+  MonitorUptime uptime = 11;
+}
+
+message StatusServer {
+  string id = 1;
+  string name = 2;
+  string environment = 3;
+  repeated string tags = 4;
+  repeated StatusMonitor monitors = 5;
+}
+
+message StatusGroup {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  uint32 sort_order = 4;
+  repeated StatusServer servers = 5;
+}
+
+message GetStatusOverviewRequest {}
+
+message GetStatusOverviewResponse {
+  repeated StatusGroup groups = 1;
+}
+
+// StatusService exposes the anonymous, slim status-page overview.
+service StatusService {
+  rpc GetStatusOverview(GetStatusOverviewRequest) returns (GetStatusOverviewResponse) {}
+}

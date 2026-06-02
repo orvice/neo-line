@@ -7,7 +7,6 @@
 package neolinev1
 
 import (
-	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
@@ -24,8 +23,7 @@ const (
 )
 
 // AlertChannel describes a single delivery target inside a NotifyGroup.
-// Supported types: "webhook", "telegram", "discord", "mastodon". The meaning of
-// target and extra depends on the type (see docs/monitoring-configuration.md).
+// Supported types: "webhook", "telegram", "discord", "mastodon".
 type AlertChannel struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Type          string                 `protobuf:"bytes,1,opt,name=type,proto3" json:"type,omitempty"`
@@ -86,9 +84,7 @@ func (x *AlertChannel) GetExtra() map[string]string {
 	return nil
 }
 
-// NotifyGroup is a reusable, named bucket of delivery channels. A MonitorGroup's
-// AlertPolicy references one or more NotifyGroups by id; dispatch fans out to
-// every channel of every referenced group.
+// NotifyGroup is a reusable, named bucket of delivery channels.
 type NotifyGroup struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -634,7 +630,7 @@ var File_neoline_v1_notify_group_proto protoreflect.FileDescriptor
 const file_neoline_v1_notify_group_proto_rawDesc = "" +
 	"\n" +
 	"\x1dneoline/v1/notify_group.proto\x12\n" +
-	"neoline.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xaf\x01\n" +
+	"neoline.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xaf\x01\n" +
 	"\fAlertChannel\x12\x12\n" +
 	"\x04type\x18\x01 \x01(\tR\x04type\x12\x16\n" +
 	"\x06target\x18\x02 \x01(\tR\x06target\x129\n" +
@@ -674,13 +670,13 @@ const file_neoline_v1_notify_group_proto_rawDesc = "" +
 	"\x05group\x18\x01 \x01(\v2\x17.neoline.v1.NotifyGroupR\x05group\"B\n" +
 	"\x18DeleteNotifyGroupRequest\x12&\n" +
 	"\x0fnotify_group_id\x18\x01 \x01(\tR\rnotifyGroupId\"\x1b\n" +
-	"\x19DeleteNotifyGroupResponse2\xc1\x05\n" +
-	"\x12NotifyGroupService\x12x\n" +
-	"\x10ListNotifyGroups\x12#.neoline.v1.ListNotifyGroupsRequest\x1a$.neoline.v1.ListNotifyGroupsResponse\"\x19\x82\xd3\xe4\x93\x02\x13\x12\x11/v1/notify-groups\x12\x82\x01\n" +
-	"\x11CreateNotifyGroup\x12$.neoline.v1.CreateNotifyGroupRequest\x1a%.neoline.v1.CreateNotifyGroupResponse\" \x82\xd3\xe4\x93\x02\x1a:\x05group\"\x11/v1/notify-groups\x12\x84\x01\n" +
-	"\x0eGetNotifyGroup\x12!.neoline.v1.GetNotifyGroupRequest\x1a\".neoline.v1.GetNotifyGroupResponse\"+\x82\xd3\xe4\x93\x02%\x12#/v1/notify-groups/{notify_group_id}\x12\x94\x01\n" +
-	"\x11UpdateNotifyGroup\x12$.neoline.v1.UpdateNotifyGroupRequest\x1a%.neoline.v1.UpdateNotifyGroupResponse\"2\x82\xd3\xe4\x93\x02,:\x05group\x1a#/v1/notify-groups/{notify_group_id}\x12\x8d\x01\n" +
-	"\x11DeleteNotifyGroup\x12$.neoline.v1.DeleteNotifyGroupRequest\x1a%.neoline.v1.DeleteNotifyGroupResponse\"+\x82\xd3\xe4\x93\x02%*#/v1/notify-groups/{notify_group_id}B;Z9github.com/orvice/neo-line/pkg/proto/neoline/v1;neolinev1b\x06proto3"
+	"\x19DeleteNotifyGroupResponse2\xfc\x03\n" +
+	"\x12NotifyGroupService\x12_\n" +
+	"\x10ListNotifyGroups\x12#.neoline.v1.ListNotifyGroupsRequest\x1a$.neoline.v1.ListNotifyGroupsResponse\"\x00\x12b\n" +
+	"\x11CreateNotifyGroup\x12$.neoline.v1.CreateNotifyGroupRequest\x1a%.neoline.v1.CreateNotifyGroupResponse\"\x00\x12Y\n" +
+	"\x0eGetNotifyGroup\x12!.neoline.v1.GetNotifyGroupRequest\x1a\".neoline.v1.GetNotifyGroupResponse\"\x00\x12b\n" +
+	"\x11UpdateNotifyGroup\x12$.neoline.v1.UpdateNotifyGroupRequest\x1a%.neoline.v1.UpdateNotifyGroupResponse\"\x00\x12b\n" +
+	"\x11DeleteNotifyGroup\x12$.neoline.v1.DeleteNotifyGroupRequest\x1a%.neoline.v1.DeleteNotifyGroupResponse\"\x00B;Z9github.com/orvice/neo-line/pkg/proto/neoline/v1;neolinev1b\x06proto3"
 
 var (
 	file_neoline_v1_notify_group_proto_rawDescOnce sync.Once

@@ -7,7 +7,6 @@
 package neolinev1
 
 import (
-	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
@@ -23,6 +22,76 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// ServerSSH stores per-server SSH execution settings. Empty host/port/user
+// values inherit from the server host and global runtime SSH defaults.
+type ServerSSH struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Enabled       bool                   `protobuf:"varint,1,opt,name=enabled,proto3" json:"enabled,omitempty"`
+	Host          string                 `protobuf:"bytes,2,opt,name=host,proto3" json:"host,omitempty"`
+	Port          uint32                 `protobuf:"varint,3,opt,name=port,proto3" json:"port,omitempty"`
+	User          string                 `protobuf:"bytes,4,opt,name=user,proto3" json:"user,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ServerSSH) Reset() {
+	*x = ServerSSH{}
+	mi := &file_neoline_v1_server_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ServerSSH) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ServerSSH) ProtoMessage() {}
+
+func (x *ServerSSH) ProtoReflect() protoreflect.Message {
+	mi := &file_neoline_v1_server_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ServerSSH.ProtoReflect.Descriptor instead.
+func (*ServerSSH) Descriptor() ([]byte, []int) {
+	return file_neoline_v1_server_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *ServerSSH) GetEnabled() bool {
+	if x != nil {
+		return x.Enabled
+	}
+	return false
+}
+
+func (x *ServerSSH) GetHost() string {
+	if x != nil {
+		return x.Host
+	}
+	return ""
+}
+
+func (x *ServerSSH) GetPort() uint32 {
+	if x != nil {
+		return x.Port
+	}
+	return 0
+}
+
+func (x *ServerSSH) GetUser() string {
+	if x != nil {
+		return x.User
+	}
+	return ""
+}
+
 // Server is a monitored host with one or more attached monitors.
 type Server struct {
 	state              protoimpl.MessageState `protogen:"open.v1"`
@@ -32,21 +101,21 @@ type Server struct {
 	Environment        string                 `protobuf:"bytes,4,opt,name=environment,proto3" json:"environment,omitempty"`
 	Region             string                 `protobuf:"bytes,5,opt,name=region,proto3" json:"region,omitempty"`
 	Tags               []string               `protobuf:"bytes,6,rep,name=tags,proto3" json:"tags,omitempty"`
-	Enabled            bool                   `protobuf:"varint,7,opt,name=enabled,proto3" json:"enabled,omitempty"`
-	HealthStatus       HealthStatus           `protobuf:"varint,8,opt,name=health_status,json=healthStatus,proto3,enum=neoline.v1.HealthStatus" json:"health_status,omitempty"`
-	LastStatusChangeAt *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=last_status_change_at,json=lastStatusChangeAt,proto3" json:"last_status_change_at,omitempty"`
-	LastCheckAt        *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=last_check_at,json=lastCheckAt,proto3" json:"last_check_at,omitempty"`
-	CreatedAt          *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt          *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	// sort_order controls display order. Smaller values are listed first.
-	SortOrder     uint32 `protobuf:"varint,13,opt,name=sort_order,json=sortOrder,proto3" json:"sort_order,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	SortOrder          uint32                 `protobuf:"varint,7,opt,name=sort_order,json=sortOrder,proto3" json:"sort_order,omitempty"`
+	Enabled            bool                   `protobuf:"varint,8,opt,name=enabled,proto3" json:"enabled,omitempty"`
+	HealthStatus       string                 `protobuf:"bytes,9,opt,name=health_status,json=healthStatus,proto3" json:"health_status,omitempty"`
+	LastStatusChangeAt *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=last_status_change_at,json=lastStatusChangeAt,proto3" json:"last_status_change_at,omitempty"`
+	LastCheckAt        *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=last_check_at,json=lastCheckAt,proto3" json:"last_check_at,omitempty"`
+	Ssh                *ServerSSH             `protobuf:"bytes,12,opt,name=ssh,proto3" json:"ssh,omitempty"`
+	CreatedAt          *timestamppb.Timestamp `protobuf:"bytes,13,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt          *timestamppb.Timestamp `protobuf:"bytes,14,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *Server) Reset() {
 	*x = Server{}
-	mi := &file_neoline_v1_server_proto_msgTypes[0]
+	mi := &file_neoline_v1_server_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -58,7 +127,7 @@ func (x *Server) String() string {
 func (*Server) ProtoMessage() {}
 
 func (x *Server) ProtoReflect() protoreflect.Message {
-	mi := &file_neoline_v1_server_proto_msgTypes[0]
+	mi := &file_neoline_v1_server_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -71,7 +140,7 @@ func (x *Server) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Server.ProtoReflect.Descriptor instead.
 func (*Server) Descriptor() ([]byte, []int) {
-	return file_neoline_v1_server_proto_rawDescGZIP(), []int{0}
+	return file_neoline_v1_server_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *Server) GetId() string {
@@ -116,6 +185,13 @@ func (x *Server) GetTags() []string {
 	return nil
 }
 
+func (x *Server) GetSortOrder() uint32 {
+	if x != nil {
+		return x.SortOrder
+	}
+	return 0
+}
+
 func (x *Server) GetEnabled() bool {
 	if x != nil {
 		return x.Enabled
@@ -123,11 +199,11 @@ func (x *Server) GetEnabled() bool {
 	return false
 }
 
-func (x *Server) GetHealthStatus() HealthStatus {
+func (x *Server) GetHealthStatus() string {
 	if x != nil {
 		return x.HealthStatus
 	}
-	return HealthStatus_HEALTH_STATUS_UNSPECIFIED
+	return ""
 }
 
 func (x *Server) GetLastStatusChangeAt() *timestamppb.Timestamp {
@@ -140,6 +216,13 @@ func (x *Server) GetLastStatusChangeAt() *timestamppb.Timestamp {
 func (x *Server) GetLastCheckAt() *timestamppb.Timestamp {
 	if x != nil {
 		return x.LastCheckAt
+	}
+	return nil
+}
+
+func (x *Server) GetSsh() *ServerSSH {
+	if x != nil {
+		return x.Ssh
 	}
 	return nil
 }
@@ -158,20 +241,13 @@ func (x *Server) GetUpdatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
-func (x *Server) GetSortOrder() uint32 {
-	if x != nil {
-		return x.SortOrder
-	}
-	return 0
-}
-
 // ServerEvent records a server health-status transition.
 type ServerEvent struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	ServerId       string                 `protobuf:"bytes,2,opt,name=server_id,json=serverId,proto3" json:"server_id,omitempty"`
-	PreviousStatus HealthStatus           `protobuf:"varint,3,opt,name=previous_status,json=previousStatus,proto3,enum=neoline.v1.HealthStatus" json:"previous_status,omitempty"`
-	CurrentStatus  HealthStatus           `protobuf:"varint,4,opt,name=current_status,json=currentStatus,proto3,enum=neoline.v1.HealthStatus" json:"current_status,omitempty"`
+	PreviousStatus string                 `protobuf:"bytes,3,opt,name=previous_status,json=previousStatus,proto3" json:"previous_status,omitempty"`
+	CurrentStatus  string                 `protobuf:"bytes,4,opt,name=current_status,json=currentStatus,proto3" json:"current_status,omitempty"`
 	Reason         string                 `protobuf:"bytes,5,opt,name=reason,proto3" json:"reason,omitempty"`
 	OccurredAt     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=occurred_at,json=occurredAt,proto3" json:"occurred_at,omitempty"`
 	unknownFields  protoimpl.UnknownFields
@@ -180,7 +256,7 @@ type ServerEvent struct {
 
 func (x *ServerEvent) Reset() {
 	*x = ServerEvent{}
-	mi := &file_neoline_v1_server_proto_msgTypes[1]
+	mi := &file_neoline_v1_server_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -192,7 +268,7 @@ func (x *ServerEvent) String() string {
 func (*ServerEvent) ProtoMessage() {}
 
 func (x *ServerEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_neoline_v1_server_proto_msgTypes[1]
+	mi := &file_neoline_v1_server_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -205,7 +281,7 @@ func (x *ServerEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ServerEvent.ProtoReflect.Descriptor instead.
 func (*ServerEvent) Descriptor() ([]byte, []int) {
-	return file_neoline_v1_server_proto_rawDescGZIP(), []int{1}
+	return file_neoline_v1_server_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *ServerEvent) GetId() string {
@@ -222,18 +298,18 @@ func (x *ServerEvent) GetServerId() string {
 	return ""
 }
 
-func (x *ServerEvent) GetPreviousStatus() HealthStatus {
+func (x *ServerEvent) GetPreviousStatus() string {
 	if x != nil {
 		return x.PreviousStatus
 	}
-	return HealthStatus_HEALTH_STATUS_UNSPECIFIED
+	return ""
 }
 
-func (x *ServerEvent) GetCurrentStatus() HealthStatus {
+func (x *ServerEvent) GetCurrentStatus() string {
 	if x != nil {
 		return x.CurrentStatus
 	}
-	return HealthStatus_HEALTH_STATUS_UNSPECIFIED
+	return ""
 }
 
 func (x *ServerEvent) GetReason() string {
@@ -254,7 +330,7 @@ func (x *ServerEvent) GetOccurredAt() *timestamppb.Timestamp {
 type ServerHealth struct {
 	state              protoimpl.MessageState `protogen:"open.v1"`
 	ServerId           string                 `protobuf:"bytes,1,opt,name=server_id,json=serverId,proto3" json:"server_id,omitempty"`
-	Status             HealthStatus           `protobuf:"varint,2,opt,name=status,proto3,enum=neoline.v1.HealthStatus" json:"status,omitempty"`
+	Status             string                 `protobuf:"bytes,2,opt,name=status,proto3" json:"status,omitempty"`
 	LastStatusChangeAt *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=last_status_change_at,json=lastStatusChangeAt,proto3" json:"last_status_change_at,omitempty"`
 	LastCheckAt        *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=last_check_at,json=lastCheckAt,proto3" json:"last_check_at,omitempty"`
 	TotalMonitors      uint32                 `protobuf:"varint,5,opt,name=total_monitors,json=totalMonitors,proto3" json:"total_monitors,omitempty"`
@@ -269,7 +345,7 @@ type ServerHealth struct {
 
 func (x *ServerHealth) Reset() {
 	*x = ServerHealth{}
-	mi := &file_neoline_v1_server_proto_msgTypes[2]
+	mi := &file_neoline_v1_server_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -281,7 +357,7 @@ func (x *ServerHealth) String() string {
 func (*ServerHealth) ProtoMessage() {}
 
 func (x *ServerHealth) ProtoReflect() protoreflect.Message {
-	mi := &file_neoline_v1_server_proto_msgTypes[2]
+	mi := &file_neoline_v1_server_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -294,7 +370,7 @@ func (x *ServerHealth) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ServerHealth.ProtoReflect.Descriptor instead.
 func (*ServerHealth) Descriptor() ([]byte, []int) {
-	return file_neoline_v1_server_proto_rawDescGZIP(), []int{2}
+	return file_neoline_v1_server_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *ServerHealth) GetServerId() string {
@@ -304,11 +380,11 @@ func (x *ServerHealth) GetServerId() string {
 	return ""
 }
 
-func (x *ServerHealth) GetStatus() HealthStatus {
+func (x *ServerHealth) GetStatus() string {
 	if x != nil {
 		return x.Status
 	}
-	return HealthStatus_HEALTH_STATUS_UNSPECIFIED
+	return ""
 }
 
 func (x *ServerHealth) GetLastStatusChangeAt() *timestamppb.Timestamp {
@@ -379,7 +455,7 @@ type ListServersRequest struct {
 
 func (x *ListServersRequest) Reset() {
 	*x = ListServersRequest{}
-	mi := &file_neoline_v1_server_proto_msgTypes[3]
+	mi := &file_neoline_v1_server_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -391,7 +467,7 @@ func (x *ListServersRequest) String() string {
 func (*ListServersRequest) ProtoMessage() {}
 
 func (x *ListServersRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_neoline_v1_server_proto_msgTypes[3]
+	mi := &file_neoline_v1_server_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -404,7 +480,7 @@ func (x *ListServersRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListServersRequest.ProtoReflect.Descriptor instead.
 func (*ListServersRequest) Descriptor() ([]byte, []int) {
-	return file_neoline_v1_server_proto_rawDescGZIP(), []int{3}
+	return file_neoline_v1_server_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *ListServersRequest) GetPageSize() uint32 {
@@ -445,7 +521,7 @@ type ListServersResponse struct {
 
 func (x *ListServersResponse) Reset() {
 	*x = ListServersResponse{}
-	mi := &file_neoline_v1_server_proto_msgTypes[4]
+	mi := &file_neoline_v1_server_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -457,7 +533,7 @@ func (x *ListServersResponse) String() string {
 func (*ListServersResponse) ProtoMessage() {}
 
 func (x *ListServersResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_neoline_v1_server_proto_msgTypes[4]
+	mi := &file_neoline_v1_server_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -470,7 +546,7 @@ func (x *ListServersResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListServersResponse.ProtoReflect.Descriptor instead.
 func (*ListServersResponse) Descriptor() ([]byte, []int) {
-	return file_neoline_v1_server_proto_rawDescGZIP(), []int{4}
+	return file_neoline_v1_server_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *ListServersResponse) GetServers() []*Server {
@@ -496,7 +572,7 @@ type CreateServerRequest struct {
 
 func (x *CreateServerRequest) Reset() {
 	*x = CreateServerRequest{}
-	mi := &file_neoline_v1_server_proto_msgTypes[5]
+	mi := &file_neoline_v1_server_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -508,7 +584,7 @@ func (x *CreateServerRequest) String() string {
 func (*CreateServerRequest) ProtoMessage() {}
 
 func (x *CreateServerRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_neoline_v1_server_proto_msgTypes[5]
+	mi := &file_neoline_v1_server_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -521,7 +597,7 @@ func (x *CreateServerRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateServerRequest.ProtoReflect.Descriptor instead.
 func (*CreateServerRequest) Descriptor() ([]byte, []int) {
-	return file_neoline_v1_server_proto_rawDescGZIP(), []int{5}
+	return file_neoline_v1_server_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *CreateServerRequest) GetServer() *Server {
@@ -540,7 +616,7 @@ type CreateServerResponse struct {
 
 func (x *CreateServerResponse) Reset() {
 	*x = CreateServerResponse{}
-	mi := &file_neoline_v1_server_proto_msgTypes[6]
+	mi := &file_neoline_v1_server_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -552,7 +628,7 @@ func (x *CreateServerResponse) String() string {
 func (*CreateServerResponse) ProtoMessage() {}
 
 func (x *CreateServerResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_neoline_v1_server_proto_msgTypes[6]
+	mi := &file_neoline_v1_server_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -565,7 +641,7 @@ func (x *CreateServerResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateServerResponse.ProtoReflect.Descriptor instead.
 func (*CreateServerResponse) Descriptor() ([]byte, []int) {
-	return file_neoline_v1_server_proto_rawDescGZIP(), []int{6}
+	return file_neoline_v1_server_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *CreateServerResponse) GetServer() *Server {
@@ -584,7 +660,7 @@ type GetServerRequest struct {
 
 func (x *GetServerRequest) Reset() {
 	*x = GetServerRequest{}
-	mi := &file_neoline_v1_server_proto_msgTypes[7]
+	mi := &file_neoline_v1_server_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -596,7 +672,7 @@ func (x *GetServerRequest) String() string {
 func (*GetServerRequest) ProtoMessage() {}
 
 func (x *GetServerRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_neoline_v1_server_proto_msgTypes[7]
+	mi := &file_neoline_v1_server_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -609,7 +685,7 @@ func (x *GetServerRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetServerRequest.ProtoReflect.Descriptor instead.
 func (*GetServerRequest) Descriptor() ([]byte, []int) {
-	return file_neoline_v1_server_proto_rawDescGZIP(), []int{7}
+	return file_neoline_v1_server_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *GetServerRequest) GetId() string {
@@ -628,7 +704,7 @@ type GetServerResponse struct {
 
 func (x *GetServerResponse) Reset() {
 	*x = GetServerResponse{}
-	mi := &file_neoline_v1_server_proto_msgTypes[8]
+	mi := &file_neoline_v1_server_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -640,7 +716,7 @@ func (x *GetServerResponse) String() string {
 func (*GetServerResponse) ProtoMessage() {}
 
 func (x *GetServerResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_neoline_v1_server_proto_msgTypes[8]
+	mi := &file_neoline_v1_server_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -653,7 +729,7 @@ func (x *GetServerResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetServerResponse.ProtoReflect.Descriptor instead.
 func (*GetServerResponse) Descriptor() ([]byte, []int) {
-	return file_neoline_v1_server_proto_rawDescGZIP(), []int{8}
+	return file_neoline_v1_server_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *GetServerResponse) GetServer() *Server {
@@ -673,7 +749,7 @@ type UpdateServerRequest struct {
 
 func (x *UpdateServerRequest) Reset() {
 	*x = UpdateServerRequest{}
-	mi := &file_neoline_v1_server_proto_msgTypes[9]
+	mi := &file_neoline_v1_server_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -685,7 +761,7 @@ func (x *UpdateServerRequest) String() string {
 func (*UpdateServerRequest) ProtoMessage() {}
 
 func (x *UpdateServerRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_neoline_v1_server_proto_msgTypes[9]
+	mi := &file_neoline_v1_server_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -698,7 +774,7 @@ func (x *UpdateServerRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateServerRequest.ProtoReflect.Descriptor instead.
 func (*UpdateServerRequest) Descriptor() ([]byte, []int) {
-	return file_neoline_v1_server_proto_rawDescGZIP(), []int{9}
+	return file_neoline_v1_server_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *UpdateServerRequest) GetId() string {
@@ -724,7 +800,7 @@ type UpdateServerResponse struct {
 
 func (x *UpdateServerResponse) Reset() {
 	*x = UpdateServerResponse{}
-	mi := &file_neoline_v1_server_proto_msgTypes[10]
+	mi := &file_neoline_v1_server_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -736,7 +812,7 @@ func (x *UpdateServerResponse) String() string {
 func (*UpdateServerResponse) ProtoMessage() {}
 
 func (x *UpdateServerResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_neoline_v1_server_proto_msgTypes[10]
+	mi := &file_neoline_v1_server_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -749,7 +825,7 @@ func (x *UpdateServerResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateServerResponse.ProtoReflect.Descriptor instead.
 func (*UpdateServerResponse) Descriptor() ([]byte, []int) {
-	return file_neoline_v1_server_proto_rawDescGZIP(), []int{10}
+	return file_neoline_v1_server_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *UpdateServerResponse) GetServer() *Server {
@@ -768,7 +844,7 @@ type DeleteServerRequest struct {
 
 func (x *DeleteServerRequest) Reset() {
 	*x = DeleteServerRequest{}
-	mi := &file_neoline_v1_server_proto_msgTypes[11]
+	mi := &file_neoline_v1_server_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -780,7 +856,7 @@ func (x *DeleteServerRequest) String() string {
 func (*DeleteServerRequest) ProtoMessage() {}
 
 func (x *DeleteServerRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_neoline_v1_server_proto_msgTypes[11]
+	mi := &file_neoline_v1_server_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -793,7 +869,7 @@ func (x *DeleteServerRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteServerRequest.ProtoReflect.Descriptor instead.
 func (*DeleteServerRequest) Descriptor() ([]byte, []int) {
-	return file_neoline_v1_server_proto_rawDescGZIP(), []int{11}
+	return file_neoline_v1_server_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *DeleteServerRequest) GetId() string {
@@ -811,7 +887,7 @@ type DeleteServerResponse struct {
 
 func (x *DeleteServerResponse) Reset() {
 	*x = DeleteServerResponse{}
-	mi := &file_neoline_v1_server_proto_msgTypes[12]
+	mi := &file_neoline_v1_server_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -823,7 +899,7 @@ func (x *DeleteServerResponse) String() string {
 func (*DeleteServerResponse) ProtoMessage() {}
 
 func (x *DeleteServerResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_neoline_v1_server_proto_msgTypes[12]
+	mi := &file_neoline_v1_server_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -836,7 +912,7 @@ func (x *DeleteServerResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteServerResponse.ProtoReflect.Descriptor instead.
 func (*DeleteServerResponse) Descriptor() ([]byte, []int) {
-	return file_neoline_v1_server_proto_rawDescGZIP(), []int{12}
+	return file_neoline_v1_server_proto_rawDescGZIP(), []int{13}
 }
 
 type GetServerHealthRequest struct {
@@ -848,7 +924,7 @@ type GetServerHealthRequest struct {
 
 func (x *GetServerHealthRequest) Reset() {
 	*x = GetServerHealthRequest{}
-	mi := &file_neoline_v1_server_proto_msgTypes[13]
+	mi := &file_neoline_v1_server_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -860,7 +936,7 @@ func (x *GetServerHealthRequest) String() string {
 func (*GetServerHealthRequest) ProtoMessage() {}
 
 func (x *GetServerHealthRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_neoline_v1_server_proto_msgTypes[13]
+	mi := &file_neoline_v1_server_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -873,7 +949,7 @@ func (x *GetServerHealthRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetServerHealthRequest.ProtoReflect.Descriptor instead.
 func (*GetServerHealthRequest) Descriptor() ([]byte, []int) {
-	return file_neoline_v1_server_proto_rawDescGZIP(), []int{13}
+	return file_neoline_v1_server_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *GetServerHealthRequest) GetId() string {
@@ -892,7 +968,7 @@ type GetServerHealthResponse struct {
 
 func (x *GetServerHealthResponse) Reset() {
 	*x = GetServerHealthResponse{}
-	mi := &file_neoline_v1_server_proto_msgTypes[14]
+	mi := &file_neoline_v1_server_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -904,7 +980,7 @@ func (x *GetServerHealthResponse) String() string {
 func (*GetServerHealthResponse) ProtoMessage() {}
 
 func (x *GetServerHealthResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_neoline_v1_server_proto_msgTypes[14]
+	mi := &file_neoline_v1_server_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -917,7 +993,7 @@ func (x *GetServerHealthResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetServerHealthResponse.ProtoReflect.Descriptor instead.
 func (*GetServerHealthResponse) Descriptor() ([]byte, []int) {
-	return file_neoline_v1_server_proto_rawDescGZIP(), []int{14}
+	return file_neoline_v1_server_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *GetServerHealthResponse) GetHealth() *ServerHealth {
@@ -938,7 +1014,7 @@ type ListServerEventsRequest struct {
 
 func (x *ListServerEventsRequest) Reset() {
 	*x = ListServerEventsRequest{}
-	mi := &file_neoline_v1_server_proto_msgTypes[15]
+	mi := &file_neoline_v1_server_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -950,7 +1026,7 @@ func (x *ListServerEventsRequest) String() string {
 func (*ListServerEventsRequest) ProtoMessage() {}
 
 func (x *ListServerEventsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_neoline_v1_server_proto_msgTypes[15]
+	mi := &file_neoline_v1_server_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -963,7 +1039,7 @@ func (x *ListServerEventsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListServerEventsRequest.ProtoReflect.Descriptor instead.
 func (*ListServerEventsRequest) Descriptor() ([]byte, []int) {
-	return file_neoline_v1_server_proto_rawDescGZIP(), []int{15}
+	return file_neoline_v1_server_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *ListServerEventsRequest) GetId() string {
@@ -997,7 +1073,7 @@ type ListServerEventsResponse struct {
 
 func (x *ListServerEventsResponse) Reset() {
 	*x = ListServerEventsResponse{}
-	mi := &file_neoline_v1_server_proto_msgTypes[16]
+	mi := &file_neoline_v1_server_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1009,7 +1085,7 @@ func (x *ListServerEventsResponse) String() string {
 func (*ListServerEventsResponse) ProtoMessage() {}
 
 func (x *ListServerEventsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_neoline_v1_server_proto_msgTypes[16]
+	mi := &file_neoline_v1_server_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1022,7 +1098,7 @@ func (x *ListServerEventsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListServerEventsResponse.ProtoReflect.Descriptor instead.
 func (*ListServerEventsResponse) Descriptor() ([]byte, []int) {
-	return file_neoline_v1_server_proto_rawDescGZIP(), []int{16}
+	return file_neoline_v1_server_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *ListServerEventsResponse) GetEvents() []*ServerEvent {
@@ -1044,36 +1120,42 @@ var File_neoline_v1_server_proto protoreflect.FileDescriptor
 const file_neoline_v1_server_proto_rawDesc = "" +
 	"\n" +
 	"\x17neoline/v1/server.proto\x12\n" +
-	"neoline.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x17neoline/v1/common.proto\"\x8b\x04\n" +
+	"neoline.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"a\n" +
+	"\tServerSSH\x12\x18\n" +
+	"\aenabled\x18\x01 \x01(\bR\aenabled\x12\x12\n" +
+	"\x04host\x18\x02 \x01(\tR\x04host\x12\x12\n" +
+	"\x04port\x18\x03 \x01(\rR\x04port\x12\x12\n" +
+	"\x04user\x18\x04 \x01(\tR\x04user\"\x9a\x04\n" +
 	"\x06Server\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x12\n" +
 	"\x04host\x18\x03 \x01(\tR\x04host\x12 \n" +
 	"\venvironment\x18\x04 \x01(\tR\venvironment\x12\x16\n" +
 	"\x06region\x18\x05 \x01(\tR\x06region\x12\x12\n" +
-	"\x04tags\x18\x06 \x03(\tR\x04tags\x12\x18\n" +
-	"\aenabled\x18\a \x01(\bR\aenabled\x12=\n" +
-	"\rhealth_status\x18\b \x01(\x0e2\x18.neoline.v1.HealthStatusR\fhealthStatus\x12M\n" +
-	"\x15last_status_change_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\x12lastStatusChangeAt\x12>\n" +
-	"\rlast_check_at\x18\n" +
-	" \x01(\v2\x1a.google.protobuf.TimestampR\vlastCheckAt\x129\n" +
+	"\x04tags\x18\x06 \x03(\tR\x04tags\x12\x1d\n" +
 	"\n" +
-	"created_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
+	"sort_order\x18\a \x01(\rR\tsortOrder\x12\x18\n" +
+	"\aenabled\x18\b \x01(\bR\aenabled\x12#\n" +
+	"\rhealth_status\x18\t \x01(\tR\fhealthStatus\x12M\n" +
+	"\x15last_status_change_at\x18\n" +
+	" \x01(\v2\x1a.google.protobuf.TimestampR\x12lastStatusChangeAt\x12>\n" +
+	"\rlast_check_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\vlastCheckAt\x12'\n" +
+	"\x03ssh\x18\f \x01(\v2\x15.neoline.v1.ServerSSHR\x03ssh\x129\n" +
 	"\n" +
-	"updated_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x1d\n" +
+	"created_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"sort_order\x18\r \x01(\rR\tsortOrder\"\x93\x02\n" +
+	"updated_at\x18\x0e \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\xdf\x01\n" +
 	"\vServerEvent\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
-	"\tserver_id\x18\x02 \x01(\tR\bserverId\x12A\n" +
-	"\x0fprevious_status\x18\x03 \x01(\x0e2\x18.neoline.v1.HealthStatusR\x0epreviousStatus\x12?\n" +
-	"\x0ecurrent_status\x18\x04 \x01(\x0e2\x18.neoline.v1.HealthStatusR\rcurrentStatus\x12\x16\n" +
+	"\tserver_id\x18\x02 \x01(\tR\bserverId\x12'\n" +
+	"\x0fprevious_status\x18\x03 \x01(\tR\x0epreviousStatus\x12%\n" +
+	"\x0ecurrent_status\x18\x04 \x01(\tR\rcurrentStatus\x12\x16\n" +
 	"\x06reason\x18\x05 \x01(\tR\x06reason\x12;\n" +
 	"\voccurred_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"occurredAt\"\xe6\x03\n" +
+	"occurredAt\"\xcc\x03\n" +
 	"\fServerHealth\x12\x1b\n" +
-	"\tserver_id\x18\x01 \x01(\tR\bserverId\x120\n" +
-	"\x06status\x18\x02 \x01(\x0e2\x18.neoline.v1.HealthStatusR\x06status\x12M\n" +
+	"\tserver_id\x18\x01 \x01(\tR\bserverId\x12\x16\n" +
+	"\x06status\x18\x02 \x01(\tR\x06status\x12M\n" +
 	"\x15last_status_change_at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\x12lastStatusChangeAt\x12>\n" +
 	"\rlast_check_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\vlastCheckAt\x12%\n" +
 	"\x0etotal_monitors\x18\x05 \x01(\rR\rtotalMonitors\x12)\n" +
@@ -1119,15 +1201,15 @@ const file_neoline_v1_server_proto_rawDesc = "" +
 	"page_token\x18\x03 \x01(\tR\tpageToken\"s\n" +
 	"\x18ListServerEventsResponse\x12/\n" +
 	"\x06events\x18\x01 \x03(\v2\x17.neoline.v1.ServerEventR\x06events\x12&\n" +
-	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken2\xa7\x06\n" +
-	"\rServerService\x12c\n" +
-	"\vListServers\x12\x1e.neoline.v1.ListServersRequest\x1a\x1f.neoline.v1.ListServersResponse\"\x13\x82\xd3\xe4\x93\x02\r\x12\v/v1/servers\x12n\n" +
-	"\fCreateServer\x12\x1f.neoline.v1.CreateServerRequest\x1a .neoline.v1.CreateServerResponse\"\x1b\x82\xd3\xe4\x93\x02\x15:\x06server\"\v/v1/servers\x12b\n" +
-	"\tGetServer\x12\x1c.neoline.v1.GetServerRequest\x1a\x1d.neoline.v1.GetServerResponse\"\x18\x82\xd3\xe4\x93\x02\x12\x12\x10/v1/servers/{id}\x12s\n" +
-	"\fUpdateServer\x12\x1f.neoline.v1.UpdateServerRequest\x1a .neoline.v1.UpdateServerResponse\" \x82\xd3\xe4\x93\x02\x1a:\x06server\x1a\x10/v1/servers/{id}\x12k\n" +
-	"\fDeleteServer\x12\x1f.neoline.v1.DeleteServerRequest\x1a .neoline.v1.DeleteServerResponse\"\x18\x82\xd3\xe4\x93\x02\x12*\x10/v1/servers/{id}\x12{\n" +
-	"\x0fGetServerHealth\x12\".neoline.v1.GetServerHealthRequest\x1a#.neoline.v1.GetServerHealthResponse\"\x1f\x82\xd3\xe4\x93\x02\x19\x12\x17/v1/servers/{id}/health\x12~\n" +
-	"\x10ListServerEvents\x12#.neoline.v1.ListServerEventsRequest\x1a$.neoline.v1.ListServerEventsResponse\"\x1f\x82\xd3\xe4\x93\x02\x19\x12\x17/v1/servers/{id}/eventsB;Z9github.com/orvice/neo-line/pkg/proto/neoline/v1;neolinev1b\x06proto3"
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken2\xeb\x04\n" +
+	"\rServerService\x12P\n" +
+	"\vListServers\x12\x1e.neoline.v1.ListServersRequest\x1a\x1f.neoline.v1.ListServersResponse\"\x00\x12S\n" +
+	"\fCreateServer\x12\x1f.neoline.v1.CreateServerRequest\x1a .neoline.v1.CreateServerResponse\"\x00\x12J\n" +
+	"\tGetServer\x12\x1c.neoline.v1.GetServerRequest\x1a\x1d.neoline.v1.GetServerResponse\"\x00\x12S\n" +
+	"\fUpdateServer\x12\x1f.neoline.v1.UpdateServerRequest\x1a .neoline.v1.UpdateServerResponse\"\x00\x12S\n" +
+	"\fDeleteServer\x12\x1f.neoline.v1.DeleteServerRequest\x1a .neoline.v1.DeleteServerResponse\"\x00\x12\\\n" +
+	"\x0fGetServerHealth\x12\".neoline.v1.GetServerHealthRequest\x1a#.neoline.v1.GetServerHealthResponse\"\x00\x12_\n" +
+	"\x10ListServerEvents\x12#.neoline.v1.ListServerEventsRequest\x1a$.neoline.v1.ListServerEventsResponse\"\x00B;Z9github.com/orvice/neo-line/pkg/proto/neoline/v1;neolinev1b\x06proto3"
 
 var (
 	file_neoline_v1_server_proto_rawDescOnce sync.Once
@@ -1141,67 +1223,64 @@ func file_neoline_v1_server_proto_rawDescGZIP() []byte {
 	return file_neoline_v1_server_proto_rawDescData
 }
 
-var file_neoline_v1_server_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
+var file_neoline_v1_server_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
 var file_neoline_v1_server_proto_goTypes = []any{
-	(*Server)(nil),                   // 0: neoline.v1.Server
-	(*ServerEvent)(nil),              // 1: neoline.v1.ServerEvent
-	(*ServerHealth)(nil),             // 2: neoline.v1.ServerHealth
-	(*ListServersRequest)(nil),       // 3: neoline.v1.ListServersRequest
-	(*ListServersResponse)(nil),      // 4: neoline.v1.ListServersResponse
-	(*CreateServerRequest)(nil),      // 5: neoline.v1.CreateServerRequest
-	(*CreateServerResponse)(nil),     // 6: neoline.v1.CreateServerResponse
-	(*GetServerRequest)(nil),         // 7: neoline.v1.GetServerRequest
-	(*GetServerResponse)(nil),        // 8: neoline.v1.GetServerResponse
-	(*UpdateServerRequest)(nil),      // 9: neoline.v1.UpdateServerRequest
-	(*UpdateServerResponse)(nil),     // 10: neoline.v1.UpdateServerResponse
-	(*DeleteServerRequest)(nil),      // 11: neoline.v1.DeleteServerRequest
-	(*DeleteServerResponse)(nil),     // 12: neoline.v1.DeleteServerResponse
-	(*GetServerHealthRequest)(nil),   // 13: neoline.v1.GetServerHealthRequest
-	(*GetServerHealthResponse)(nil),  // 14: neoline.v1.GetServerHealthResponse
-	(*ListServerEventsRequest)(nil),  // 15: neoline.v1.ListServerEventsRequest
-	(*ListServerEventsResponse)(nil), // 16: neoline.v1.ListServerEventsResponse
-	(HealthStatus)(0),                // 17: neoline.v1.HealthStatus
+	(*ServerSSH)(nil),                // 0: neoline.v1.ServerSSH
+	(*Server)(nil),                   // 1: neoline.v1.Server
+	(*ServerEvent)(nil),              // 2: neoline.v1.ServerEvent
+	(*ServerHealth)(nil),             // 3: neoline.v1.ServerHealth
+	(*ListServersRequest)(nil),       // 4: neoline.v1.ListServersRequest
+	(*ListServersResponse)(nil),      // 5: neoline.v1.ListServersResponse
+	(*CreateServerRequest)(nil),      // 6: neoline.v1.CreateServerRequest
+	(*CreateServerResponse)(nil),     // 7: neoline.v1.CreateServerResponse
+	(*GetServerRequest)(nil),         // 8: neoline.v1.GetServerRequest
+	(*GetServerResponse)(nil),        // 9: neoline.v1.GetServerResponse
+	(*UpdateServerRequest)(nil),      // 10: neoline.v1.UpdateServerRequest
+	(*UpdateServerResponse)(nil),     // 11: neoline.v1.UpdateServerResponse
+	(*DeleteServerRequest)(nil),      // 12: neoline.v1.DeleteServerRequest
+	(*DeleteServerResponse)(nil),     // 13: neoline.v1.DeleteServerResponse
+	(*GetServerHealthRequest)(nil),   // 14: neoline.v1.GetServerHealthRequest
+	(*GetServerHealthResponse)(nil),  // 15: neoline.v1.GetServerHealthResponse
+	(*ListServerEventsRequest)(nil),  // 16: neoline.v1.ListServerEventsRequest
+	(*ListServerEventsResponse)(nil), // 17: neoline.v1.ListServerEventsResponse
 	(*timestamppb.Timestamp)(nil),    // 18: google.protobuf.Timestamp
 }
 var file_neoline_v1_server_proto_depIdxs = []int32{
-	17, // 0: neoline.v1.Server.health_status:type_name -> neoline.v1.HealthStatus
-	18, // 1: neoline.v1.Server.last_status_change_at:type_name -> google.protobuf.Timestamp
-	18, // 2: neoline.v1.Server.last_check_at:type_name -> google.protobuf.Timestamp
+	18, // 0: neoline.v1.Server.last_status_change_at:type_name -> google.protobuf.Timestamp
+	18, // 1: neoline.v1.Server.last_check_at:type_name -> google.protobuf.Timestamp
+	0,  // 2: neoline.v1.Server.ssh:type_name -> neoline.v1.ServerSSH
 	18, // 3: neoline.v1.Server.created_at:type_name -> google.protobuf.Timestamp
 	18, // 4: neoline.v1.Server.updated_at:type_name -> google.protobuf.Timestamp
-	17, // 5: neoline.v1.ServerEvent.previous_status:type_name -> neoline.v1.HealthStatus
-	17, // 6: neoline.v1.ServerEvent.current_status:type_name -> neoline.v1.HealthStatus
-	18, // 7: neoline.v1.ServerEvent.occurred_at:type_name -> google.protobuf.Timestamp
-	17, // 8: neoline.v1.ServerHealth.status:type_name -> neoline.v1.HealthStatus
-	18, // 9: neoline.v1.ServerHealth.last_status_change_at:type_name -> google.protobuf.Timestamp
-	18, // 10: neoline.v1.ServerHealth.last_check_at:type_name -> google.protobuf.Timestamp
-	0,  // 11: neoline.v1.ListServersResponse.servers:type_name -> neoline.v1.Server
-	0,  // 12: neoline.v1.CreateServerRequest.server:type_name -> neoline.v1.Server
-	0,  // 13: neoline.v1.CreateServerResponse.server:type_name -> neoline.v1.Server
-	0,  // 14: neoline.v1.GetServerResponse.server:type_name -> neoline.v1.Server
-	0,  // 15: neoline.v1.UpdateServerRequest.server:type_name -> neoline.v1.Server
-	0,  // 16: neoline.v1.UpdateServerResponse.server:type_name -> neoline.v1.Server
-	2,  // 17: neoline.v1.GetServerHealthResponse.health:type_name -> neoline.v1.ServerHealth
-	1,  // 18: neoline.v1.ListServerEventsResponse.events:type_name -> neoline.v1.ServerEvent
-	3,  // 19: neoline.v1.ServerService.ListServers:input_type -> neoline.v1.ListServersRequest
-	5,  // 20: neoline.v1.ServerService.CreateServer:input_type -> neoline.v1.CreateServerRequest
-	7,  // 21: neoline.v1.ServerService.GetServer:input_type -> neoline.v1.GetServerRequest
-	9,  // 22: neoline.v1.ServerService.UpdateServer:input_type -> neoline.v1.UpdateServerRequest
-	11, // 23: neoline.v1.ServerService.DeleteServer:input_type -> neoline.v1.DeleteServerRequest
-	13, // 24: neoline.v1.ServerService.GetServerHealth:input_type -> neoline.v1.GetServerHealthRequest
-	15, // 25: neoline.v1.ServerService.ListServerEvents:input_type -> neoline.v1.ListServerEventsRequest
-	4,  // 26: neoline.v1.ServerService.ListServers:output_type -> neoline.v1.ListServersResponse
-	6,  // 27: neoline.v1.ServerService.CreateServer:output_type -> neoline.v1.CreateServerResponse
-	8,  // 28: neoline.v1.ServerService.GetServer:output_type -> neoline.v1.GetServerResponse
-	10, // 29: neoline.v1.ServerService.UpdateServer:output_type -> neoline.v1.UpdateServerResponse
-	12, // 30: neoline.v1.ServerService.DeleteServer:output_type -> neoline.v1.DeleteServerResponse
-	14, // 31: neoline.v1.ServerService.GetServerHealth:output_type -> neoline.v1.GetServerHealthResponse
-	16, // 32: neoline.v1.ServerService.ListServerEvents:output_type -> neoline.v1.ListServerEventsResponse
-	26, // [26:33] is the sub-list for method output_type
-	19, // [19:26] is the sub-list for method input_type
-	19, // [19:19] is the sub-list for extension type_name
-	19, // [19:19] is the sub-list for extension extendee
-	0,  // [0:19] is the sub-list for field type_name
+	18, // 5: neoline.v1.ServerEvent.occurred_at:type_name -> google.protobuf.Timestamp
+	18, // 6: neoline.v1.ServerHealth.last_status_change_at:type_name -> google.protobuf.Timestamp
+	18, // 7: neoline.v1.ServerHealth.last_check_at:type_name -> google.protobuf.Timestamp
+	1,  // 8: neoline.v1.ListServersResponse.servers:type_name -> neoline.v1.Server
+	1,  // 9: neoline.v1.CreateServerRequest.server:type_name -> neoline.v1.Server
+	1,  // 10: neoline.v1.CreateServerResponse.server:type_name -> neoline.v1.Server
+	1,  // 11: neoline.v1.GetServerResponse.server:type_name -> neoline.v1.Server
+	1,  // 12: neoline.v1.UpdateServerRequest.server:type_name -> neoline.v1.Server
+	1,  // 13: neoline.v1.UpdateServerResponse.server:type_name -> neoline.v1.Server
+	3,  // 14: neoline.v1.GetServerHealthResponse.health:type_name -> neoline.v1.ServerHealth
+	2,  // 15: neoline.v1.ListServerEventsResponse.events:type_name -> neoline.v1.ServerEvent
+	4,  // 16: neoline.v1.ServerService.ListServers:input_type -> neoline.v1.ListServersRequest
+	6,  // 17: neoline.v1.ServerService.CreateServer:input_type -> neoline.v1.CreateServerRequest
+	8,  // 18: neoline.v1.ServerService.GetServer:input_type -> neoline.v1.GetServerRequest
+	10, // 19: neoline.v1.ServerService.UpdateServer:input_type -> neoline.v1.UpdateServerRequest
+	12, // 20: neoline.v1.ServerService.DeleteServer:input_type -> neoline.v1.DeleteServerRequest
+	14, // 21: neoline.v1.ServerService.GetServerHealth:input_type -> neoline.v1.GetServerHealthRequest
+	16, // 22: neoline.v1.ServerService.ListServerEvents:input_type -> neoline.v1.ListServerEventsRequest
+	5,  // 23: neoline.v1.ServerService.ListServers:output_type -> neoline.v1.ListServersResponse
+	7,  // 24: neoline.v1.ServerService.CreateServer:output_type -> neoline.v1.CreateServerResponse
+	9,  // 25: neoline.v1.ServerService.GetServer:output_type -> neoline.v1.GetServerResponse
+	11, // 26: neoline.v1.ServerService.UpdateServer:output_type -> neoline.v1.UpdateServerResponse
+	13, // 27: neoline.v1.ServerService.DeleteServer:output_type -> neoline.v1.DeleteServerResponse
+	15, // 28: neoline.v1.ServerService.GetServerHealth:output_type -> neoline.v1.GetServerHealthResponse
+	17, // 29: neoline.v1.ServerService.ListServerEvents:output_type -> neoline.v1.ListServerEventsResponse
+	23, // [23:30] is the sub-list for method output_type
+	16, // [16:23] is the sub-list for method input_type
+	16, // [16:16] is the sub-list for extension type_name
+	16, // [16:16] is the sub-list for extension extendee
+	0,  // [0:16] is the sub-list for field type_name
 }
 
 func init() { file_neoline_v1_server_proto_init() }
@@ -1209,14 +1288,13 @@ func file_neoline_v1_server_proto_init() {
 	if File_neoline_v1_server_proto != nil {
 		return
 	}
-	file_neoline_v1_common_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_neoline_v1_server_proto_rawDesc), len(file_neoline_v1_server_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   17,
+			NumMessages:   18,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -2,23 +2,19 @@ syntax = "proto3";
 
 package neoline.v1;
 
-import "google/api/annotations.proto";
 import "google/protobuf/timestamp.proto";
 
 option go_package = "github.com/orvice/neo-line/pkg/proto/neoline/v1;neolinev1";
 
 // AlertChannel describes a single delivery target inside a NotifyGroup.
-// Supported types: "webhook", "telegram", "discord", "mastodon". The meaning of
-// target and extra depends on the type (see docs/monitoring-configuration.md).
+// Supported types: "webhook", "telegram", "discord", "mastodon".
 message AlertChannel {
   string type = 1;
   string target = 2;
   map<string, string> extra = 3;
 }
 
-// NotifyGroup is a reusable, named bucket of delivery channels. A MonitorGroup's
-// AlertPolicy references one or more NotifyGroups by id; dispatch fans out to
-// every channel of every referenced group.
+// NotifyGroup is a reusable, named bucket of delivery channels.
 message NotifyGroup {
   string id = 1;
   string name = 2;
@@ -71,25 +67,9 @@ message DeleteNotifyGroupResponse {}
 
 // NotifyGroupService manages reusable notification channel groups.
 service NotifyGroupService {
-  rpc ListNotifyGroups(ListNotifyGroupsRequest) returns (ListNotifyGroupsResponse) {
-    option (google.api.http) = {get: "/v1/notify-groups"};
-  }
-  rpc CreateNotifyGroup(CreateNotifyGroupRequest) returns (CreateNotifyGroupResponse) {
-    option (google.api.http) = {
-      post: "/v1/notify-groups"
-      body: "group"
-    };
-  }
-  rpc GetNotifyGroup(GetNotifyGroupRequest) returns (GetNotifyGroupResponse) {
-    option (google.api.http) = {get: "/v1/notify-groups/{notify_group_id}"};
-  }
-  rpc UpdateNotifyGroup(UpdateNotifyGroupRequest) returns (UpdateNotifyGroupResponse) {
-    option (google.api.http) = {
-      put: "/v1/notify-groups/{notify_group_id}"
-      body: "group"
-    };
-  }
-  rpc DeleteNotifyGroup(DeleteNotifyGroupRequest) returns (DeleteNotifyGroupResponse) {
-    option (google.api.http) = {delete: "/v1/notify-groups/{notify_group_id}"};
-  }
+  rpc ListNotifyGroups(ListNotifyGroupsRequest) returns (ListNotifyGroupsResponse) {}
+  rpc CreateNotifyGroup(CreateNotifyGroupRequest) returns (CreateNotifyGroupResponse) {}
+  rpc GetNotifyGroup(GetNotifyGroupRequest) returns (GetNotifyGroupResponse) {}
+  rpc UpdateNotifyGroup(UpdateNotifyGroupRequest) returns (UpdateNotifyGroupResponse) {}
+  rpc DeleteNotifyGroup(DeleteNotifyGroupRequest) returns (DeleteNotifyGroupResponse) {}
 }

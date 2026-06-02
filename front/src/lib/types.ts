@@ -33,6 +33,14 @@ export interface Server {
   last_check_at?: string
   created_at: string
   updated_at: string
+  ssh?: ServerSSH
+}
+
+export interface ServerSSH {
+  enabled: boolean
+  host?: string
+  port?: number
+  user?: string
 }
 
 export interface Monitor {

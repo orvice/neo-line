@@ -7,7 +7,6 @@
 package neolinev1
 
 import (
-	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
@@ -26,18 +25,14 @@ const (
 // AlertPolicy is the group-level configuration that drives alert dispatch when
 // any monitor in the group transitions between health states.
 type AlertPolicy struct {
-	state   protoimpl.MessageState `protogen:"open.v1"`
-	Enabled bool                   `protobuf:"varint,1,opt,name=enabled,proto3" json:"enabled,omitempty"`
-	// notify_group_ids references the NotifyGroups whose channels receive the
-	// alert. Dispatch fans out to every channel of every referenced group.
-	NotifyGroupIds []string `protobuf:"bytes,2,rep,name=notify_group_ids,json=notifyGroupIds,proto3" json:"notify_group_ids,omitempty"`
-	OnDown         bool     `protobuf:"varint,3,opt,name=on_down,json=onDown,proto3" json:"on_down,omitempty"`
-	OnRecover      bool     `protobuf:"varint,4,opt,name=on_recover,json=onRecover,proto3" json:"on_recover,omitempty"`
-	OnWarning      bool     `protobuf:"varint,5,opt,name=on_warning,json=onWarning,proto3" json:"on_warning,omitempty"`
-	OnCritical     bool     `protobuf:"varint,6,opt,name=on_critical,json=onCritical,proto3" json:"on_critical,omitempty"`
-	// min_interval_seconds throttles alerts so the same (group, monitor) pair
-	// does not fire more often than this window. Zero disables throttling.
-	MinIntervalSeconds uint32 `protobuf:"varint,7,opt,name=min_interval_seconds,json=minIntervalSeconds,proto3" json:"min_interval_seconds,omitempty"`
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	Enabled            bool                   `protobuf:"varint,1,opt,name=enabled,proto3" json:"enabled,omitempty"`
+	NotifyGroupIds     []string               `protobuf:"bytes,2,rep,name=notify_group_ids,json=notifyGroupIds,proto3" json:"notify_group_ids,omitempty"`
+	OnDown             bool                   `protobuf:"varint,3,opt,name=on_down,json=onDown,proto3" json:"on_down,omitempty"`
+	OnRecover          bool                   `protobuf:"varint,4,opt,name=on_recover,json=onRecover,proto3" json:"on_recover,omitempty"`
+	OnWarning          bool                   `protobuf:"varint,5,opt,name=on_warning,json=onWarning,proto3" json:"on_warning,omitempty"`
+	OnCritical         bool                   `protobuf:"varint,6,opt,name=on_critical,json=onCritical,proto3" json:"on_critical,omitempty"`
+	MinIntervalSeconds uint32                 `protobuf:"varint,7,opt,name=min_interval_seconds,json=minIntervalSeconds,proto3" json:"min_interval_seconds,omitempty"`
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
@@ -124,15 +119,14 @@ func (x *AlertPolicy) GetMinIntervalSeconds() uint32 {
 // MonitorGroup is a flat, named bucket of monitors. A monitor may belong to
 // multiple groups, and each group carries its own alert policy.
 type MonitorGroup struct {
-	state       protoimpl.MessageState `protogen:"open.v1"`
-	Id          string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name        string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Description string                 `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
-	AlertPolicy *AlertPolicy           `protobuf:"bytes,4,opt,name=alert_policy,json=alertPolicy,proto3" json:"alert_policy,omitempty"`
-	CreatedAt   *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt   *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	// sort_order controls display order. Smaller values are listed first.
-	SortOrder     uint32 `protobuf:"varint,7,opt,name=sort_order,json=sortOrder,proto3" json:"sort_order,omitempty"`
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Description   string                 `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
+	SortOrder     uint32                 `protobuf:"varint,4,opt,name=sort_order,json=sortOrder,proto3" json:"sort_order,omitempty"`
+	AlertPolicy   *AlertPolicy           `protobuf:"bytes,5,opt,name=alert_policy,json=alertPolicy,proto3" json:"alert_policy,omitempty"`
+	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -188,6 +182,13 @@ func (x *MonitorGroup) GetDescription() string {
 	return ""
 }
 
+func (x *MonitorGroup) GetSortOrder() uint32 {
+	if x != nil {
+		return x.SortOrder
+	}
+	return 0
+}
+
 func (x *MonitorGroup) GetAlertPolicy() *AlertPolicy {
 	if x != nil {
 		return x.AlertPolicy
@@ -207,13 +208,6 @@ func (x *MonitorGroup) GetUpdatedAt() *timestamppb.Timestamp {
 		return x.UpdatedAt
 	}
 	return nil
-}
-
-func (x *MonitorGroup) GetSortOrder() uint32 {
-	if x != nil {
-		return x.SortOrder
-	}
-	return 0
 }
 
 type ListMonitorGroupsRequest struct {
@@ -789,7 +783,7 @@ var File_neoline_v1_monitor_group_proto protoreflect.FileDescriptor
 const file_neoline_v1_monitor_group_proto_rawDesc = "" +
 	"\n" +
 	"\x1eneoline/v1/monitor_group.proto\x12\n" +
-	"neoline.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x18neoline/v1/monitor.proto\"\xfb\x01\n" +
+	"neoline.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x18neoline/v1/monitor.proto\"\xfb\x01\n" +
 	"\vAlertPolicy\x12\x18\n" +
 	"\aenabled\x18\x01 \x01(\bR\aenabled\x12(\n" +
 	"\x10notify_group_ids\x18\x02 \x03(\tR\x0enotifyGroupIds\x12\x17\n" +
@@ -804,14 +798,14 @@ const file_neoline_v1_monitor_group_proto_rawDesc = "" +
 	"\fMonitorGroup\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12 \n" +
-	"\vdescription\x18\x03 \x01(\tR\vdescription\x12:\n" +
-	"\falert_policy\x18\x04 \x01(\v2\x17.neoline.v1.AlertPolicyR\valertPolicy\x129\n" +
+	"\vdescription\x18\x03 \x01(\tR\vdescription\x12\x1d\n" +
 	"\n" +
-	"created_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
+	"sort_order\x18\x04 \x01(\rR\tsortOrder\x12:\n" +
+	"\falert_policy\x18\x05 \x01(\v2\x17.neoline.v1.AlertPolicyR\valertPolicy\x129\n" +
 	"\n" +
-	"updated_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x1d\n" +
+	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"sort_order\x18\a \x01(\rR\tsortOrder\"V\n" +
+	"updated_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"V\n" +
 	"\x18ListMonitorGroupsRequest\x12\x1b\n" +
 	"\tpage_size\x18\x01 \x01(\rR\bpageSize\x12\x1d\n" +
 	"\n" +
@@ -842,14 +836,14 @@ const file_neoline_v1_monitor_group_proto_rawDesc = "" +
 	"page_token\x18\x03 \x01(\tR\tpageToken\"v\n" +
 	"\x1bListMonitorsByGroupResponse\x12/\n" +
 	"\bmonitors\x18\x01 \x03(\v2\x13.neoline.v1.MonitorR\bmonitors\x12&\n" +
-	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken2\xda\x06\n" +
-	"\x13MonitorGroupService\x12|\n" +
-	"\x11ListMonitorGroups\x12$.neoline.v1.ListMonitorGroupsRequest\x1a%.neoline.v1.ListMonitorGroupsResponse\"\x1a\x82\xd3\xe4\x93\x02\x14\x12\x12/v1/monitor-groups\x12\x86\x01\n" +
-	"\x12CreateMonitorGroup\x12%.neoline.v1.CreateMonitorGroupRequest\x1a&.neoline.v1.CreateMonitorGroupResponse\"!\x82\xd3\xe4\x93\x02\x1b:\x05group\"\x12/v1/monitor-groups\x12\x81\x01\n" +
-	"\x0fGetMonitorGroup\x12\".neoline.v1.GetMonitorGroupRequest\x1a#.neoline.v1.GetMonitorGroupResponse\"%\x82\xd3\xe4\x93\x02\x1f\x12\x1d/v1/monitor-groups/{group_id}\x12\x91\x01\n" +
-	"\x12UpdateMonitorGroup\x12%.neoline.v1.UpdateMonitorGroupRequest\x1a&.neoline.v1.UpdateMonitorGroupResponse\",\x82\xd3\xe4\x93\x02&:\x05group\x1a\x1d/v1/monitor-groups/{group_id}\x12\x8a\x01\n" +
-	"\x12DeleteMonitorGroup\x12%.neoline.v1.DeleteMonitorGroupRequest\x1a&.neoline.v1.DeleteMonitorGroupResponse\"%\x82\xd3\xe4\x93\x02\x1f*\x1d/v1/monitor-groups/{group_id}\x12\x96\x01\n" +
-	"\x13ListMonitorsByGroup\x12&.neoline.v1.ListMonitorsByGroupRequest\x1a'.neoline.v1.ListMonitorsByGroupResponse\".\x82\xd3\xe4\x93\x02(\x12&/v1/monitor-groups/{group_id}/monitorsB;Z9github.com/orvice/neo-line/pkg/proto/neoline/v1;neolinev1b\x06proto3"
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken2\xf6\x04\n" +
+	"\x13MonitorGroupService\x12b\n" +
+	"\x11ListMonitorGroups\x12$.neoline.v1.ListMonitorGroupsRequest\x1a%.neoline.v1.ListMonitorGroupsResponse\"\x00\x12e\n" +
+	"\x12CreateMonitorGroup\x12%.neoline.v1.CreateMonitorGroupRequest\x1a&.neoline.v1.CreateMonitorGroupResponse\"\x00\x12\\\n" +
+	"\x0fGetMonitorGroup\x12\".neoline.v1.GetMonitorGroupRequest\x1a#.neoline.v1.GetMonitorGroupResponse\"\x00\x12e\n" +
+	"\x12UpdateMonitorGroup\x12%.neoline.v1.UpdateMonitorGroupRequest\x1a&.neoline.v1.UpdateMonitorGroupResponse\"\x00\x12e\n" +
+	"\x12DeleteMonitorGroup\x12%.neoline.v1.DeleteMonitorGroupRequest\x1a&.neoline.v1.DeleteMonitorGroupResponse\"\x00\x12h\n" +
+	"\x13ListMonitorsByGroup\x12&.neoline.v1.ListMonitorsByGroupRequest\x1a'.neoline.v1.ListMonitorsByGroupResponse\"\x00B;Z9github.com/orvice/neo-line/pkg/proto/neoline/v1;neolinev1b\x06proto3"
 
 var (
 	file_neoline_v1_monitor_group_proto_rawDescOnce sync.Once

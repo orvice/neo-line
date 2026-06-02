@@ -2,84 +2,9 @@ syntax = "proto3";
 
 package neoline.v1;
 
-import "google/api/annotations.proto";
-import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
-import "neoline/v1/common.proto";
 
 option go_package = "github.com/orvice/neo-line/pkg/proto/neoline/v1;neolinev1";
-
-// TcpConfig holds TCP-monitor-specific options. TCP monitors only need the
-// shared host/port/timeout fields, so this message is reserved for future use.
-message TcpConfig {}
-
-// HttpConfig holds HTTP-monitor-specific options.
-message HttpConfig {
-  string path = 1;
-  string method = 2;
-  map<string, string> headers = 3;
-  // expected_status_codes is a comma-separated list of accepted codes and
-  // inclusive ranges, for example "200-299,301,302". Empty accepts only 200.
-  string expected_status_codes = 4;
-}
-
-// HttpsConfig holds HTTPS-monitor-specific options. Includes TLS handshake
-// behavior on top of standard HTTP fields.
-message HttpsConfig {
-  string path = 1;
-  string method = 2;
-  map<string, string> headers = 3;
-  // expected_status_codes is a comma-separated list of accepted codes and
-  // inclusive ranges, for example "200-299,301,302". Empty accepts only 200.
-  string expected_status_codes = 4;
-  // sni_name overrides the TLS ServerName sent during handshake.
-  string sni_name = 5;
-  // tls_verify enables peer certificate verification.
-  bool tls_verify = 6;
-}
-
-// TlsCertificateConfig holds TLS-certificate-monitor-specific options.
-message TlsCertificateConfig {
-  string sni_name = 1;
-  bool tls_verify = 2;
-  uint32 warning_days = 3;
-  uint32 critical_days = 4;
-}
-
-// Monitor describes a single configured check attached to a server.
-message Monitor {
-  string id = 1;
-  string server_id = 2;
-  string name = 3;
-  MonitorKind kind = 4;
-  bool enabled = 5;
-  string host = 6;
-  uint32 port = 7;
-  uint32 interval_seconds = 8;
-  uint32 timeout_seconds = 9;
-  uint32 retries = 10;
-  HealthStatus status = 11;
-  google.protobuf.Timestamp last_check_at = 12;
-  google.protobuf.Timestamp last_status_change_at = 13;
-  google.protobuf.Timestamp created_at = 14;
-  google.protobuf.Timestamp updated_at = 15;
-
-  // group_ids lists the monitor groups this monitor belongs to. Used for UI
-  // grouping and to drive group-level alert policies.
-  repeated string group_ids = 16;
-
-  // certificate holds the most recently observed peer certificate metadata for
-  // TLS-based monitors. Updated after each probe that reads a certificate.
-  CertificateInfo certificate = 17;
-
-  // Per-kind configuration. The set member should match `kind`.
-  oneof config {
-    TcpConfig tcp = 20;
-    HttpConfig http = 21;
-    HttpsConfig https = 22;
-    TlsCertificateConfig tls_certificate = 23;
-  }
-}
 
 // CertificateInfo captures peer certificate metadata observed during a probe.
 message CertificateInfo {
@@ -92,21 +17,75 @@ message CertificateInfo {
   int32 days_remaining = 7;
 }
 
+// Monitor describes a single configured check attached to a server.
+message Monitor {
+  string id = 1;
+  string server_id = 2;
+  repeated string group_ids = 3;
+  string name = 4;
+  // kind is one of "tcp", "url", "tls_port".
+  string kind = 5;
+  bool enabled = 6;
+  string host = 7;
+  uint32 port = 8;
+  string url = 9;
+  string method = 10;
+  string path = 11;
+  map<string, string> headers = 12;
+  string expected_status_codes = 13;
+  bool tls_verify = 14;
+  string sni_name = 15;
+  uint32 warning_days = 16;
+  uint32 critical_days = 17;
+  uint32 interval_seconds = 18;
+  uint32 timeout_seconds = 19;
+  uint32 retries = 20;
+  string status = 21;
+  google.protobuf.Timestamp last_check_at = 22;
+  google.protobuf.Timestamp last_status_change_at = 23;
+  CertificateInfo certificate = 24;
+  google.protobuf.Timestamp created_at = 25;
+  google.protobuf.Timestamp updated_at = 26;
+}
+
 // CheckResult is the outcome of a single monitor execution.
 message CheckResult {
   string id = 1;
   string server_id = 2;
   string monitor_id = 3;
-  HealthStatus status = 4;
+  string status = 4;
   google.protobuf.Timestamp started_at = 5;
   google.protobuf.Timestamp ended_at = 6;
-  google.protobuf.Duration duration = 7;
-  ErrorStage error_stage = 8;
+  int64 duration_ms = 7;
+  string error_stage = 8;
   string error_message = 9;
   string remote_address = 10;
   uint32 port = 11;
   uint32 http_status_code = 12;
   CertificateInfo certificate = 13;
+}
+
+// UptimeWindow summarizes availability over a single rolling time window.
+message UptimeWindow {
+  int64 window_seconds = 1;
+  int32 total = 2;
+  int32 up = 3;
+  int32 down = 4;
+  double uptime = 5;
+  double avg_latency_ms = 6;
+}
+
+// Heartbeat is a compact view of one check, ordered oldest to newest.
+message Heartbeat {
+  string status = 1;
+  google.protobuf.Timestamp started_at = 2;
+  int64 duration_ms = 3;
+}
+
+// MonitorUptime is the Kuma-style availability summary for one monitor.
+message MonitorUptime {
+  map<string, UptimeWindow> windows = 1;
+  repeated Heartbeat heartbeats = 2;
 }
 
 message ListMonitorsRequest {
@@ -169,31 +148,23 @@ message ListCheckResultsResponse {
   string next_page_token = 2;
 }
 
+message GetMonitorUptimeRequest {
+  string server_id = 1;
+  string monitor_id = 2;
+}
+
+message GetMonitorUptimeResponse {
+  MonitorUptime uptime = 1;
+}
+
 // MonitorService manages monitors attached to a server and exposes
-// historical check results.
+// historical check results and uptime.
 service MonitorService {
-  rpc ListMonitors(ListMonitorsRequest) returns (ListMonitorsResponse) {
-    option (google.api.http) = {get: "/v1/servers/{server_id}/monitors"};
-  }
-  rpc CreateMonitor(CreateMonitorRequest) returns (CreateMonitorResponse) {
-    option (google.api.http) = {
-      post: "/v1/servers/{server_id}/monitors"
-      body: "monitor"
-    };
-  }
-  rpc GetMonitor(GetMonitorRequest) returns (GetMonitorResponse) {
-    option (google.api.http) = {get: "/v1/servers/{server_id}/monitors/{monitor_id}"};
-  }
-  rpc UpdateMonitor(UpdateMonitorRequest) returns (UpdateMonitorResponse) {
-    option (google.api.http) = {
-      put: "/v1/servers/{server_id}/monitors/{monitor_id}"
-      body: "monitor"
-    };
-  }
-  rpc DeleteMonitor(DeleteMonitorRequest) returns (DeleteMonitorResponse) {
-    option (google.api.http) = {delete: "/v1/servers/{server_id}/monitors/{monitor_id}"};
-  }
-  rpc ListCheckResults(ListCheckResultsRequest) returns (ListCheckResultsResponse) {
-    option (google.api.http) = {get: "/v1/servers/{server_id}/monitors/{monitor_id}/results"};
-  }
+  rpc ListMonitors(ListMonitorsRequest) returns (ListMonitorsResponse) {}
+  rpc CreateMonitor(CreateMonitorRequest) returns (CreateMonitorResponse) {}
+  rpc GetMonitor(GetMonitorRequest) returns (GetMonitorResponse) {}
+  rpc UpdateMonitor(UpdateMonitorRequest) returns (UpdateMonitorResponse) {}
+  rpc DeleteMonitor(DeleteMonitorRequest) returns (DeleteMonitorResponse) {}
+  rpc ListCheckResults(ListCheckResultsRequest) returns (ListCheckResultsResponse) {}
+  rpc GetMonitorUptime(GetMonitorUptimeRequest) returns (GetMonitorUptimeResponse) {}
 }

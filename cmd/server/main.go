@@ -14,7 +14,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/orvice/neo-line/internal/alert"
 	"github.com/orvice/neo-line/internal/archive"
-	"github.com/orvice/neo-line/internal/httpapi"
+	"github.com/orvice/neo-line/internal/connectapi"
 	"github.com/orvice/neo-line/internal/mcpserver"
 	"github.com/orvice/neo-line/internal/scheduler"
 	nlssh "github.com/orvice/neo-line/internal/ssh"
@@ -86,7 +86,7 @@ func main() {
 			r.GET("/ping", func(c *gin.Context) {
 				c.JSON(http.StatusOK, gin.H{"message": "pong"})
 			})
-			httpapi.Register(r, mongoStore)
+			connectapi.Register(r, mongoStore)
 			mcpserver.Register(r, mongoStore, sshRunner)
 		},
 		InitFunc: []func() error{
@@ -113,6 +113,9 @@ func main() {
 				}
 				if err := mongoStore.EnsureMcpTokenIndexes(ctx); err != nil {
 					return fmt.Errorf("ensure mcp token indexes: %w", err)
+				}
+				if err := mongoStore.EnsureResultIndexes(ctx); err != nil {
+					return fmt.Errorf("ensure result indexes: %w", err)
 				}
 				if err := bootstrapAdmin(ctx, mongoStore); err != nil {
 					return fmt.Errorf("bootstrap admin user: %w", err)

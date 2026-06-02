@@ -54,6 +54,10 @@ type Store interface {
 	EnsureGroupIndexes(ctx context.Context) error
 	EnsureNotifyGroupIndexes(ctx context.Context) error
 	EnsureMcpTokenIndexes(ctx context.Context) error
+	EnsureResultIndexes(ctx context.Context) error
+
+	CacheGet(ctx context.Context, key string) ([]byte, bool, error)
+	CacheSet(ctx context.Context, key string, data []byte, ttl time.Duration) error
 
 	ListMcpTokens(ctx context.Context) ([]McpToken, error)
 	CreateMcpToken(ctx context.Context, name string) (McpToken, string, error)

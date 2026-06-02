@@ -31,6 +31,10 @@ interface FormState {
   tags: string
   sortOrder: string
   enabled: boolean
+  sshEnabled: boolean
+  sshHost: string
+  sshPort: string
+  sshUser: string
 }
 
 function toFormState(server?: Server): FormState {
@@ -43,6 +47,13 @@ function toFormState(server?: Server): FormState {
     sortOrder:
       server?.sort_order !== undefined ? String(server.sort_order) : "0",
     enabled: server?.enabled ?? true,
+    sshEnabled: server?.ssh?.enabled ?? false,
+    sshHost: server?.ssh?.host ?? "",
+    sshPort:
+      server?.ssh?.port !== undefined && server.ssh.port !== 0
+        ? String(server.ssh.port)
+        : "",
+    sshUser: server?.ssh?.user ?? "",
   }
 }
 
@@ -57,6 +68,7 @@ export function ServerForm({ open, onOpenChange, server }: ServerFormProps) {
 
   const mutation = useMutation({
     mutationFn: async () => {
+      const sshPort = form.sshPort ? Number(form.sshPort) : undefined
       const body: Partial<Server> = {
         name: form.name.trim(),
         host: form.host.trim(),
@@ -68,6 +80,12 @@ export function ServerForm({ open, onOpenChange, server }: ServerFormProps) {
           .filter(Boolean),
         sort_order: form.sortOrder ? Number(form.sortOrder) : 0,
         enabled: form.enabled,
+        ssh: {
+          enabled: form.sshEnabled,
+          host: form.sshHost.trim() || undefined,
+          port: sshPort && sshPort > 0 ? sshPort : undefined,
+          user: form.sshUser.trim() || undefined,
+        },
       }
       return isEdit
         ? api.updateServer(server!.id, body)
@@ -171,6 +189,58 @@ export function ServerForm({ open, onOpenChange, server }: ServerFormProps) {
               checked={form.enabled}
               onCheckedChange={(v) => setForm({ ...form, enabled: v })}
             />
+          </div>
+          <div className="flex flex-col gap-3 rounded-md border p-3">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="ssh-enabled">启用 SSH 执行</Label>
+              <Switch
+                id="ssh-enabled"
+                checked={form.sshEnabled}
+                onCheckedChange={(v) => setForm({ ...form, sshEnabled: v })}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="ssh-host">SSH 主机</Label>
+                <Input
+                  id="ssh-host"
+                  value={form.sshHost}
+                  onChange={(e) =>
+                    setForm({ ...form, sshHost: e.target.value })
+                  }
+                  placeholder="默认使用主机 / IP"
+                  disabled={!form.sshEnabled}
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="ssh-port">SSH 端口</Label>
+                <Input
+                  id="ssh-port"
+                  type="number"
+                  min="1"
+                  max="65535"
+                  step="1"
+                  value={form.sshPort}
+                  onChange={(e) =>
+                    setForm({ ...form, sshPort: e.target.value })
+                  }
+                  placeholder="默认 22"
+                  disabled={!form.sshEnabled}
+                />
+              </div>
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="ssh-user">SSH 用户</Label>
+              <Input
+                id="ssh-user"
+                value={form.sshUser}
+                onChange={(e) =>
+                  setForm({ ...form, sshUser: e.target.value })
+                }
+                placeholder="默认使用全局配置"
+                disabled={!form.sshEnabled}
+              />
+            </div>
           </div>
           <DialogFooter>
             <Button

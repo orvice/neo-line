@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+package neoline.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/orvice/neo-line/pkg/proto/neoline/v1;neolinev1";
+
+// McpToken is an issued MCP API token. The plaintext secret is returned only
+// once on creation and is never stored.
+message McpToken {
+  string id = 1;
+  string name = 2;
+  string prefix = 3;
+  google.protobuf.Timestamp created_at = 4;
+  google.protobuf.Timestamp last_used_at = 5;
+}
+
+message ListMcpTokensRequest {}
+
+message ListMcpTokensResponse {
+  repeated McpToken tokens = 1;
+}
+
+message CreateMcpTokenRequest {
+  string name = 1;
+}
+
+message CreateMcpTokenResponse {
+  McpToken token = 1;
+  string secret = 2;
+}
+
+message DeleteMcpTokenRequest {
+  string token_id = 1;
+}
+
+message DeleteMcpTokenResponse {}
+
+// McpTokenService manages MCP API tokens.
+service McpTokenService {
+  rpc ListMcpTokens(ListMcpTokensRequest) returns (ListMcpTokensResponse) {}
+  rpc CreateMcpToken(CreateMcpTokenRequest) returns (CreateMcpTokenResponse) {}
+  rpc DeleteMcpToken(DeleteMcpTokenRequest) returns (DeleteMcpTokenResponse) {}
+}

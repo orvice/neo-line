@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -9,13 +10,15 @@ import (
 )
 
 // ListEnabledMonitors returns every enabled monitor that belongs to an enabled
-// server. The scheduler uses this as the authoritative set of work to run.
+// server. Empty monitor hosts inherit the owning server host for runtime probes.
+// The scheduler uses this as the authoritative set of work to run.
 func (s *MongoStore) ListEnabledMonitors(ctx context.Context) ([]Monitor, error) {
 	cursor, err := s.servers().Find(ctx, bson.M{"enabled": true})
 	if err != nil {
 		return nil, err
 	}
 	enabledServers := make([]string, 0)
+	serverHosts := make(map[string]string)
 	{
 		defer cursor.Close(ctx)
 		for cursor.Next(ctx) {
@@ -24,6 +27,7 @@ func (s *MongoStore) ListEnabledMonitors(ctx context.Context) ([]Monitor, error)
 				return nil, err
 			}
 			enabledServers = append(enabledServers, server.ID)
+			serverHosts[server.ID] = strings.TrimSpace(server.Host)
 		}
 		if err := cursor.Err(); err != nil {
 			return nil, err
@@ -42,7 +46,17 @@ func (s *MongoStore) ListEnabledMonitors(ctx context.Context) ([]Monitor, error)
 	if err := monCursor.All(ctx, &monitors); err != nil {
 		return nil, err
 	}
+	applyServerHostFallback(monitors, serverHosts)
 	return monitors, nil
+}
+
+func applyServerHostFallback(monitors []Monitor, serverHosts map[string]string) {
+	for i := range monitors {
+		if strings.TrimSpace(monitors[i].Host) != "" {
+			continue
+		}
+		monitors[i].Host = serverHosts[monitors[i].ServerID]
+	}
 }
 
 // SaveCheckResult persists a single probe outcome, updates the owning monitor's
