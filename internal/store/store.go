@@ -22,6 +22,9 @@ const (
 	StatusCritical = "Critical"
 	StatusDown     = "Down"
 	StatusUnknown  = "Unknown"
+
+	DefaultTLSWarningDays  uint32 = 21
+	DefaultTLSCriticalDays uint32 = 7
 )
 
 // Server is a monitored host. MongoDB is the source of truth for these fields.
@@ -250,6 +253,21 @@ func (s *MongoStore) EnsureServerIndexes(ctx context.Context) error {
 		},
 		Options: options.Index().SetName("by_sort_order_created_at"),
 	}); err != nil {
+		return err
+	}
+	return nil
+}
+
+// EnsureMonitorIndexes creates indexes and backfills monitor fields introduced
+// after initial deployments.
+func (s *MongoStore) EnsureMonitorIndexes(ctx context.Context) error {
+	if _, err := s.monitors().UpdateMany(ctx,
+		bson.M{
+			"kind":         bson.M{"$in": []string{"tls", "tls_port", "tls_certificate"}},
+			"warning_days": bson.M{"$in": []uint32{0, 30}},
+		},
+		bson.M{"$set": bson.M{"warning_days": DefaultTLSWarningDays}},
+	); err != nil {
 		return err
 	}
 	return nil
@@ -549,10 +567,10 @@ func applyMonitorDefaults(monitor *Monitor) {
 			monitor.Port = 443
 		}
 		if monitor.WarningDays == 0 {
-			monitor.WarningDays = 30
+			monitor.WarningDays = DefaultTLSWarningDays
 		}
 		if monitor.CriticalDays == 0 {
-			monitor.CriticalDays = 7
+			monitor.CriticalDays = DefaultTLSCriticalDays
 		}
 	}
 }

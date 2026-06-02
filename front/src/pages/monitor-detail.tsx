@@ -5,6 +5,8 @@ import { ArrowLeft } from "lucide-react"
 import { api, ApiError } from "@/lib/api"
 import type { CheckResult, UptimeWindow } from "@/lib/types"
 import {
+  DEFAULT_TLS_CRITICAL_DAYS,
+  DEFAULT_TLS_WARNING_DAYS,
   formatDuration,
   formatRelative,
   formatTime,
@@ -143,11 +145,11 @@ export function MonitorDetailPage() {
               <>
                 <Field
                   label="警告阈值"
-                  value={`${monitor.warning_days ?? 30} 天`}
+                  value={`${monitor.warning_days ?? DEFAULT_TLS_WARNING_DAYS} 天`}
                 />
                 <Field
                   label="严重阈值"
-                  value={`${monitor.critical_days ?? 7} 天`}
+                  value={`${monitor.critical_days ?? DEFAULT_TLS_CRITICAL_DAYS} 天`}
                 />
               </>
             )}

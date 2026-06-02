@@ -82,11 +82,11 @@ func certificateStatus(cert *x509.Certificate, m store.Monitor, info *store.Cert
 	}
 	warning := m.WarningDays
 	if warning == 0 {
-		warning = 30
+		warning = store.DefaultTLSWarningDays
 	}
 	critical := m.CriticalDays
 	if critical == 0 {
-		critical = 7
+		critical = store.DefaultTLSCriticalDays
 	}
 	days := info.DaysRemaining
 	switch {

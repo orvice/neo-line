@@ -102,6 +102,9 @@ func main() {
 				if err := mongoStore.EnsureServerIndexes(ctx); err != nil {
 					return fmt.Errorf("ensure server indexes: %w", err)
 				}
+				if err := mongoStore.EnsureMonitorIndexes(ctx); err != nil {
+					return fmt.Errorf("ensure monitor indexes: %w", err)
+				}
 				if err := mongoStore.EnsureAuditIndexes(ctx); err != nil {
 					return fmt.Errorf("ensure audit indexes: %w", err)
 				}

@@ -50,11 +50,11 @@ func TestApplyMonitorDefaults(t *testing.T) {
 				if monitor.Port != 443 {
 					t.Fatalf("Port = %d, want 443", monitor.Port)
 				}
-				if monitor.WarningDays != 30 {
-					t.Fatalf("WarningDays = %d, want 30", monitor.WarningDays)
+				if monitor.WarningDays != DefaultTLSWarningDays {
+					t.Fatalf("WarningDays = %d, want %d", monitor.WarningDays, DefaultTLSWarningDays)
 				}
-				if monitor.CriticalDays != 7 {
-					t.Fatalf("CriticalDays = %d, want 7", monitor.CriticalDays)
+				if monitor.CriticalDays != DefaultTLSCriticalDays {
+					t.Fatalf("CriticalDays = %d, want %d", monitor.CriticalDays, DefaultTLSCriticalDays)
 				}
 			})
 		}

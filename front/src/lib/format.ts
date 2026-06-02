@@ -2,6 +2,9 @@ import type { CertificateInfo, HealthStatus } from "./types"
 
 const ZERO_TIME_PREFIX = "0001-01-01"
 
+export const DEFAULT_TLS_WARNING_DAYS = 21
+export const DEFAULT_TLS_CRITICAL_DAYS = 7
+
 export function isZeroTime(value?: string): boolean {
   return !value || value.startsWith(ZERO_TIME_PREFIX)
 }

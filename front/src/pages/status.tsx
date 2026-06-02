@@ -33,6 +33,8 @@ import type {
 } from "@/lib/types"
 import { useSettings } from "@/lib/settings"
 import {
+  DEFAULT_TLS_CRITICAL_DAYS,
+  DEFAULT_TLS_WARNING_DAYS,
   formatCertExpiry,
   formatRelative,
   formatTime,
@@ -811,8 +813,8 @@ function certificateHealth(
   monitor: StatusMonitor
 ): HealthStatus {
   const days = cert.days_remaining
-  const warningDays = monitor.warning_days || 30
-  const criticalDays = monitor.critical_days || 7
+  const warningDays = monitor.warning_days || DEFAULT_TLS_WARNING_DAYS
+  const criticalDays = monitor.critical_days || DEFAULT_TLS_CRITICAL_DAYS
   if (days === undefined) return "Unknown"
   if (days < 0 || days <= criticalDays) return "Critical"
   if (days <= warningDays) return "Warning"

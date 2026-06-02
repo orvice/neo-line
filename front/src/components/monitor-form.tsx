@@ -3,7 +3,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 
 import { api, ApiError } from "@/lib/api"
-import { isTlsMonitorKind } from "@/lib/format"
+import {
+  DEFAULT_TLS_CRITICAL_DAYS,
+  DEFAULT_TLS_WARNING_DAYS,
+  isTlsMonitorKind,
+} from "@/lib/format"
 import type { Monitor, MonitorKind } from "@/lib/types"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -296,7 +300,7 @@ export function MonitorForm({
                       onChange={(e) =>
                         setForm({ ...form, warningDays: e.target.value })
                       }
-                      placeholder="30"
+                      placeholder={String(DEFAULT_TLS_WARNING_DAYS)}
                     />
                   </div>
                   <div className="flex flex-col gap-2">
@@ -308,7 +312,7 @@ export function MonitorForm({
                       onChange={(e) =>
                         setForm({ ...form, criticalDays: e.target.value })
                       }
-                      placeholder="7"
+                      placeholder={String(DEFAULT_TLS_CRITICAL_DAYS)}
                     />
                   </div>
                 </div>
