@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/orvice/neo-line/internal/archive"
+	"github.com/orvice/neo-line/internal/metric"
 	"github.com/orvice/neo-line/internal/probe"
 	"github.com/orvice/neo-line/internal/store"
 )
@@ -93,6 +94,9 @@ func (s *Scheduler) reconcile(ctx context.Context) {
 		return
 	}
 
+	metric.ReconcileTotal.Inc()
+	metric.EnabledMonitors.Set(float64(len(monitors)))
+
 	now := time.Now()
 	due := 0
 	for _, m := range monitors {
@@ -139,6 +143,7 @@ func (s *Scheduler) dispatch(ctx context.Context, m store.Monitor) {
 		}()
 
 		result := probe.Run(ctx, m)
+		s.recordMetrics(m, result)
 		prevStatus, err := s.store.SaveCheckResult(ctx, result)
 		if err != nil {
 			s.logger.Error("failed to save check result", "monitor_id", m.ID, "error", err.Error())
@@ -146,6 +151,7 @@ func (s *Scheduler) dispatch(ctx context.Context, m store.Monitor) {
 		}
 		s.archiver.Enqueue(result)
 		if prevStatus != "" && prevStatus != result.Status {
+			metric.StatusChangesTotal.WithLabelValues(m.Kind, prevStatus, result.Status).Inc()
 			s.logger.Info("monitor status changed",
 				"monitor_id", m.ID,
 				"server_id", m.ServerID,
@@ -165,4 +171,17 @@ func (s *Scheduler) dispatch(ctx context.Context, m store.Monitor) {
 			"duration_ms", result.DurationMS,
 		)
 	}()
+}
+
+// recordMetrics updates Prometheus metrics for a completed probe.
+func (s *Scheduler) recordMetrics(m store.Monitor, result store.CheckResult) {
+	metric.ProbesTotal.WithLabelValues(m.Kind, result.Status).Inc()
+	metric.ProbeDuration.WithLabelValues(m.Kind).Observe(float64(result.DurationMS) / 1000)
+	metric.MonitorStatus.WithLabelValues(m.ID, m.ServerID, m.Kind).Set(metric.StatusCode(result.Status))
+	if result.ErrorStage != "" && result.ErrorStage != probe.StageNone {
+		metric.ProbeErrorsTotal.WithLabelValues(m.Kind, result.ErrorStage).Inc()
+	}
+	if result.Certificate != nil {
+		metric.CertificateDaysRemaining.WithLabelValues(m.ID, m.ServerID).Set(float64(result.Certificate.DaysRemaining))
+	}
 }
