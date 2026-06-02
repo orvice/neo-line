@@ -94,7 +94,7 @@ VITE_API_TARGET=http://localhost:8080 pnpm dev
 | `BUTTERFLY_CONFIG_FILE_PATH` | `BUTTERFLY_CONFIG_TYPE=file` 时的 YAML 配置文件路径 |
 | `ADMIN_EMAIL` | 管理员账号邮箱，默认 `admin@neo-line.local` |
 | `ADMIN_PASSWORD` | 管理员密码；设置后启动时会创建或轮换管理员密码 |
-| `MCP_AUTH_TOKEN` | `/api/mcp` 静态鉴权 token；为空时 MCP 端点不额外校验 |
+| `MCP_AUTH_TOKEN` | `/api/mcp` 静态鉴权 token；为空且 MongoDB 中没有持久化 MCP token 时，MCP 端点开放访问 |
 
 更多配置项和监控字段见 [监控配置文档](./docs/monitoring-configuration.md)。
 

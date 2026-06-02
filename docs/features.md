@@ -751,8 +751,8 @@ AuthService.Logout          # 需鉴权，吊销当前 token
 
 **状态：** 已实现
 
-- 公开接口：`GET /ping`、`AuthService.Login`、`SettingsService.GetSettings`、`StatusService.GetStatusOverview`，以及 server / monitor 的只读查询，方便 dashboard 读取。
-- 需鉴权的 Admin 接口：server 和 monitor 的写操作、`SettingsService.UpdateSettings`，以及 `AuthService.GetCurrentUser`、`AuthService.Logout`。
+- 公开接口：`GET /ping`、`AuthService.Login`、`SettingsService.GetSettings`、`StatusService.GetStatusOverview`。
+- 需鉴权的 Admin 接口：除上述公开 Connect procedure 外的所有 Connect API，包括 server / monitor / monitor group / notify group / MCP token 的读写操作、`SettingsService.UpdateSettings`、`AuthService.GetCurrentUser` 和 `AuthService.Logout`。
 
 ## Monitor 分组
 
