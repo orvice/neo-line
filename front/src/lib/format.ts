@@ -73,3 +73,7 @@ export const monitorKindLabels: Record<string, string> = {
   tls: "TLS 证书",
   tls_port: "TLS 证书",
 }
+
+export function isTlsMonitorKind(kind?: string): boolean {
+  return kind === "tls" || kind === "tls_port" || kind === "tls_certificate"
+}

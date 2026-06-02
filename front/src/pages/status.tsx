@@ -7,7 +7,6 @@ import {
   CheckCircle2,
   CircleDashed,
   Clock3,
-  Gauge,
   Globe2,
   LayoutGrid,
   LockKeyhole,
@@ -37,6 +36,7 @@ import {
   formatCertExpiry,
   formatRelative,
   formatTime,
+  isTlsMonitorKind,
   monitorKindLabels,
   statusLabels,
 } from "@/lib/format"
@@ -344,63 +344,57 @@ export function StatusPage() {
           <>
             <section
               className={cn(
-                "relative overflow-hidden rounded-lg border bg-card p-6 shadow-[0_24px_70px_rgba(0,0,0,0.12)] sm:p-8 dark:bg-surface-recessed",
+                "relative overflow-hidden rounded-lg border bg-card px-4 py-4 shadow-[0_18px_48px_rgba(0,0,0,0.12)] sm:px-5 dark:bg-surface-recessed",
                 overallTone.border
               )}
             >
               <div className="absolute inset-x-0 top-0 h-px bg-primary/40" />
-              <div className="relative flex flex-col items-center gap-4 text-center">
-                <div
-                  className={cn(
-                    "flex size-16 items-center justify-center rounded-lg border",
-                    overallTone.border,
-                    overallTone.bg
-                  )}
-                >
-                  <OverallIcon className={cn("size-8", overallTone.text)} />
-                </div>
-                <div>
+              <div className="relative flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <div className="flex min-w-0 items-center gap-3">
                   <div
                     className={cn(
-                      "mx-auto mb-3 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold",
+                      "flex size-12 shrink-0 items-center justify-center rounded-lg border",
                       overallTone.border,
-                      overallTone.bg,
-                      overallTone.text
+                      overallTone.bg
                     )}
                   >
-                    <span className={cn("size-2 rounded-full", overallTone.dot)} />
-                    {statusLabels[overallStatus]}
+                    <OverallIcon className={cn("size-6", overallTone.text)} />
                   </div>
-                  <h2 className="text-3xl font-bold tracking-normal text-foreground sm:text-4xl">
-                    {overallTitle(overallStatus, allMonitors.length)}
-                  </h2>
-                  <p className="mt-2 flex flex-wrap items-center justify-center gap-2 text-sm text-muted-foreground">
-                    <Clock3 className="size-4" />
-                    最近更新：{formatRelative(lastUpdated)}
-                  </p>
+                  <div className="min-w-0">
+                    <div
+                      className={cn(
+                        "mb-1 inline-flex items-center gap-2 rounded-full border px-2.5 py-0.5 text-xs font-semibold",
+                        overallTone.border,
+                        overallTone.bg,
+                        overallTone.text
+                      )}
+                    >
+                      <span className={cn("size-2 rounded-full", overallTone.dot)} />
+                      {statusLabels[overallStatus]}
+                    </div>
+                    <h2 className="truncate text-xl font-semibold tracking-normal text-foreground sm:text-2xl">
+                      {overallTitle(overallStatus, allMonitors.length)}
+                    </h2>
+                    <p className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground sm:text-sm">
+                      <Clock3 className="size-3.5" />
+                      最近更新：{formatRelative(lastUpdated)}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-3 border-t border-border pt-3 md:min-w-[360px] md:border-l md:border-t-0 md:pl-5 md:pt-0">
+                  <SummaryStat label="24h 可用性" value={globalUptime} />
+                  <SummaryStat
+                    label="活跃异常"
+                    value={statusCountText(activeIncidents)}
+                    tone={activeIncidents === 0 ? undefined : "warn"}
+                  />
+                  <SummaryStat
+                    label="监控 / 服务器"
+                    value={`${allMonitors.length} / ${serverCount}`}
+                  />
                 </div>
               </div>
-            </section>
-
-            <section className="grid gap-3 md:grid-cols-3">
-              <MetricCard
-                label="全局 24h 可用性"
-                value={globalUptime}
-                tone={globalUptime === "-" ? "neutral" : "good"}
-                icon={Gauge}
-              />
-              <MetricCard
-                label="活跃异常"
-                value={statusCountText(activeIncidents)}
-                tone={activeIncidents === 0 ? "neutral" : "warn"}
-                icon={AlertTriangle}
-              />
-              <MetricCard
-                label="启用监控 / 服务器"
-                value={`${allMonitors.length} / ${serverCount}`}
-                tone="neutral"
-                icon={ServerIcon}
-              />
             </section>
 
             <section className="grid gap-3 sm:grid-cols-5">
@@ -479,12 +473,7 @@ export function StatusPage() {
 function StatusLoading() {
   return (
     <div className="flex flex-col gap-4">
-      <Skeleton className="h-52 rounded-lg bg-surface-recessed" />
-      <div className="grid gap-3 md:grid-cols-3">
-        <Skeleton className="h-24 rounded-lg bg-card" />
-        <Skeleton className="h-24 rounded-lg bg-card" />
-        <Skeleton className="h-24 rounded-lg bg-card" />
-      </div>
+      <Skeleton className="h-28 rounded-lg bg-surface-recessed" />
       <div className="grid gap-4 xl:grid-cols-2">
         <Skeleton className="h-72 rounded-lg bg-card" />
         <Skeleton className="h-72 rounded-lg bg-card" />
@@ -506,30 +495,22 @@ function EmptyState({ text, compact = false }: { text: string; compact?: boolean
   )
 }
 
-function MetricCard({
+function SummaryStat({
   label,
   value,
   tone,
-  icon: Icon,
 }: {
   label: string
   value: string
-  tone: "good" | "warn" | "neutral"
-  icon: typeof Gauge
+  tone?: "warn"
 }) {
-  const toneClass =
-    tone === "good"
-      ? "text-emerald-600 dark:text-emerald-400"
-      : tone === "warn"
-        ? "text-amber-600 dark:text-amber-300"
-        : "text-foreground"
+  const toneClass = tone === "warn" ? "text-amber-600 dark:text-amber-300" : "text-foreground"
   return (
-    <div className="rounded-lg border border-border bg-card p-4">
-      <div className="flex items-center justify-between gap-3 text-xs font-semibold uppercase tracking-normal text-muted-foreground">
-        <span>{label}</span>
-        <Icon className="size-4 text-primary" />
+    <div className="min-w-0">
+      <div className="truncate text-[11px] font-semibold uppercase tracking-normal text-muted-foreground">
+        {label}
       </div>
-      <div className={cn("mt-2 font-mono text-2xl font-semibold", toneClass)}>
+      <div className={cn("mt-1 truncate font-mono text-lg font-semibold sm:text-xl", toneClass)}>
         {value}
       </div>
     </div>
@@ -658,12 +639,16 @@ function CompactMonitorRow({ monitor }: { monitor: StatusMonitor }) {
   const tone = STATUS_TONES[status]
   const window24h = monitor.uptime?.windows?.["24h"]
   const Icon = monitorIcon(monitor)
+  const cert = monitor.certificate
+  const certTone = cert ? STATUS_TONES[certificateHealth(cert, monitor)] : undefined
+  const certExpiry = cert ? formatCertExpiry(cert) : undefined
+  const kindLabel = monitorKindLabels[monitor.kind] ?? monitor.kind
 
   return (
     <Link
       to={`/servers/${monitor.server_id}/monitors/${monitor.id}`}
       className={cn(
-        "group flex items-center gap-3 rounded-md border bg-background px-2.5 py-2 transition hover:border-primary/70",
+        "group grid grid-cols-[auto_auto_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 rounded-md border bg-background px-2.5 py-2 transition hover:border-primary/70 sm:grid-cols-[auto_auto_minmax(0,1fr)_6rem_4rem]",
         status === "Healthy" ? "border-border/70" : tone.border,
         status !== "Healthy" && tone.softBg
       )}
@@ -675,7 +660,7 @@ function CompactMonitorRow({ monitor }: { monitor: StatusMonitor }) {
           {monitor.name}
         </div>
         <div className="truncate font-mono text-xs text-muted-foreground">
-          {monitorKindLabels[monitor.kind] ?? monitor.kind}
+          {kindLabel}
         </div>
       </div>
       <div className="hidden w-24 shrink-0 sm:block">
@@ -689,6 +674,13 @@ function CompactMonitorRow({ monitor }: { monitor: StatusMonitor }) {
           {formatLatency(window24h)}
         </div>
       </div>
+      {certExpiry && certTone && (
+        <div className={cn("col-start-3 col-end-5 flex min-w-0 items-center gap-1 font-mono text-xs sm:col-start-3 sm:col-end-6", certTone.text)}>
+          <LockKeyhole className="size-3 shrink-0" />
+          <span className="shrink-0 text-muted-foreground">证书</span>
+          <span className="truncate">{certExpiry}</span>
+        </div>
+      )}
     </Link>
   )
 }
@@ -739,6 +731,8 @@ function MonitorPanel({ monitor }: { monitor: StatusMonitor }) {
   const window24h = monitor.uptime?.windows?.["24h"]
   const Icon = monitorIcon(monitor)
   const cert = monitor.certificate
+  const certExpiry = cert ? formatCertExpiry(cert) : undefined
+  const certTone = cert ? STATUS_TONES[certificateHealth(cert, monitor)] : undefined
 
   return (
     <Link
@@ -759,6 +753,11 @@ function MonitorPanel({ monitor }: { monitor: StatusMonitor }) {
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
             <span>{monitorKindLabels[monitor.kind] ?? monitor.kind}</span>
+            {certExpiry && certTone && (
+              <span className={cn("font-mono", certTone.text)}>
+                证书 {certExpiry}
+              </span>
+            )}
           </div>
         </div>
         <div
@@ -807,6 +806,19 @@ function MonitorFact({ label, value }: { label: string; value: string }) {
   )
 }
 
+function certificateHealth(
+  cert: StatusCertificate,
+  monitor: StatusMonitor
+): HealthStatus {
+  const days = cert.days_remaining
+  const warningDays = monitor.warning_days || 30
+  const criticalDays = monitor.critical_days || 7
+  if (days === undefined) return "Unknown"
+  if (days < 0 || days <= criticalDays) return "Critical"
+  if (days <= warningDays) return "Warning"
+  return "Healthy"
+}
+
 function CertificateRing({
   cert,
   monitor,
@@ -814,36 +826,30 @@ function CertificateRing({
   cert: StatusCertificate
   monitor: StatusMonitor
 }) {
-  const days = cert.days_remaining
-  const warningDays = monitor.warning_days || 30
-  const criticalDays = monitor.critical_days || 7
-  const health =
-    days === undefined
-      ? "Unknown"
-      : days < 0 || days <= criticalDays
-        ? "Critical"
-        : days <= warningDays
-          ? "Warning"
-          : "Healthy"
+  const health = certificateHealth(cert, monitor)
   const tone = STATUS_TONES[health]
-  const progress =
-    days === undefined ? 0 : Math.max(0, Math.min(100, (days / warningDays) * 100))
 
   return (
-    <div className="flex items-center justify-end gap-3 rounded-lg border border-border bg-surface-elevated px-3 py-2">
+    <div
+      className={cn(
+        "flex min-w-[220px] items-center gap-3 rounded-lg border bg-surface-elevated px-3 py-2.5",
+        tone.border,
+        health !== "Healthy" && tone.softBg
+      )}
+      title={formatCertExpiry(cert)}
+    >
       <div
-        className="grid size-12 shrink-0 place-items-center rounded-full"
-        style={{
-          background: `conic-gradient(${tone.ring} ${progress}%, var(--color-hairline) 0)`,
-        }}
+        className={cn(
+          "grid size-10 shrink-0 place-items-center rounded-lg border",
+          tone.border,
+          tone.bg
+        )}
       >
-        <div className="grid size-9 place-items-center rounded-full bg-background">
-          <LockKeyhole className={cn("size-4", tone.text)} />
-        </div>
+        <LockKeyhole className={cn("size-4", tone.text)} />
       </div>
-      <div className="min-w-0 text-right">
+      <div className="min-w-0">
         <div className="text-xs font-semibold uppercase tracking-normal text-muted-foreground">
-          TLS 证书
+          TLS 证书有效期
         </div>
         <div className={cn("mt-1 truncate font-mono text-sm", tone.text)}>
           {formatCertExpiry(cert)}
@@ -888,13 +894,9 @@ function UptimeStrip({ beats }: { beats: Heartbeat[] }) {
 
 function monitorIcon(monitor: StatusMonitor) {
   if (monitor.kind === "url") return Globe2
-  if (isTlsMonitor(monitor)) return ShieldCheck
+  if (isTlsMonitorKind(monitor.kind)) return ShieldCheck
   if (monitor.kind === "tcp") return Wifi
   return Terminal
-}
-
-function isTlsMonitor(monitor: StatusMonitor): boolean {
-  return monitor.kind === "tls" || monitor.kind === "tls_port"
 }
 
 function filterGroups(groups: StatusGroup[], term: string): StatusGroup[] {

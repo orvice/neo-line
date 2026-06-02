@@ -11,6 +11,7 @@ import {
   formatCertExpiry,
   formatRelative,
   formatTime,
+  isTlsMonitorKind,
   monitorKindLabels,
 } from "@/lib/format"
 import { StatusBadge } from "@/components/status-badge"
@@ -194,7 +195,7 @@ export function ServerDetailPage() {
                         </TableCell>
                         <TableCell className="text-muted-foreground font-mono text-xs">
                           <div>{targetLabel(m)}</div>
-                          {m.kind === "tls_port" && m.certificate && (
+                          {isTlsMonitorKind(m.kind) && m.certificate && (
                             <div className="mt-0.5">
                               证书 {formatCertExpiry(m.certificate)}
                             </div>

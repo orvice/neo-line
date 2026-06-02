@@ -8,6 +8,7 @@ import {
   formatDuration,
   formatRelative,
   formatTime,
+  isTlsMonitorKind,
   monitorKindLabels,
 } from "@/lib/format"
 import { StatusBadge } from "@/components/status-badge"
@@ -113,7 +114,7 @@ export function MonitorDetailPage() {
             <Field label="探测间隔" value={`${monitor.interval_seconds} 秒`} />
             <Field label="超时" value={`${monitor.timeout_seconds} 秒`} />
             <Field label="重试次数" value={String(monitor.retries)} />
-            {(monitor.kind === "tcp" || monitor.kind === "tls_port") && (
+            {(monitor.kind === "tcp" || isTlsMonitorKind(monitor.kind)) && (
               <Field
                 label="目标"
                 value={`${monitor.host || "(服务器主机)"}${monitor.port ? `:${monitor.port}` : ""}`}
@@ -129,7 +130,7 @@ export function MonitorDetailPage() {
                 />
               </>
             )}
-            {(monitor.kind === "url" || monitor.kind === "tls_port") && (
+            {(monitor.kind === "url" || isTlsMonitorKind(monitor.kind)) && (
               <>
                 <Field
                   label="TLS 校验"
@@ -138,7 +139,7 @@ export function MonitorDetailPage() {
                 <Field label="SNI 名称" value={monitor.sni_name || "默认"} />
               </>
             )}
-            {monitor.kind === "tls_port" && (
+            {isTlsMonitorKind(monitor.kind) && (
               <>
                 <Field
                   label="警告阈值"

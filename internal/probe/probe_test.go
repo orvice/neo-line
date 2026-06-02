@@ -2,8 +2,14 @@ package probe
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/tls"
 	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/pem"
 	"errors"
+	"math/big"
 	"net"
 	"testing"
 	"time"
@@ -44,6 +50,64 @@ func TestRunPopulatesCheckResult(t *testing.T) {
 	}
 }
 
+func TestRunTreatsTLSKindAsTLSPort(t *testing.T) {
+	cert := testTLSCertificate(t)
+	listener, err := tls.Listen("tcp", "127.0.0.1:0", &tls.Config{Certificates: []tls.Certificate{cert}})
+	if err != nil {
+		t.Fatalf("tls.Listen() error = %v", err)
+	}
+	defer listener.Close()
+
+	handshakeDone := make(chan error, 1)
+	go func() {
+		conn, err := listener.Accept()
+		if err != nil {
+			handshakeDone <- err
+			return
+		}
+		defer conn.Close()
+
+		tlsConn, ok := conn.(*tls.Conn)
+		if !ok {
+			handshakeDone <- errors.New("accepted connection is not TLS")
+			return
+		}
+		handshakeDone <- tlsConn.Handshake()
+	}()
+
+	addr := listener.Addr().(*net.TCPAddr)
+	result := Run(context.Background(), store.Monitor{
+		ID:             "mon_tls_alias",
+		ServerID:       "srv_1",
+		Kind:           "tls",
+		Host:           "127.0.0.1",
+		Port:           uint32(addr.Port),
+		TLSVerify:      false,
+		TimeoutSeconds: 2,
+		WarningDays:    30,
+		CriticalDays:   7,
+	})
+
+	if result.Status != store.StatusHealthy {
+		t.Fatalf("Status = %q, want %q; result = %#v", result.Status, store.StatusHealthy, result)
+	}
+	if result.Certificate == nil {
+		t.Fatalf("Certificate is nil; result = %#v", result)
+	}
+	if result.Certificate.DaysRemaining <= 30 {
+		t.Fatalf("DaysRemaining = %d, want > 30", result.Certificate.DaysRemaining)
+	}
+
+	select {
+	case err := <-handshakeDone:
+		if err != nil {
+			t.Fatalf("server handshake error = %v", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("timed out waiting for server handshake")
+	}
+}
+
 func TestStatusCodeAccepted(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -75,6 +139,45 @@ func TestStatusCodeAccepted(t *testing.T) {
 			}
 		})
 	}
+}
+
+func testTLSCertificate(t *testing.T) tls.Certificate {
+	t.Helper()
+
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatalf("rsa.GenerateKey() error = %v", err)
+	}
+	serial, err := rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), 128))
+	if err != nil {
+		t.Fatalf("rand.Int() error = %v", err)
+	}
+
+	now := time.Now()
+	template := &x509.Certificate{
+		SerialNumber: serial,
+		Subject: pkix.Name{
+			CommonName: "localhost",
+		},
+		NotBefore:             now.Add(-time.Hour),
+		NotAfter:              now.Add(90 * 24 * time.Hour),
+		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		BasicConstraintsValid: true,
+		IPAddresses:           []net.IP{net.ParseIP("127.0.0.1")},
+	}
+	der, err := x509.CreateCertificate(rand.Reader, template, template, &key.PublicKey, key)
+	if err != nil {
+		t.Fatalf("x509.CreateCertificate() error = %v", err)
+	}
+
+	certPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der})
+	keyPEM := pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(key)})
+	cert, err := tls.X509KeyPair(certPEM, keyPEM)
+	if err != nil {
+		t.Fatalf("tls.X509KeyPair() error = %v", err)
+	}
+	return cert
 }
 
 func TestClassifyHTTPError(t *testing.T) {

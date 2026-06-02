@@ -5,7 +5,7 @@ export type HealthStatus =
   | "Down"
   | "Unknown"
 
-export type MonitorKind = "tcp" | "url" | "tls" | "tls_port"
+export type MonitorKind = "tcp" | "url" | "tls" | "tls_port" | "tls_certificate"
 
 export interface User {
   id: string

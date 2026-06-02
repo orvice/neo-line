@@ -144,7 +144,7 @@ retries: 3
 - `server_id`：关联的 server ID，由 URL 路径中的 server ID 写入
 - `group_ids`：所属分组 ID 列表，可选；每个 ID 必须在 `monitor_groups` 中存在，否则写入返回 `400`
 - `name`：monitor 显示名称
-- `kind`：monitor 类型，可选值为 `tcp`、`url`、`tls_port`
+- `kind`：monitor 类型，可选值为 `tcp`、`url`、`tls_port`。`tls_port` 是 TLS 证书端口探测的规范值；运行时会兼容历史数据中的 `tls` 和 `tls_certificate`，按 `tls_port` 同等处理，但新建配置应继续写入 `tls_port`
 - `enabled`：是否启用该 monitor
 - `interval_seconds`：检查间隔，默认 `60`
 - `timeout_seconds`：单次检查超时时间，默认 `5`
@@ -261,6 +261,8 @@ sni_name: api.example.com
 TLS Port 探测用于检查目标端口是否可以完成 TLS 握手，并记录证书状态。
 
 该探测不发送 HTTP 请求，也不判断 HTTP 状态码。它适用于 HTTPS 端口、TLS 代理、LDAPS、SMTPS 或其他基于 TLS 的自定义服务。
+
+规范配置使用 `kind: tls_port`。历史 MongoDB 文档中如果存在 `kind: tls` 或 `kind: tls_certificate`，运行时会作为 TLS Port 探测兼容处理，并在探测成功后写回 `certificate` 当前快照。
 
 MongoDB document 字段示例：
 

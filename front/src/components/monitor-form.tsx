@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 
 import { api, ApiError } from "@/lib/api"
+import { isTlsMonitorKind } from "@/lib/format"
 import type { Monitor, MonitorKind } from "@/lib/types"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -51,9 +52,11 @@ interface FormState {
 }
 
 function toFormState(monitor?: Monitor): FormState {
+  const kind = monitor?.kind && isTlsMonitorKind(monitor.kind) ? "tls_port" : monitor?.kind
+
   return {
     name: monitor?.name ?? "",
-    kind: monitor?.kind ?? "tcp",
+    kind: kind ?? "tcp",
     enabled: monitor?.enabled ?? true,
     host: monitor?.host ?? "",
     port: monitor?.port ? String(monitor.port) : "",
@@ -120,7 +123,7 @@ export function MonitorForm({
         retries: numberOrUndefined(form.retries),
         group_ids: form.groupIds,
       }
-      if (form.kind === "tcp" || form.kind === "tls_port") {
+      if (form.kind === "tcp" || isTlsMonitorKind(form.kind)) {
         body.host = form.host.trim() || undefined
         body.port = numberOrUndefined(form.port)
       }
@@ -129,11 +132,11 @@ export function MonitorForm({
         body.method = form.method.trim() || "GET"
         body.expected_status_codes = form.expectedStatus.trim() || undefined
       }
-      if (form.kind === "url" || form.kind === "tls_port") {
+      if (form.kind === "url" || isTlsMonitorKind(form.kind)) {
         body.tls_verify = form.tlsVerify
         body.sni_name = form.sniName.trim() || undefined
       }
-      if (form.kind === "tls_port") {
+      if (isTlsMonitorKind(form.kind)) {
         body.warning_days = numberOrUndefined(form.warningDays)
         body.critical_days = numberOrUndefined(form.criticalDays)
       }
@@ -154,8 +157,8 @@ export function MonitorForm({
     },
   })
 
-  const showHostPort = form.kind === "tcp" || form.kind === "tls_port"
-  const showTls = form.kind === "url" || form.kind === "tls_port"
+  const showHostPort = form.kind === "tcp" || isTlsMonitorKind(form.kind)
+  const showTls = form.kind === "url" || isTlsMonitorKind(form.kind)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -217,7 +220,7 @@ export function MonitorForm({
                   type="number"
                   value={form.port}
                   onChange={(e) => setForm({ ...form, port: e.target.value })}
-                  placeholder={form.kind === "tls_port" ? "443" : ""}
+                  placeholder={isTlsMonitorKind(form.kind) ? "443" : ""}
                 />
               </div>
             </div>
@@ -282,7 +285,7 @@ export function MonitorForm({
                   placeholder="example.com"
                 />
               </div>
-              {form.kind === "tls_port" && (
+              {isTlsMonitorKind(form.kind) && (
                 <div className="grid grid-cols-2 gap-4">
                   <div className="flex flex-col gap-2">
                     <Label htmlFor="m-warn">警告天数</Label>

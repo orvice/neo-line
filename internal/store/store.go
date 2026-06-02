@@ -544,7 +544,7 @@ func applyMonitorDefaults(monitor *Monitor) {
 	if strings.TrimSpace(monitor.ExpectedStatusCodes) == "" && (monitor.Kind == "url" || monitor.Kind == "http" || monitor.Kind == "https") {
 		monitor.ExpectedStatusCodes = "200"
 	}
-	if monitor.Kind == "tls_port" || monitor.Kind == "tls_certificate" {
+	if isTLSPortKind(monitor.Kind) {
 		if monitor.Port == 0 {
 			monitor.Port = 443
 		}
@@ -555,6 +555,10 @@ func applyMonitorDefaults(monitor *Monitor) {
 			monitor.CriticalDays = 7
 		}
 	}
+}
+
+func isTLSPortKind(kind string) bool {
+	return kind == "tls" || kind == "tls_port" || kind == "tls_certificate"
 }
 
 func aggregateHealth(health ServerHealth) string {

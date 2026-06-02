@@ -6,8 +6,8 @@
 //   - url:      HTTP/HTTPS endpoint availability (scheme decides protocol)
 //   - tls_port: TLS handshake + certificate state on a raw TLS port
 //
-// "http"/"https" are accepted as aliases for url, and "tls_certificate" as an
-// alias for tls_port.
+// "http"/"https" are accepted as aliases for url, and "tls"/"tls_certificate"
+// as aliases for tls_port.
 package probe
 
 import (
@@ -120,7 +120,7 @@ func runOnce(ctx context.Context, m store.Monitor, logger *slog.Logger) outcome 
 	switch m.Kind {
 	case "url", "http", "https":
 		return probeURL(attemptCtx, m, timeout, logger)
-	case "tls_port", "tls_certificate":
+	case "tls", "tls_port", "tls_certificate":
 		return probeTLSPort(attemptCtx, m, timeout, logger)
 	default: // "tcp" and unknown kinds fall back to TCP reachability.
 		return probeTCP(attemptCtx, m, timeout, logger)

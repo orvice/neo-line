@@ -41,18 +41,22 @@ func TestApplyMonitorDefaults(t *testing.T) {
 	})
 
 	t.Run("tls port defaults", func(t *testing.T) {
-		monitor := Monitor{Kind: "tls_port"}
+		for _, kind := range []string{"tls", "tls_port", "tls_certificate"} {
+			t.Run(kind, func(t *testing.T) {
+				monitor := Monitor{Kind: kind}
 
-		applyMonitorDefaults(&monitor)
+				applyMonitorDefaults(&monitor)
 
-		if monitor.Port != 443 {
-			t.Fatalf("Port = %d, want 443", monitor.Port)
-		}
-		if monitor.WarningDays != 30 {
-			t.Fatalf("WarningDays = %d, want 30", monitor.WarningDays)
-		}
-		if monitor.CriticalDays != 7 {
-			t.Fatalf("CriticalDays = %d, want 7", monitor.CriticalDays)
+				if monitor.Port != 443 {
+					t.Fatalf("Port = %d, want 443", monitor.Port)
+				}
+				if monitor.WarningDays != 30 {
+					t.Fatalf("WarningDays = %d, want 30", monitor.WarningDays)
+				}
+				if monitor.CriticalDays != 7 {
+					t.Fatalf("CriticalDays = %d, want 7", monitor.CriticalDays)
+				}
+			})
 		}
 	})
 
