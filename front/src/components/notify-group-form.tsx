@@ -318,8 +318,13 @@ function ChannelEditor({
   const [newHeaderKey, setNewHeaderKey] = useState("")
   const [newHeaderVal, setNewHeaderVal] = useState("")
 
-  // Reserved extra keys managed by dedicated fields
-  const reservedKeys = new Set(["bot_token", "access_token", "visibility"])
+  // For non-webhook types, certain extra keys are managed by dedicated fields
+  // and should not appear in the generic header editor. For webhook, ALL extra
+  // keys are custom HTTP headers — nothing is reserved.
+  const reservedKeys: Set<string> =
+    type === "webhook"
+      ? new Set()
+      : new Set(["bot_token", "access_token", "visibility"])
   const webhookHeaders = Object.entries(channel.extra ?? {}).filter(
     ([k]) => !reservedKeys.has(k)
   )
