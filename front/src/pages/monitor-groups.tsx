@@ -14,6 +14,7 @@ import { ReorderControls } from "@/components/reorder-controls"
 import { TableSkeleton } from "@/components/table-skeleton"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import {
   Table,
@@ -36,6 +37,16 @@ export function MonitorGroupsPage() {
     queryKey: ["monitor-groups"],
     queryFn: () => api.listMonitorGroups({ page_size: 200 }),
   })
+
+  const { data: notifyData } = useQuery({
+    queryKey: ["notify-groups"],
+    queryFn: () => api.listNotifyGroups({ page_size: 200 }),
+  })
+  const notifyGroupMap = useMemo(() => {
+    const m = new Map<string, string>()
+    for (const ng of notifyData?.groups ?? []) m.set(ng.id, ng.name)
+    return m
+  }, [notifyData])
 
   const groups = data?.groups ?? []
   const sorted = useMemo(() => bySortOrder(groups), [groups])
@@ -190,8 +201,11 @@ export function MonitorGroupsPage() {
                         </span>
                       )}
                     </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
-                      {g.alert_policy?.notify_group_ids?.length ?? 0}
+                    <TableCell>
+                      <NotifyGroupBadges
+                        ids={g.alert_policy?.notify_group_ids ?? []}
+                        nameMap={notifyGroupMap}
+                      />
                     </TableCell>
                     {user && (
                       <TableCell className="text-right">
@@ -226,7 +240,10 @@ export function MonitorGroupsPage() {
 
       <MonitorGroupForm
         open={formOpen}
-        onOpenChange={setFormOpen}
+        onOpenChange={(o) => {
+          setFormOpen(o)
+          if (!o) queryClient.invalidateQueries({ queryKey: ["notify-groups"] })
+        }}
         group={editing}
       />
       <ConfirmDialog
@@ -237,6 +254,36 @@ export function MonitorGroupsPage() {
         pending={deleteMutation.isPending}
         onConfirm={() => deleting && deleteMutation.mutate(deleting.id)}
       />
+    </div>
+  )
+}
+
+const MAX_VISIBLE_BADGES = 3
+
+function NotifyGroupBadges({
+  ids,
+  nameMap,
+}: {
+  ids: string[]
+  nameMap: Map<string, string>
+}) {
+  if (!ids || ids.length === 0) {
+    return <span className="text-muted-foreground text-sm">-</span>
+  }
+  const visible = ids.slice(0, MAX_VISIBLE_BADGES)
+  const rest = ids.length - MAX_VISIBLE_BADGES
+  return (
+    <div className="flex flex-wrap gap-1">
+      {visible.map((id) => (
+        <Badge key={id} variant="secondary" className="font-normal">
+          {nameMap.get(id) ?? id.slice(0, 8)}
+        </Badge>
+      ))}
+      {rest > 0 && (
+        <Badge variant="outline" className="font-normal">
+          +{rest}
+        </Badge>
+      )}
     </div>
   )
 }
