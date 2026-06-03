@@ -30,7 +30,7 @@ type runtimeConfig struct {
 
 type sshConfig struct {
 	// KeyPath is the local private key used for all SSH connections. Empty
-	// disables the SSH MCP tools.
+	// disables SSH remote execution APIs and MCP tools.
 	KeyPath string `yaml:"key_path"`
 	// User is the default SSH user when a server does not override it.
 	User string `yaml:"user"`
@@ -86,7 +86,7 @@ func main() {
 			r.GET("/ping", func(c *gin.Context) {
 				c.JSON(http.StatusOK, gin.H{"message": "pong"})
 			})
-			connectapi.Register(r, mongoStore)
+			connectapi.Register(r, mongoStore, sshRunner)
 			mcpserver.Register(r, mongoStore, sshRunner)
 		},
 		InitFunc: []func() error{
@@ -142,7 +142,7 @@ func main() {
 					return fmt.Errorf("init ssh: %w", err)
 				}
 				if sshRunner != nil {
-					log.Println("SSH MCP tools enabled")
+					log.Println("SSH remote execution enabled")
 				}
 				return nil
 			},

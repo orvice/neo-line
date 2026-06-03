@@ -1,6 +1,6 @@
 // Package ssh provides a thin SSH command runner backed by a single local
-// private key loaded from the runtime configuration. It is used by the MCP
-// server to execute commands on monitored hosts.
+// private key loaded from the runtime configuration. It is used by API and MCP
+// handlers to execute commands on monitored hosts.
 package ssh
 
 import (

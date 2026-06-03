@@ -11,7 +11,7 @@ import (
 func TestRegisterMountsConnectHandlersUnderAPIPrefix(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
-	Register(r, nil)
+	Register(r, nil, nil)
 
 	req := httptest.NewRequest(http.MethodGet, BasePath+"/neoline.v1.AuthService/Login", nil)
 	w := httptest.NewRecorder()
@@ -25,7 +25,7 @@ func TestRegisterMountsConnectHandlersUnderAPIPrefix(t *testing.T) {
 func TestRegisterDoesNotExposeLegacyGrpcPrefix(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
-	Register(r, nil)
+	Register(r, nil, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/grpc/neoline.v1.AuthService/Login", nil)
 	w := httptest.NewRecorder()

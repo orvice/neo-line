@@ -148,6 +148,8 @@ func auditResourceType(procedure string) string {
 		return "notify_group"
 	case "McpTokenService":
 		return "mcp_token"
+	case "SshService":
+		return "ssh"
 	default:
 		return ""
 	}
@@ -158,10 +160,14 @@ func auditResourceID(msg any) string {
 	type id interface{ GetId() string }
 	type groupID interface{ GetGroupId() string }
 	type notifyGroupID interface{ GetNotifyGroupId() string }
+	type serverID interface{ GetServerId() string }
 	type tokenID interface{ GetTokenId() string }
 
 	if m, ok := msg.(monitorID); ok && m.GetMonitorId() != "" {
 		return m.GetMonitorId()
+	}
+	if m, ok := msg.(serverID); ok && m.GetServerId() != "" {
+		return m.GetServerId()
 	}
 	if m, ok := msg.(id); ok && m.GetId() != "" {
 		return m.GetId()

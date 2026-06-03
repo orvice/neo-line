@@ -8,6 +8,7 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/gin-gonic/gin"
+	nlssh "github.com/orvice/neo-line/internal/ssh"
 	"github.com/orvice/neo-line/internal/store"
 	"github.com/orvice/neo-line/pkg/proto/neoline/v1/neolinev1connect"
 )
@@ -19,15 +20,16 @@ const BasePath = "/api/grpc"
 // Service implements every neoline.v1 Connect handler against the store.
 type Service struct {
 	store store.Store
+	ssh   *nlssh.Runner
 }
 
-func New(st store.Store) *Service {
-	return &Service{store: st}
+func New(st store.Store, ssh *nlssh.Runner) *Service {
+	return &Service{store: st, ssh: ssh}
 }
 
 // Register mounts the Connect handlers on the Gin engine under BasePath.
-func Register(r *gin.Engine, st store.Store) {
-	svc := New(st)
+func Register(r *gin.Engine, st store.Store, ssh *nlssh.Runner) {
+	svc := New(st, ssh)
 	opts := connect.WithInterceptors(svc.authInterceptor(), svc.auditInterceptor())
 
 	mux := http.NewServeMux()
@@ -39,6 +41,7 @@ func Register(r *gin.Engine, st store.Store) {
 	mux.Handle(neolinev1connect.NewMonitorGroupServiceHandler(svc, opts))
 	mux.Handle(neolinev1connect.NewNotifyGroupServiceHandler(svc, opts))
 	mux.Handle(neolinev1connect.NewMcpTokenServiceHandler(svc, opts))
+	mux.Handle(neolinev1connect.NewSshServiceHandler(svc, opts))
 
 	handler := http.StripPrefix(BasePath, mux)
 	r.Any(BasePath+"/*any", gin.WrapH(handler))

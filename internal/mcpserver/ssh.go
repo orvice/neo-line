@@ -3,7 +3,6 @@ package mcpserver
 import (
 	"context"
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -68,23 +67,12 @@ func (t *tools) sshTestConnection(ctx context.Context, _ *mcp.CallToolRequest, i
 // sshTarget resolves a server's SSH target, applying per-server overrides over
 // the global defaults. It errors when SSH is disabled for the server.
 func (t *tools) sshTarget(ctx context.Context, serverID string) (nlssh.Target, error) {
-	if t.ssh == nil {
-		return nlssh.Target{}, nlssh.ErrDisabled
+	target, err := nlssh.ResolveTarget(ctx, t.store, t.ssh, serverID)
+	if err != nil && errors.Is(err, nlssh.ErrDisabled) {
+		return nlssh.Target{}, err
 	}
-	server, err := t.store.GetServer(ctx, serverID)
 	if err != nil {
 		return nlssh.Target{}, mapErr(err)
 	}
-	if server.SSH == nil || !server.SSH.Enabled {
-		return nlssh.Target{}, fmt.Errorf("ssh is not enabled for server %q", serverID)
-	}
-	host := server.SSH.Host
-	if host == "" {
-		host = server.Host
-	}
-	return nlssh.Target{
-		Host: host,
-		Port: int(server.SSH.Port),
-		User: server.SSH.User,
-	}, nil
+	return target, nil
 }

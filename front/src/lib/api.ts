@@ -9,6 +9,7 @@ import { AuthService } from "@/gen/neoline/v1/auth_pb"
 import { SettingsService, type Settings as PbSettings } from "@/gen/neoline/v1/settings_pb"
 import { StatusService } from "@/gen/neoline/v1/status_pb"
 import { McpTokenService } from "@/gen/neoline/v1/mcp_token_pb"
+import { SshService } from "@/gen/neoline/v1/ssh_pb"
 import {
   ServerService,
   type Server as PbServer,
@@ -57,6 +58,8 @@ import type {
   ServerEvent,
   ServerHealth,
   Settings,
+  SshExecResponse,
+  SshTestConnectionResponse,
   StatusCertificate,
   StatusGroup,
   StatusMonitor,
@@ -107,6 +110,7 @@ const monitorClient = createClient(MonitorService, transport)
 const groupClient = createClient(MonitorGroupService, transport)
 const notifyClient = createClient(NotifyGroupService, transport)
 const mcpClient = createClient(McpTokenService, transport)
+const sshClient = createClient(SshService, transport)
 
 function statusFromCode(code: Code): number {
   switch (code) {
@@ -589,6 +593,31 @@ export const api = {
       return {
         events: res.events.map(serverEventFromProto),
         next_page_token: res.nextPageToken,
+      }
+    }),
+  sshExec: (serverId: string, command: string, timeoutSeconds?: number) =>
+    call<SshExecResponse>(async () => {
+      const res = await sshClient.exec({
+        serverId,
+        command,
+        timeoutSeconds: timeoutSeconds ?? 0,
+      })
+      return {
+        server_id: res.serverId,
+        host: res.host,
+        stdout: res.stdout,
+        stderr: res.stderr,
+        exit_code: res.exitCode,
+      }
+    }),
+  sshTestConnection: (serverId: string) =>
+    call<SshTestConnectionResponse>(async () => {
+      const res = await sshClient.testConnection({ serverId })
+      return {
+        server_id: res.serverId,
+        host: res.host,
+        ok: res.ok,
+        output: res.output || undefined,
       }
     }),
 

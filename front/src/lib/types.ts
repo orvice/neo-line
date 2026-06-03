@@ -120,6 +120,21 @@ export interface ServerHealth {
   unknown_monitors: number
 }
 
+export interface SshExecResponse {
+  server_id: string
+  host: string
+  stdout: string
+  stderr: string
+  exit_code: number
+}
+
+export interface SshTestConnectionResponse {
+  server_id: string
+  host: string
+  ok: boolean
+  output?: string
+}
+
 export interface UptimeWindow {
   window_seconds: number
   total: number

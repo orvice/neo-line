@@ -49,7 +49,7 @@ ssh:
   known_hosts_path: "/etc/neo-line/known_hosts"
 ```
 
-- `ssh.key_path`：本地私钥路径，是所有 SSH 连接的唯一私钥来源。为空时不启用 SSH 相关 MCP 工具。私钥不存在或解析失败会导致服务启动报错。
+- `ssh.key_path`：本地私钥路径，是所有 SSH 连接的唯一私钥来源。为空时不启用 SSH 远程执行能力（API 调用返回未配置错误，MCP 不注册 SSH 工具）。私钥不存在或解析失败会导致服务启动报错。
 - `ssh.user`：默认 SSH 用户，server 未覆盖时使用，默认 `root`。
 - `ssh.port`：默认 SSH 端口，server 未覆盖时使用，默认 `22`。
 - `ssh.known_hosts_path`：known_hosts 文件路径，配置后按其校验主机密钥；为空时不校验主机密钥（仅适用于受信任内网）。

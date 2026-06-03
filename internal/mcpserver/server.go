@@ -10,6 +10,7 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	nlssh "github.com/orvice/neo-line/internal/ssh"
+	"github.com/orvice/neo-line/internal/statusview"
 	"github.com/orvice/neo-line/internal/store"
 )
 
@@ -58,6 +59,11 @@ func NewServer(st store.Store, ssh *nlssh.Runner) *mcp.Server {
 		Name:        "get_monitor_uptime",
 		Description: "Get Kuma-style rolling uptime windows for a monitor by server id and monitor id.",
 	}, st, t.getMonitorUptime)
+
+	addAuditedTool(srv, &mcp.Tool{
+		Name:        "get_status_overview",
+		Description: "Get the slim public status-page overview grouped by monitor group.",
+	}, st, t.getStatusOverview)
 
 	addAuditedTool(srv, &mcp.Tool{
 		Name:        "list_monitor_groups",
@@ -163,6 +169,8 @@ type tools struct {
 	store store.Store
 	ssh   *nlssh.Runner
 }
+
+type emptyInput struct{}
 
 type pageInput struct {
 	PageSize  int64  `json:"page_size,omitempty" jsonschema:"max results to return, 1-200, defaults to 50"`
@@ -279,6 +287,14 @@ func (t *tools) getMonitorUptime(ctx context.Context, _ *mcp.CallToolRequest, in
 		return nil, monitorUptimeOutput{}, mapErr(err)
 	}
 	return nil, monitorUptimeOutput{Uptime: uptime}, nil
+}
+
+func (t *tools) getStatusOverview(ctx context.Context, _ *mcp.CallToolRequest, _ emptyInput) (*mcp.CallToolResult, statusview.Overview, error) {
+	overview, err := statusview.Build(ctx, t.store)
+	if err != nil {
+		return nil, statusview.Overview{}, err
+	}
+	return nil, overview, nil
 }
 
 type listCheckResultsInput struct {
