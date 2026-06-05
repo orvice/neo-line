@@ -3,6 +3,7 @@ import { Link, NavLink, Outlet, useLocation } from "react-router-dom"
 import {
   Activity,
   BellRing,
+  FileSearch,
   FolderTree,
   LogOut,
   Monitor,
@@ -107,6 +108,13 @@ export function Layout() {
                 >
                   <Plug className="size-4" />
                   MCP
+                </NavLink>
+                <NavLink
+                  to="/audit-logs"
+                  className={navClass}
+                >
+                  <FileSearch className="size-4" />
+                  审计
                 </NavLink>
                 <NavLink
                   to="/settings"

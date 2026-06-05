@@ -1,11 +1,11 @@
 import { useState } from "react"
 import { Link, useParams } from "react-router-dom"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { ArrowLeft, Pencil, Plus, Trash2 } from "lucide-react"
+import { ArrowLeft, Pencil, Play, Plus, Terminal, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 
 import { api, ApiError } from "@/lib/api"
-import type { Monitor } from "@/lib/types"
+import type { Monitor, Server, SshExecResponse, SshTestConnectionResponse } from "@/lib/types"
 import { useAuth } from "@/lib/auth"
 import {
   formatCertExpiry,
@@ -18,8 +18,11 @@ import { StatusBadge } from "@/components/status-badge"
 import { MonitorForm } from "@/components/monitor-form"
 import { ConfirmDialog } from "@/components/confirm-dialog"
 import { TableSkeleton } from "@/components/table-skeleton"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import {
   Table,
   TableBody,
@@ -147,6 +150,7 @@ export function ServerDetailPage() {
         <TabsList>
           <TabsTrigger value="monitors">监控项 ({monitors.length})</TabsTrigger>
           <TabsTrigger value="events">状态事件 ({events.length})</TabsTrigger>
+          <TabsTrigger value="ssh">SSH 运维</TabsTrigger>
         </TabsList>
 
         <TabsContent value="monitors">
@@ -279,6 +283,10 @@ export function ServerDetailPage() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        <TabsContent value="ssh">
+          <SshPanel serverId={serverId} server={server} />
+        </TabsContent>
       </Tabs>
 
       <MonitorForm
@@ -311,6 +319,209 @@ function SummaryCard({ label, value }: { label: string; value: number }) {
         <span className="text-2xl font-semibold">{value}</span>
       </CardContent>
     </Card>
+  )
+}
+
+function SshPanel({ serverId, server }: { serverId: string; server: Server }) {
+  const [command, setCommand] = useState("uptime")
+  const [timeoutSeconds, setTimeoutSeconds] = useState(30)
+  const [execResult, setExecResult] = useState<SshExecResponse | undefined>()
+  const [testResult, setTestResult] = useState<SshTestConnectionResponse | undefined>()
+
+  const ssh = server.ssh
+  const enabled = Boolean(ssh?.enabled)
+  const host = ssh?.host || server.host
+  const port = ssh?.port || 22
+  const sshUser = ssh?.user || "默认用户"
+
+  const testMutation = useMutation({
+    mutationFn: () => api.sshTestConnection(serverId),
+    onSuccess: (res) => {
+      setTestResult(res)
+      toast.success(res.ok ? "SSH 连接正常" : "SSH 连接测试完成")
+    },
+    onError: (err) => {
+      toast.error(err instanceof ApiError ? err.message : "连接测试失败")
+    },
+  })
+
+  const execMutation = useMutation({
+    mutationFn: () =>
+      api.sshExec(serverId, command.trim(), Math.max(1, timeoutSeconds || 30)),
+    onSuccess: (res) => {
+      setExecResult(res)
+      toast.success(res.exit_code === 0 ? "命令执行完成" : `命令退出码 ${res.exit_code}`)
+    },
+    onError: (err) => {
+      toast.error(err instanceof ApiError ? err.message : "命令执行失败")
+    },
+  })
+
+  function submitExec() {
+    if (!command.trim()) {
+      toast.error("请输入要执行的命令")
+      return
+    }
+    execMutation.mutate()
+  }
+
+  if (!enabled) {
+    return (
+      <Card>
+        <CardContent className="text-muted-foreground flex flex-col items-center gap-2 p-10 text-center">
+          <Terminal className="size-8 opacity-50" />
+          此服务器未启用 SSH 执行，请在服务器编辑中启用。
+        </CardContent>
+      </Card>
+    )
+  }
+
+  return (
+    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <Card>
+        <CardHeader>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Terminal className="size-4" />
+                远程命令
+              </CardTitle>
+              <p className="text-muted-foreground mt-1 text-sm">
+                {sshUser}@{host}:{port}
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              onClick={() => testMutation.mutate()}
+              disabled={testMutation.isPending}
+            >
+              <Play />
+              {testMutation.isPending ? "测试中…" : "测试连接"}
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_140px]">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="ssh-command">命令</Label>
+              <Input
+                id="ssh-command"
+                value={command}
+                onChange={(e) => setCommand(e.target.value)}
+                onKeyDown={(e) => {
+                  if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+                    submitExec()
+                  }
+                }}
+                placeholder="uptime"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="ssh-timeout">超时（秒）</Label>
+              <Input
+                id="ssh-timeout"
+                type="number"
+                min={1}
+                max={3600}
+                value={timeoutSeconds}
+                onChange={(e) => setTimeoutSeconds(Number(e.target.value))}
+              />
+            </div>
+          </div>
+          <div className="flex justify-end">
+            <Button onClick={submitExec} disabled={execMutation.isPending}>
+              <Terminal />
+              {execMutation.isPending ? "执行中…" : "执行命令"}
+            </Button>
+          </div>
+          {execResult && <ExecResult result={execResult} />}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">连接信息</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-3 text-sm">
+          <InfoRow label="目标" value={host} mono />
+          <InfoRow label="端口" value={String(port)} />
+          <InfoRow label="用户" value={sshUser} />
+          <InfoRow label="配置" value="已启用" />
+          {testResult && (
+            <div className="border-t pt-3">
+              <div className="mb-2 flex items-center gap-2">
+                <Badge variant={testResult.ok ? "secondary" : "destructive"}>
+                  {testResult.ok ? "连接正常" : "连接失败"}
+                </Badge>
+                <span className="text-muted-foreground text-xs">
+                  {testResult.host}
+                </span>
+              </div>
+              {testResult.output && (
+                <pre className="bg-muted/60 overflow-x-auto rounded-md border p-2 text-xs">
+                  {testResult.output}
+                </pre>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+function ExecResult({ result }: { result: SshExecResponse }) {
+  return (
+    <div className="flex flex-col gap-3 border-t pt-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <Badge variant={result.exit_code === 0 ? "secondary" : "destructive"}>
+          exit {result.exit_code}
+        </Badge>
+        <span className="text-muted-foreground text-xs">
+          host {result.host}
+        </span>
+      </div>
+      <OutputBlock label="stdout" value={result.stdout} />
+      <OutputBlock label="stderr" value={result.stderr} destructive />
+    </div>
+  )
+}
+
+function OutputBlock({
+  label,
+  value,
+  destructive,
+}: {
+  label: string
+  value: string
+  destructive?: boolean
+}) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className={destructive ? "text-destructive text-xs" : "text-muted-foreground text-xs"}>
+        {label}
+      </span>
+      <pre className="bg-muted/60 min-h-16 overflow-x-auto rounded-md border p-3 text-xs leading-relaxed">
+        {value || "-"}
+      </pre>
+    </div>
+  )
+}
+
+function InfoRow({
+  label,
+  value,
+  mono,
+}: {
+  label: string
+  value: string
+  mono?: boolean
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <span className="text-muted-foreground">{label}</span>
+      <span className={mono ? "font-mono text-xs" : ""}>{value}</span>
+    </div>
   )
 }
 

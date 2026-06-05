@@ -144,6 +144,18 @@ type AuditLog struct {
 	OccurredAt   time.Time         `bson:"occurred_at" json:"occurred_at"`
 }
 
+type AuditLogFilter struct {
+	Source       string
+	Action       string
+	ResourceType string
+	ResourceID   string
+	ActorEmail   string
+	TokenPrefix  string
+	Success      *bool
+	StartTime    *time.Time
+	EndTime      *time.Time
+}
+
 type ServerHealth struct {
 	ServerID           string    `json:"server_id"`
 	Status             string    `json:"status"`
@@ -306,6 +318,42 @@ func (s *MongoStore) SaveAuditLog(ctx context.Context, entry AuditLog) error {
 	}
 	_, err := s.auditLogs().InsertOne(ctx, entry)
 	return err
+}
+
+func (s *MongoStore) ListAuditLogs(ctx context.Context, filter AuditLogFilter, limit int64, pageToken string) ([]AuditLog, string, error) {
+	m := bson.M{}
+	if filter.Source != "" {
+		m["source"] = filter.Source
+	}
+	if filter.Action != "" {
+		m["action"] = filter.Action
+	}
+	if filter.ResourceType != "" {
+		m["resource_type"] = filter.ResourceType
+	}
+	if filter.ResourceID != "" {
+		m["resource_id"] = filter.ResourceID
+	}
+	if filter.ActorEmail != "" {
+		m["actor_email"] = filter.ActorEmail
+	}
+	if filter.TokenPrefix != "" {
+		m["token_prefix"] = filter.TokenPrefix
+	}
+	if filter.Success != nil {
+		m["success"] = *filter.Success
+	}
+	if filter.StartTime != nil || filter.EndTime != nil {
+		timeFilter := bson.M{}
+		if filter.StartTime != nil {
+			timeFilter["$gte"] = *filter.StartTime
+		}
+		if filter.EndTime != nil {
+			timeFilter["$lte"] = *filter.EndTime
+		}
+		m["occurred_at"] = timeFilter
+	}
+	return findPage[AuditLog](ctx, s.auditLogs(), m, limit, pageToken, bson.D{{Key: "occurred_at", Value: -1}})
 }
 
 func (s *MongoStore) Close(ctx context.Context) error {

@@ -13,6 +13,7 @@ import { MonitorGroupDetailPage } from "./pages/monitor-group-detail"
 import { NotifyGroupsPage } from "./pages/notify-groups"
 import { SettingsPage } from "./pages/settings"
 import { McpPage } from "./pages/mcp"
+import { AuditLogsPage } from "./pages/audit-logs"
 
 function LoadingScreen() {
   return (
@@ -93,6 +94,14 @@ export function App() {
           element={
             <RequireAuth>
               <McpPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/audit-logs"
+          element={
+            <RequireAuth>
+              <AuditLogsPage />
             </RequireAuth>
           }
         />

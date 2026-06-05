@@ -134,6 +134,8 @@ func auditAction(procedure string) string {
 func auditResourceType(procedure string) string {
 	service, _ := splitProcedure(procedure)
 	switch service {
+	case "AuditLogService":
+		return "audit_log"
 	case "AuthService":
 		return "auth"
 	case "SettingsService":

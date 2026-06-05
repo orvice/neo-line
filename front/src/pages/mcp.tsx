@@ -42,6 +42,7 @@ type ToolEntry = {
 }
 
 const readTools: ToolEntry[] = [
+  { name: "get_status_overview", description: "读取公开状态页使用的分组、server、monitor 与 uptime 概览。" },
   { name: "list_servers", description: "列出 server，支持按 environment、tags 过滤。" },
   { name: "get_server", description: "按 id 查询单个 server。" },
   { name: "get_server_health", description: "查询 server 聚合健康状态及各状态 monitor 数量。" },
@@ -53,6 +54,8 @@ const readTools: ToolEntry[] = [
   { name: "list_monitor_groups", description: "列出所有 monitor 分组及其 alert policy。" },
   { name: "get_monitor_group", description: "按 group_id 查询单个分组。" },
   { name: "list_monitors_by_group", description: "列出指定分组下的 monitor（跨 server）。" },
+  { name: "list_notify_groups", description: "列出通知组及其 webhook / chat channel 配置。" },
+  { name: "get_notify_group", description: "按 notify_group_id 查询单个通知组。" },
 ]
 
 const writeTools: ToolEntry[] = [
@@ -65,6 +68,14 @@ const writeTools: ToolEntry[] = [
   { name: "create_monitor_group", description: "创建 monitor 分组及其 alert policy。" },
   { name: "update_monitor_group", description: "按 group_id 更新分组与 alert policy。" },
   { name: "delete_monitor_group", description: "按 group_id 删除分组。" },
+  { name: "create_notify_group", description: "创建通知组及其派发通道。" },
+  { name: "update_notify_group", description: "按 notify_group_id 更新通知组。" },
+  { name: "delete_notify_group", description: "按 notify_group_id 删除通知组。" },
+]
+
+const sshTools: ToolEntry[] = [
+  { name: "ssh_test_connection", description: "对指定 server 建立 SSH 连接并执行轻量探测命令。" },
+  { name: "ssh_exec", description: "在启用 SSH 的 server 上执行命令，返回 stdout、stderr 与 exit code。" },
 ]
 
 function CodeBlock({ code, language = "" }: { code: string; language?: string }) {
@@ -137,7 +148,7 @@ export function McpPage() {
         </div>
         <p className="text-muted-foreground mt-1 text-sm">
           neo-line 内置 Model Context Protocol server，允许 AI 客户端以工具调用方式读写
-          server、monitor 与 monitor group。
+          状态概览、server、monitor、monitor group、notify group，并可在启用 SSH 时执行远程命令。
         </p>
       </div>
 
@@ -237,6 +248,9 @@ export function McpPage() {
               <TabsTrigger value="write">
                 写入 <Badge variant="secondary" className="ml-1.5">{writeTools.length}</Badge>
               </TabsTrigger>
+              <TabsTrigger value="ssh">
+                SSH <Badge variant="secondary" className="ml-1.5">{sshTools.length}</Badge>
+              </TabsTrigger>
             </TabsList>
             <TabsContent value="read">
               <ToolList tools={readTools} />
@@ -246,6 +260,13 @@ export function McpPage() {
               <p className="text-muted-foreground mt-3 text-xs">
                 写入工具直接调用底层 store 方法，会执行 group ID 校验、默认字段填充等服务端逻辑。删除
                 server 会级联删除其下 monitor。
+              </p>
+            </TabsContent>
+            <TabsContent value="ssh">
+              <ToolList tools={sshTools} />
+              <p className="text-muted-foreground mt-3 text-xs">
+                SSH 工具仅在服务端配置了 <code className="bg-muted rounded px-1">ssh.key_path</code>{" "}
+                时注册；命令执行与连接测试会写入审计日志。
               </p>
             </TabsContent>
           </Tabs>

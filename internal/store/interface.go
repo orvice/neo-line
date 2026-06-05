@@ -48,6 +48,8 @@ type Store interface {
 	GetSettings(ctx context.Context) (Settings, error)
 	UpdateSettings(ctx context.Context, settings Settings) (Settings, error)
 
+	ListAuditLogs(ctx context.Context, filter AuditLogFilter, limit int64, pageToken string) ([]AuditLog, string, error)
+
 	EnsureServerIndexes(ctx context.Context) error
 	EnsureMonitorIndexes(ctx context.Context) error
 	EnsureAuditIndexes(ctx context.Context) error

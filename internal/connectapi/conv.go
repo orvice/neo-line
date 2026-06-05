@@ -396,3 +396,26 @@ func mcpTokenToProto(t store.McpToken) *pb.McpToken {
 func userToProto(id, email, role string) *pb.User {
 	return &pb.User{Id: id, Email: email, Role: role}
 }
+
+func auditLogToProto(log store.AuditLog) *pb.AuditLog {
+	return &pb.AuditLog{
+		Id:           log.ID,
+		Source:       log.Source,
+		ActorId:      log.ActorID,
+		ActorEmail:   log.ActorEmail,
+		TokenPrefix:  log.TokenPrefix,
+		Action:       log.Action,
+		ResourceType: log.ResourceType,
+		ResourceId:   log.ResourceID,
+		Method:       log.Method,
+		Path:         log.Path,
+		StatusCode:   int32(log.StatusCode),
+		Success:      log.Success,
+		Error:        log.Error,
+		DurationMs:   log.DurationMS,
+		RemoteIp:     log.RemoteIP,
+		UserAgent:    log.UserAgent,
+		Metadata:     log.Metadata,
+		OccurredAt:   timeToTS(log.OccurredAt),
+	}
+}

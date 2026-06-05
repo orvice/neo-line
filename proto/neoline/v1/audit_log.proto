@@ -1,0 +1,53 @@
+syntax = "proto3";
+
+package neoline.v1;
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/wrappers.proto";
+
+option go_package = "github.com/orvice/neo-line/pkg/proto/neoline/v1;neolinev1";
+
+message AuditLog {
+  string id = 1;
+  string source = 2;
+  string actor_id = 3;
+  string actor_email = 4;
+  string token_prefix = 5;
+  string action = 6;
+  string resource_type = 7;
+  string resource_id = 8;
+  string method = 9;
+  string path = 10;
+  int32 status_code = 11;
+  bool success = 12;
+  string error = 13;
+  int64 duration_ms = 14;
+  string remote_ip = 15;
+  string user_agent = 16;
+  map<string, string> metadata = 17;
+  google.protobuf.Timestamp occurred_at = 18;
+}
+
+message ListAuditLogsRequest {
+  uint32 page_size = 1;
+  string page_token = 2;
+  string source = 3;
+  string action = 4;
+  string resource_type = 5;
+  string resource_id = 6;
+  string actor_email = 7;
+  string token_prefix = 8;
+  google.protobuf.BoolValue success = 9;
+  google.protobuf.Timestamp start_time = 10;
+  google.protobuf.Timestamp end_time = 11;
+}
+
+message ListAuditLogsResponse {
+  repeated AuditLog logs = 1;
+  string next_page_token = 2;
+}
+
+// AuditLogService exposes operation audit logs for authenticated admins.
+service AuditLogService {
+  rpc ListAuditLogs(ListAuditLogsRequest) returns (ListAuditLogsResponse) {}
+}

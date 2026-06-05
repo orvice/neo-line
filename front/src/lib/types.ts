@@ -214,6 +214,41 @@ export interface CreateMcpTokenResponse {
   secret: string
 }
 
+export interface AuditLog {
+  id: string
+  source: string
+  actor_id?: string
+  actor_email?: string
+  token_prefix?: string
+  action: string
+  resource_type?: string
+  resource_id?: string
+  method?: string
+  path?: string
+  status_code?: number
+  success: boolean
+  error?: string
+  duration_ms: number
+  remote_ip?: string
+  user_agent?: string
+  metadata?: Record<string, string>
+  occurred_at: string
+}
+
+export interface AuditLogQuery {
+  page_token?: string
+  page_size?: number
+  source?: string
+  action?: string
+  resource_type?: string
+  resource_id?: string
+  actor_email?: string
+  token_prefix?: string
+  success?: boolean
+  start_time?: string
+  end_time?: string
+}
+
 // Status overview is the slim, public payload backing the anonymous status page.
 // It deliberately omits hosts, URLs, ports, headers, and certificate identity.
 export interface StatusCertificate {

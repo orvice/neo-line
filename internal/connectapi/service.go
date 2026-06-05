@@ -34,6 +34,7 @@ func Register(r *gin.Engine, st store.Store, ssh *nlssh.Runner) {
 
 	mux := http.NewServeMux()
 	mux.Handle(neolinev1connect.NewAuthServiceHandler(svc, opts))
+	mux.Handle(neolinev1connect.NewAuditLogServiceHandler(svc, opts))
 	mux.Handle(neolinev1connect.NewSettingsServiceHandler(svc, opts))
 	mux.Handle(neolinev1connect.NewStatusServiceHandler(svc, opts))
 	mux.Handle(neolinev1connect.NewServerServiceHandler(svc, opts))

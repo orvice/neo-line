@@ -11,6 +11,10 @@ import { StatusService } from "@/gen/neoline/v1/status_pb"
 import { McpTokenService } from "@/gen/neoline/v1/mcp_token_pb"
 import { SshService } from "@/gen/neoline/v1/ssh_pb"
 import {
+  AuditLogService,
+  type AuditLog as PbAuditLog,
+} from "@/gen/neoline/v1/audit_log_pb"
+import {
   ServerService,
   type Server as PbServer,
   type ServerSSH as PbServerSSH,
@@ -44,6 +48,8 @@ import {
 import type {
   AlertChannel,
   AlertPolicy,
+  AuditLog,
+  AuditLogQuery,
   CertificateInfo,
   CheckResult,
   CreateMcpTokenResponse,
@@ -111,6 +117,7 @@ const groupClient = createClient(MonitorGroupService, transport)
 const notifyClient = createClient(NotifyGroupService, transport)
 const mcpClient = createClient(McpTokenService, transport)
 const sshClient = createClient(SshService, transport)
+const auditClient = createClient(AuditLogService, transport)
 
 function statusFromCode(code: Code): number {
   switch (code) {
@@ -358,6 +365,29 @@ function mcpTokenFromProto(t: McpTokenPb): McpToken {
     prefix: t.prefix,
     created_at: iso(t.createdAt) ?? "",
     last_used_at: iso(t.lastUsedAt),
+  }
+}
+
+function auditLogFromProto(log: PbAuditLog): AuditLog {
+  return {
+    id: log.id,
+    source: log.source,
+    actor_id: log.actorId || undefined,
+    actor_email: log.actorEmail || undefined,
+    token_prefix: log.tokenPrefix || undefined,
+    action: log.action,
+    resource_type: log.resourceType || undefined,
+    resource_id: log.resourceId || undefined,
+    method: log.method || undefined,
+    path: log.path || undefined,
+    status_code: log.statusCode || undefined,
+    success: log.success,
+    error: log.error || undefined,
+    duration_ms: Number(log.durationMs),
+    remote_ip: log.remoteIp || undefined,
+    user_agent: log.userAgent || undefined,
+    metadata: Object.keys(log.metadata).length ? log.metadata : undefined,
+    occurred_at: iso(log.occurredAt) ?? "",
   }
 }
 
@@ -763,6 +793,32 @@ export const api = {
   deleteMcpToken: (id: string) =>
     call<void>(async () => {
       await mcpClient.deleteMcpToken({ tokenId: id })
+    }),
+
+  // Audit logs
+  listAuditLogs: (query?: AuditLogQuery) =>
+    call<ListResponse & { logs: AuditLog[] }>(async () => {
+      const res = await auditClient.listAuditLogs({
+        pageToken: query?.page_token ?? "",
+        pageSize: query?.page_size ?? 50,
+        source: query?.source ?? "",
+        action: query?.action ?? "",
+        resourceType: query?.resource_type ?? "",
+        resourceId: query?.resource_id ?? "",
+        actorEmail: query?.actor_email ?? "",
+        tokenPrefix: query?.token_prefix ?? "",
+        success: query?.success,
+        startTime: query?.start_time
+          ? timestampFromDate(new Date(query.start_time))
+          : undefined,
+        endTime: query?.end_time
+          ? timestampFromDate(new Date(query.end_time))
+          : undefined,
+      })
+      return {
+        logs: res.logs.map(auditLogFromProto),
+        next_page_token: res.nextPageToken,
+      }
     }),
 
   // Check results
