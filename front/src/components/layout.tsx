@@ -5,6 +5,7 @@ import {
   BellRing,
   FileSearch,
   FolderTree,
+  LayoutDashboard,
   LogOut,
   Monitor,
   Moon,
@@ -81,6 +82,13 @@ export function Layout() {
             </NavLink>
             {user ? (
               <>
+                <NavLink
+                  to="/dashboard"
+                  className={navClass}
+                >
+                  <LayoutDashboard className="size-4" />
+                  总览
+                </NavLink>
                 <NavLink
                   to="/servers"
                   className={navClass}

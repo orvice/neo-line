@@ -5,6 +5,7 @@ import { useAuth } from "./lib/auth"
 import { Layout } from "./components/layout"
 import { LoginPage } from "./pages/login"
 import { StatusPage } from "./pages/status"
+import { DashboardPage } from "./pages/dashboard"
 import { ServersPage } from "./pages/servers"
 import { ServerDetailPage } from "./pages/server-detail"
 import { MonitorDetailPage } from "./pages/monitor-detail"
@@ -41,6 +42,14 @@ export function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route element={<Layout />}>
         <Route path="/" element={<StatusPage />} />
+        <Route
+          path="/dashboard"
+          element={
+            <RequireAuth>
+              <DashboardPage />
+            </RequireAuth>
+          }
+        />
         <Route
           path="/servers"
           element={

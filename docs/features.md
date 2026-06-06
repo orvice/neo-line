@@ -953,24 +953,36 @@ archive:
 - `archive.batch_size`：单批最大结果数，默认 `100`。
 - `archive.flush_interval_seconds`：刷写间隔秒数，默认 `60`。
 
-## 未来增强
+## Web Dashboard
 
 ### Dashboard 支持
 
-**状态：** 未来增强
+**状态：** 已实现
 
-为 Web dashboard 或外部 UI 提供所需数据。
+登录态 Web Dashboard 位于 `/dashboard`，用于内部运维总览。当前实现不新增单独后端聚合接口，而是复用现有 Connect API：
 
-可能的页面：
+- `StatusService.GetStatusOverview`：读取状态页同源的 monitor group / server / monitor / uptime 聚合数据。
+- `ServerService.ListServers`：统计 server 数量与健康状态分布。
+- `MonitorGroupService.ListMonitorGroups`：统计分组与启用的 alert policy。
+- `NotifyGroupService.ListNotifyGroups`：统计通知组数量。
+- `AuditLogService.ListAuditLogs`：展示最近操作审计。
 
-- Server 列表
-- Server 详情
-- Server 当前健康状态概览
-- 端口探测配置列表
-- 探测结果历史
-- 延迟趋势图
-- TLS 证书过期概览
-- 告警历史
+页面内容：
+
+- Server / monitor / 活跃异常 / 24h 可用率 / 告警策略摘要卡片。
+- 异常监控列表，按 `Down > Critical > Warning > Unknown` 优先级排序，并链接到 monitor 详情页。
+- TLS 证书关注列表，展示已进入 warning 阈值的 TLS monitor。
+- Monitor 状态分布条。
+- 最近审计日志和常用运维入口。
+- 登录成功后默认进入 `/dashboard`；公开状态页仍保留在 `/`。
+
+未来增强：
+
+- 独立 `DashboardService` 聚合接口，减少前端多请求。
+- 延迟趋势图。
+- 告警历史。
+
+## 未来增强
 
 ### 更多探测类型
 
