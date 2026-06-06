@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
-import { Plus, Trash2 } from "lucide-react"
+import { Eye, EyeOff, Plus, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 
 import { api, ApiError } from "@/lib/api"
@@ -63,7 +63,7 @@ function toFormState(group?: NotifyGroup): FormState {
   return {
     name: group?.name ?? "",
     description: group?.description ?? "",
-    channels: group?.channels?.map((c) => ({ ...c })) ?? [],
+    channels: group?.channels?.map((c) => ({ ...c, extra: { ...c.extra } })) ?? [],
   }
 }
 
@@ -122,6 +122,16 @@ export function NotifyGroupForm({
         ...channels[index],
         extra: { ...channels[index].extra, [key]: value },
       }
+      return { ...prev, channels }
+    })
+  }
+
+  const deleteExtraKey = (index: number, key: string) => {
+    setForm((prev) => {
+      const channels = [...prev.channels]
+      const extra = { ...channels[index].extra }
+      delete extra[key]
+      channels[index] = { ...channels[index], extra }
       return { ...prev, channels }
     })
   }
@@ -206,6 +216,7 @@ export function NotifyGroupForm({
                   onExtraChange={(key, value) =>
                     updateExtra(index, key, value)
                   }
+                  onExtraDelete={(key) => deleteExtraKey(index, key)}
                   onRemove={() => removeChannel(index)}
                 />
               ))
@@ -235,6 +246,7 @@ interface ChannelEditorProps {
   onTypeChange: (type: ChannelType) => void
   onTargetChange: (target: string) => void
   onExtraChange: (key: string, value: string) => void
+  onExtraDelete: (key: string) => void
   onRemove: () => void
 }
 
@@ -262,14 +274,70 @@ function targetLabel(type: string): string {
   }
 }
 
+interface SecretInputProps {
+  value: string
+  onChange: (v: string) => void
+  placeholder?: string
+}
+
+function SecretInput({ value, onChange, placeholder }: SecretInputProps) {
+  const [visible, setVisible] = useState(false)
+  return (
+    <div className="relative flex items-center">
+      <Input
+        type={visible ? "text" : "password"}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="pr-9"
+      />
+      <button
+        type="button"
+        onClick={() => setVisible((v) => !v)}
+        className="text-muted-foreground hover:text-foreground absolute right-2.5 focus:outline-none"
+        tabIndex={-1}
+        title={visible ? "隐藏" : "显示"}
+      >
+        {visible ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+      </button>
+    </div>
+  )
+}
+
 function ChannelEditor({
   channel,
   onTypeChange,
   onTargetChange,
   onExtraChange,
+  onExtraDelete,
   onRemove,
 }: ChannelEditorProps) {
   const type = (channel.type || "webhook") as ChannelType
+
+  // For webhook: track extra headers as key/value pairs
+  const [newHeaderKey, setNewHeaderKey] = useState("")
+  const [newHeaderVal, setNewHeaderVal] = useState("")
+
+  // For non-webhook types, certain extra keys are managed by dedicated fields
+  // and should not appear in the generic header editor. For webhook, ALL extra
+  // keys are custom HTTP headers — nothing is reserved.
+  const reservedKeys: Set<string> =
+    type === "webhook"
+      ? new Set()
+      : new Set(["bot_token", "access_token", "visibility"])
+  const webhookHeaders = Object.entries(channel.extra ?? {}).filter(
+    ([k]) => !reservedKeys.has(k)
+  )
+
+  const addHeader = () => {
+    const k = newHeaderKey.trim()
+    const v = newHeaderVal.trim()
+    if (!k) return
+    onExtraChange(k, v)
+    setNewHeaderKey("")
+    setNewHeaderVal("")
+  }
+
   return (
     <div className="flex flex-col gap-2 rounded-md border p-3">
       <div className="flex items-center gap-2">
@@ -310,21 +378,97 @@ function ChannelEditor({
       {type === "telegram" && (
         <div className="flex flex-col gap-1">
           <Label className="text-xs">Bot Token</Label>
-          <Input
+          <SecretInput
             value={channel.extra?.bot_token ?? ""}
-            onChange={(e) => onExtraChange("bot_token", e.target.value)}
+            onChange={(v) => onExtraChange("bot_token", v)}
             placeholder="123456:ABC-DEF..."
           />
         </div>
       )}
       {type === "mastodon" && (
+        <>
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs">Access Token</Label>
+            <SecretInput
+              value={channel.extra?.access_token ?? ""}
+              onChange={(v) => onExtraChange("access_token", v)}
+              placeholder="应用访问令牌"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs">可见性（默认 unlisted）</Label>
+            <Input
+              value={channel.extra?.visibility ?? ""}
+              onChange={(e) => onExtraChange("visibility", e.target.value)}
+              placeholder="unlisted"
+            />
+          </div>
+        </>
+      )}
+
+      {/* Webhook custom request headers */}
+      {type === "webhook" && (
         <div className="flex flex-col gap-1">
-          <Label className="text-xs">Access Token</Label>
-          <Input
-            value={channel.extra?.access_token ?? ""}
-            onChange={(e) => onExtraChange("access_token", e.target.value)}
-            placeholder="应用访问令牌"
-          />
+          <Label className="text-xs">自定义请求头（可选）</Label>
+          {webhookHeaders.length > 0 && (
+            <div className="flex flex-col gap-1">
+              {webhookHeaders.map(([k, v]) => (
+                <div key={k} className="flex items-center gap-1">
+                  <Input
+                    className="h-7 flex-1 font-mono text-xs"
+                    value={k}
+                    readOnly
+                  />
+                  <Input
+                    className="h-7 flex-1 font-mono text-xs"
+                    value={v as string}
+                    onChange={(e) => onExtraChange(k, e.target.value)}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="size-7 shrink-0"
+                    onClick={() => onExtraDelete(k)}
+                    title="删除"
+                  >
+                    <Trash2 className="text-destructive size-3" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="flex items-center gap-1">
+            <Input
+              className="h-7 flex-1 font-mono text-xs"
+              value={newHeaderKey}
+              onChange={(e) => setNewHeaderKey(e.target.value)}
+              placeholder="Header 名称"
+            />
+            <Input
+              className="h-7 flex-1 font-mono text-xs"
+              value={newHeaderVal}
+              onChange={(e) => setNewHeaderVal(e.target.value)}
+              placeholder="值"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault()
+                  addHeader()
+                }
+              }}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="size-7 shrink-0"
+              onClick={addHeader}
+              title="添加"
+              disabled={!newHeaderKey.trim()}
+            >
+              <Plus className="size-3" />
+            </Button>
+          </div>
         </div>
       )}
     </div>
