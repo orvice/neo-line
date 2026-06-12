@@ -640,7 +640,7 @@ MCP 端点使用 header token 鉴权，支持多个持久化 token：
 - token 来源有两类，二者均有效：
   - MongoDB `mcp_tokens` 集合中存储的 token，可通过 Admin API 或 Web 控制台「MCP 接入 → 访问 Token」生成与吊销。
   - 环境变量 `MCP_AUTH_TOKEN` 配置的静态 token（向后兼容，可选）。
-- 当环境变量为空且 `mcp_tokens` 集合中没有任何 token 时，`/api/mcp` 不做鉴权（适用于受信任内网或本地开发）。
+- 匿名访问默认**拒绝**：未携带有效 token 时返回 `401`。仅当显式设置环境变量 `MCP_ALLOW_ANONYMOUS=true`、且 `MCP_AUTH_TOKEN` 为空、且 `mcp_tokens` 集合中没有任何 token 时，`/api/mcp` 才不做鉴权（仅适用于本地开发；MCP 端点可执行远程 SSH 命令，生产环境不要开启）。
 - 写入工具与读取工具共用同一组 token，没有更细粒度的权限区分；在生产环境务必配置 token。
 
 `mcp_tokens` 集合的字段：
@@ -674,8 +674,8 @@ neo-line 支持通过本地 SSH 私钥连接被监控的 server，并通过 Conn
   - `ssh.host`：SSH 连接地址，为空时回落到 server 的 `host`。
   - `ssh.port`：SSH 端口，为空时回落到全局 `ssh.port`（默认 `22`）。
   - `ssh.user`：SSH 用户，为空时回落到全局 `ssh.user`（默认 `root`）。
-- 主机密钥校验：配置了全局 `ssh.known_hosts_path` 时按 known_hosts 校验主机密钥；未配置时**不校验主机密钥**（无限制模式，仅适用于受信任内网）。
-- 命令执行带超时（`SshService.Exec` / `ssh_exec` 默认 30s，`SshService.TestConnection` / `ssh_test_connection` 固定 15s）。命令非零退出码通过 `exit_code` 返回，不视为错误；仅连接或握手失败才返回错误。
+- 主机密钥校验：启用 SSH 时**必须**配置全局 `ssh.known_hosts_path` 按 known_hosts 校验主机密钥；若要跳过校验，必须显式设置 `ssh.insecure_skip_host_key: true`（仅适用于受信任内网或本地开发），否则服务启动报错。
+- 命令执行带超时（`SshService.Exec` / `ssh_exec` 默认 30s，`SshService.TestConnection` / `ssh_test_connection` 固定 15s）。超时约束整个执行过程（拨号、握手与远端命令运行）；超时或取消时会关闭会话与底层连接以终止远端命令。命令非零退出码通过 `exit_code` 返回，不视为错误；仅连接或握手失败才返回错误。
 
 Connect API：
 

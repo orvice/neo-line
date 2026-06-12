@@ -36,8 +36,12 @@ type sshConfig struct {
 	User string `yaml:"user"`
 	// Port is the default SSH port when a server does not override it.
 	Port int `yaml:"port"`
-	// KnownHostsPath enables host key verification. Empty skips verification.
+	// KnownHostsPath enables host key verification. Required when SSH is
+	// enabled unless InsecureSkipHostKey is set.
 	KnownHostsPath string `yaml:"known_hosts_path"`
+	// InsecureSkipHostKey explicitly disables host key verification. Only for
+	// trusted networks or local development.
+	InsecureSkipHostKey bool `yaml:"insecure_skip_host_key"`
 }
 
 type mongoConfig struct {
@@ -133,10 +137,11 @@ func main() {
 				}
 
 				sshRunner, err = nlssh.New(nlssh.Config{
-					KeyPath:        appCfg.SSH.KeyPath,
-					User:           appCfg.SSH.User,
-					Port:           appCfg.SSH.Port,
-					KnownHostsPath: appCfg.SSH.KnownHostsPath,
+					KeyPath:             appCfg.SSH.KeyPath,
+					User:                appCfg.SSH.User,
+					Port:                appCfg.SSH.Port,
+					KnownHostsPath:      appCfg.SSH.KnownHostsPath,
+					InsecureSkipHostKey: appCfg.SSH.InsecureSkipHostKey,
 				})
 				if err != nil {
 					return fmt.Errorf("init ssh: %w", err)

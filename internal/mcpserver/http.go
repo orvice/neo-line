@@ -2,6 +2,8 @@ package mcpserver
 
 import (
 	"context"
+	"crypto/subtle"
+	"log/slog"
 	"net/http"
 	"os"
 	"strings"
@@ -42,13 +44,15 @@ func Register(r *gin.Engine, st store.Store, ssh *nlssh.Runner) {
 
 // authRequired enforces token auth for the MCP endpoint. A request is allowed
 // when its token matches the static MCP_AUTH_TOKEN env value or a token stored
-// in MongoDB. When neither the env value nor any stored token exists, the
-// endpoint is left open (suitable only for trusted networks or local dev).
+// in MongoDB. Unauthenticated access is refused unless MCP_ALLOW_ANONYMOUS=true
+// is set explicitly and no env token or stored token exists (local dev only —
+// the MCP endpoint can execute remote SSH commands).
 func authRequired(st store.Store) gin.HandlerFunc {
 	envToken := os.Getenv("MCP_AUTH_TOKEN")
+	allowAnonymous := strings.EqualFold(os.Getenv("MCP_ALLOW_ANONYMOUS"), "true")
 	return func(c *gin.Context) {
 		reqToken := requestToken(c)
-		if envToken != "" && reqToken == envToken {
+		if envToken != "" && subtle.ConstantTimeCompare([]byte(reqToken), []byte(envToken)) == 1 {
 			c.Set(contextTokenSourceKey, "env")
 			c.Set(contextTokenPrefixKey, tokenPrefix(reqToken))
 			attachMCPContext(c)
@@ -58,7 +62,8 @@ func authRequired(st store.Store) gin.HandlerFunc {
 		if reqToken != "" && st != nil {
 			ok, err := st.ValidateMcpToken(c.Request.Context(), reqToken)
 			if err != nil {
-				c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				slog.ErrorContext(c.Request.Context(), "validate mcp token", "error", err)
+				c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
 				return
 			}
 			if ok {
@@ -69,7 +74,7 @@ func authRequired(st store.Store) gin.HandlerFunc {
 				return
 			}
 		}
-		if envToken == "" && !tokensConfigured(c, st) {
+		if allowAnonymous && envToken == "" && !tokensConfigured(c, st) {
 			c.Set(contextTokenSourceKey, "none")
 			attachMCPContext(c)
 			c.Next()
@@ -114,10 +119,10 @@ func attachMCPContext(c *gin.Context) {
 	c.Request = c.Request.WithContext(ctx)
 }
 
+// tokenPrefix returns a short display prefix that never reveals the whole
+// token: at most maxPrefix characters and never more than half the token.
 func tokenPrefix(token string) string {
 	const maxPrefix = 12
-	if len(token) <= maxPrefix {
-		return token
-	}
-	return token[:maxPrefix]
+	n := min(len(token)/2, maxPrefix)
+	return token[:n]
 }

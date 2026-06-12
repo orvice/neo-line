@@ -25,15 +25,29 @@ func mcpRequest(body string) *http.Request {
 	return req
 }
 
-func TestMCPNoAuthByDefault(t *testing.T) {
+func TestMCPDeniesAnonymousByDefault(t *testing.T) {
 	t.Setenv("MCP_AUTH_TOKEN", "")
+	t.Setenv("MCP_ALLOW_ANONYMOUS", "")
+	r := newRouter()
+
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, mcpRequest(initBody))
+
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401 for anonymous request by default, got %d", w.Code)
+	}
+}
+
+func TestMCPAllowsAnonymousWhenOptedIn(t *testing.T) {
+	t.Setenv("MCP_AUTH_TOKEN", "")
+	t.Setenv("MCP_ALLOW_ANONYMOUS", "true")
 	r := newRouter()
 
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, mcpRequest(initBody))
 
 	if w.Code == http.StatusUnauthorized {
-		t.Fatalf("expected request to pass without token, got 401")
+		t.Fatalf("expected request to pass with MCP_ALLOW_ANONYMOUS=true, got 401")
 	}
 }
 

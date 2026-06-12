@@ -267,19 +267,53 @@ func (s *MongoStore) EnsureServerIndexes(ctx context.Context) error {
 	}); err != nil {
 		return err
 	}
+	// Lookups and updates filter on the application-level id; unique to reject
+	// duplicate caller-supplied ids.
+	if _, err := s.servers().Indexes().CreateOne(ctx, mongo.IndexModel{
+		Keys:    bson.D{{Key: "id", Value: 1}},
+		Options: options.Index().SetName("by_id").SetUnique(true),
+	}); err != nil {
+		return err
+	}
+	// Server events are listed by server_id, most recent first.
+	if _, err := s.events().Indexes().CreateOne(ctx, mongo.IndexModel{
+		Keys: bson.D{
+			{Key: "server_id", Value: 1},
+			{Key: "occurred_at", Value: -1},
+		},
+		Options: options.Index().SetName("by_server_occurred_at"),
+	}); err != nil {
+		return err
+	}
 	return nil
 }
 
 // EnsureMonitorIndexes creates indexes and backfills monitor fields introduced
 // after initial deployments.
 func (s *MongoStore) EnsureMonitorIndexes(ctx context.Context) error {
+	// Backfill only monitors without a meaningful threshold (missing or 0);
+	// never overwrite a user-configured value.
 	if _, err := s.monitors().UpdateMany(ctx,
 		bson.M{
-			"kind":         bson.M{"$in": []string{"tls", "tls_port", "tls_certificate"}},
-			"warning_days": bson.M{"$in": []uint32{0, 30}},
+			"kind": bson.M{"$in": []string{"tls", "tls_port", "tls_certificate"}},
+			"$or": []bson.M{
+				{"warning_days": bson.M{"$exists": false}},
+				{"warning_days": 0},
+			},
 		},
 		bson.M{"$set": bson.M{"warning_days": DefaultTLSWarningDays}},
 	); err != nil {
+		return err
+	}
+	// Monitor lookups and updates filter on (server_id, id); unique to reject
+	// duplicate caller-supplied ids within a server.
+	if _, err := s.monitors().Indexes().CreateOne(ctx, mongo.IndexModel{
+		Keys: bson.D{
+			{Key: "server_id", Value: 1},
+			{Key: "id", Value: 1},
+		},
+		Options: options.Index().SetName("by_server_id_id").SetUnique(true),
+	}); err != nil {
 		return err
 	}
 	return nil

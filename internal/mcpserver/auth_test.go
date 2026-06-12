@@ -63,8 +63,23 @@ func TestMCPRejectsUnknownTokenWhenStoreHasTokens(t *testing.T) {
 	}
 }
 
-func TestMCPOpenWhenNoTokensConfigured(t *testing.T) {
+func TestMCPDeniedWhenNoTokensConfiguredWithoutOptIn(t *testing.T) {
 	t.Setenv("MCP_AUTH_TOKEN", "")
+	t.Setenv("MCP_ALLOW_ANONYMOUS", "")
+	st := &fakeTokenStore{count: 0}
+	r := newRouterWithStore(st)
+
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, mcpRequest(initBody))
+
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401 with no tokens configured and no opt-in, got %d", w.Code)
+	}
+}
+
+func TestMCPOpenWhenNoTokensConfiguredWithOptIn(t *testing.T) {
+	t.Setenv("MCP_AUTH_TOKEN", "")
+	t.Setenv("MCP_ALLOW_ANONYMOUS", "true")
 	st := &fakeTokenStore{count: 0}
 	r := newRouterWithStore(st)
 
@@ -72,7 +87,21 @@ func TestMCPOpenWhenNoTokensConfigured(t *testing.T) {
 	r.ServeHTTP(w, mcpRequest(initBody))
 
 	if w.Code == http.StatusUnauthorized {
-		t.Fatalf("expected open access with no tokens configured, got 401")
+		t.Fatalf("expected open access with opt-in and no tokens configured, got 401")
+	}
+}
+
+func TestMCPAnonymousOptInIgnoredWhenTokensExist(t *testing.T) {
+	t.Setenv("MCP_AUTH_TOKEN", "")
+	t.Setenv("MCP_ALLOW_ANONYMOUS", "true")
+	st := &fakeTokenStore{valid: map[string]bool{"mcp_abc": true}, count: 1}
+	r := newRouterWithStore(st)
+
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, mcpRequest(initBody))
+
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401 when tokens exist even with opt-in, got %d", w.Code)
 	}
 }
 

@@ -50,6 +50,13 @@ func TestShouldFire(t *testing.T) {
 			want:   false,
 		},
 		{
+			name:   "recover ignored when prev is Unknown (first probe of new monitor)",
+			policy: store.AlertPolicy{OnRecover: true},
+			prev:   "Unknown",
+			curr:   "Healthy",
+			want:   false,
+		},
+		{
 			name:   "recover not triggered when staying healthy",
 			policy: store.AlertPolicy{OnRecover: true},
 			prev:   "Healthy",

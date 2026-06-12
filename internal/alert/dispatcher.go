@@ -137,8 +137,10 @@ func (d *Dispatcher) resolveChannels(ctx context.Context, notifyGroupIDs []strin
 func shouldFire(policy store.AlertPolicy, prev, curr string) bool {
 	p := normalize(prev)
 	c := normalize(curr)
-	// recovery: any non-healthy -> Healthy
-	if policy.OnRecover && p != "Healthy" && p != "" && c == "Healthy" {
+	// recovery: any non-healthy -> Healthy. A previous status of "" or
+	// "Unknown" means the monitor never had a definite state (new monitors are
+	// created with StatusUnknown), so its first Healthy probe is not a recovery.
+	if policy.OnRecover && p != "Healthy" && p != "" && p != "Unknown" && c == "Healthy" {
 		return true
 	}
 	switch c {

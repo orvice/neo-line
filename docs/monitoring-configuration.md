@@ -47,12 +47,14 @@ ssh:
   user: "root"
   port: 22
   known_hosts_path: "/etc/neo-line/known_hosts"
+  # insecure_skip_host_key: true  # 显式跳过主机密钥校验，仅限受信任内网/本地开发
 ```
 
 - `ssh.key_path`：本地私钥路径，是所有 SSH 连接的唯一私钥来源。为空时不启用 SSH 远程执行能力（API 调用返回未配置错误，MCP 不注册 SSH 工具）。私钥不存在或解析失败会导致服务启动报错。
 - `ssh.user`：默认 SSH 用户，server 未覆盖时使用，默认 `root`。
 - `ssh.port`：默认 SSH 端口，server 未覆盖时使用，默认 `22`。
-- `ssh.known_hosts_path`：known_hosts 文件路径，配置后按其校验主机密钥；为空时不校验主机密钥（仅适用于受信任内网）。
+- `ssh.known_hosts_path`：known_hosts 文件路径，启用 SSH 时必须配置并按其校验主机密钥。
+- `ssh.insecure_skip_host_key`：显式跳过主机密钥校验，默认 `false`。`known_hosts_path` 为空且此项未设为 `true` 时服务启动报错（防止无校验地连接远端主机）。
 
 每台 server 通过 `servers` 文档中的 `ssh` 子文档启用并覆盖连接目标，详见下文「Server」。
 
