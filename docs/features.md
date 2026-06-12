@@ -102,8 +102,8 @@ neo-line 会为 Connect API 和 MCP tool 调用记录操作日志：
 
 - 运行日志：通过 `slog` 输出，包含来源、动作、资源类型、资源 ID、状态、耗时等字段。
 - 持久化日志：写入 MongoDB `audit_logs` collection。审计写入失败只记录错误日志，不阻塞原 API 或 MCP 操作。
-- Connect API：统一挂载在 `/api/grpc`，覆盖公开读接口与 Admin 写接口。已登录 Admin 请求会记录 `actor_id` 与 `actor_email`。
-- MCP：覆盖所有 MCP tools，记录 tool 名、token 前缀、token 来源、资源类型、资源 ID、成功/失败与耗时。
+- Connect API：统一挂载在 `/api/grpc`，覆盖公开读接口与 Admin 写接口。已登录 Admin 请求会记录 `actor_id` 与 `actor_email`。审计拦截器位于鉴权拦截器外层，因此被鉴权拒绝（401/403）的请求同样会留下审计记录。
+- MCP：覆盖所有 MCP tools，记录 tool 名、token 前缀、token 来源、资源类型、资源 ID、成功/失败与耗时。`ssh_exec` 等带命令的工具会把命令内容（截断至 500 字符）记录到 `metadata.command`，SSH 工具的 `resource_type` 为 `ssh`。
 - 敏感信息：不会记录 Authorization header、MCP token 明文、登录密码、MCP token 创建接口返回的一次性 secret、通知通道 secret 等完整请求/响应体。
 - 查询入口：Admin 可通过 Connect API `AuditLogService.ListAuditLogs` 或 Web 控制台「审计」页面查询日志，支持 `source`、`action`、`resource_type`、`resource_id`、`actor_email`、`token_prefix`、`success`、`start_time`、`end_time`、`page_size`、`page_token` 过滤与分页。
 
@@ -675,7 +675,7 @@ neo-line 支持通过本地 SSH 私钥连接被监控的 server，并通过 Conn
   - `ssh.port`：SSH 端口，为空时回落到全局 `ssh.port`（默认 `22`）。
   - `ssh.user`：SSH 用户，为空时回落到全局 `ssh.user`（默认 `root`）。
 - 主机密钥校验：启用 SSH 时**必须**配置全局 `ssh.known_hosts_path` 按 known_hosts 校验主机密钥；若要跳过校验，必须显式设置 `ssh.insecure_skip_host_key: true`（仅适用于受信任内网或本地开发），否则服务启动报错。
-- 命令执行带超时（`SshService.Exec` / `ssh_exec` 默认 30s，`SshService.TestConnection` / `ssh_test_connection` 固定 15s）。超时约束整个执行过程（拨号、握手与远端命令运行）；超时或取消时会关闭会话与底层连接以终止远端命令。命令非零退出码通过 `exit_code` 返回，不视为错误；仅连接或握手失败才返回错误。
+- 命令执行带超时（`SshService.Exec` / `ssh_exec` 默认 30s，`SshService.TestConnection` / `ssh_test_connection` 固定 15s）。超时约束整个执行过程（拨号、握手与远端命令运行）；超时或取消时会关闭会话与底层连接以终止远端命令。命令非零退出码通过 `exit_code` 返回，不视为错误；仅连接或握手失败才返回错误。Connect API 中，超时返回 `deadline_exceeded`（`ssh command timed out`），其余连接 / 握手失败返回 `unavailable` 并保留底层错误信息以便 Admin 排障。
 
 Connect API：
 
@@ -766,7 +766,8 @@ AuthService.Logout          # 需鉴权，吊销当前 token
 **状态：** 已实现
 
 - 公开接口：`GET /ping`、`AuthService.Login`、`SettingsService.GetSettings`、`StatusService.GetStatusOverview`。
-- 需鉴权的 Admin 接口：除上述公开 Connect procedure 外的所有 Connect API，包括 server / monitor / monitor group / notify group / MCP token 的读写操作、审计日志查询、SSH 远程执行、`SettingsService.UpdateSettings`、`AuthService.GetCurrentUser` 和 `AuthService.Logout`。
+- 需鉴权的接口：除上述公开 Connect procedure 外的所有 Connect API，包括 server / monitor / monitor group / notify group / MCP token 的读写操作、审计日志查询、SSH 远程执行、`SettingsService.UpdateSettings`、`AuthService.GetCurrentUser` 和 `AuthService.Logout`。
+- 需 `admin` 角色的接口：在已登录的基础上，所有 mutating procedure（方法名以 `Create` / `Update` / `Delete` 开头）、`SshService` 全部接口和 `McpTokenService` 全部接口额外要求会话角色为 `admin`，否则返回 `permission_denied`。`AuthService`（登录、登出、查询当前用户）不受此限制。
 
 ## Monitor 分组
 
@@ -802,7 +803,7 @@ AlertPolicy 字段：
 - `on_recover`：非健康状态恢复为 `Healthy` 时派发；首次探测得到 `Healthy` 不算恢复。
 - `on_warning`：monitor 状态变为 `Warning` 时派发。
 - `on_critical`：monitor 状态变为 `Critical` 时派发。
-- `min_interval_seconds`：同 `(group, monitor)` 维度的派发节流窗口；`0` 或未填表示不节流。
+- `min_interval_seconds`：同 `(group, monitor)` 维度的派发节流窗口；`0` 或未填表示不节流。恢复（变为 `Healthy`）不受节流限制，并会重置节流窗口，确保恢复通知和恢复后的新故障都能立即派发。
 - `notify_group_ids`：引用的通知组 ID 列表（见下文「通知组」）。派发时解析这些通知组并汇总它们的全部通道。为空时该分组不向任何通道派发。
 
 ## 通知组
@@ -916,7 +917,7 @@ MongoDB 是 neo-line 监控业务配置和运行结果的主要存储。
 - 结果在内存中缓冲并按批刷写为 NDJSON（每行一条结果）对象，避免每次探测都产生一个小对象。
 - 刷写触发：攒够 `archive.batch_size` 条，或经过 `archive.flush_interval_seconds` 秒，二者先到先刷；进程退出时排空缓冲并执行最后一次刷写。
 - 内存缓冲有上限（10000 条）。当 S3 持续不可用导致缓冲写满时，丢弃最旧的结果并记录告警，保证内存不会无限增长。
-- 刷写失败只记录日志，下一周期继续尝试。
+- 刷写失败时保留该批数据，由下一次定时刷写重试（编码失败等永久性错误除外）；重试期间暂停按条数触发的刷写，避免 S3 故障时每条结果都触发一次上传尝试。退出时的最后一次刷写只尝试一次，失败则放弃，保证进程关停不被不可用的后端阻塞。
 
 对象布局（按 UTC 时间分区）：
 

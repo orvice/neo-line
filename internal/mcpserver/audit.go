@@ -27,6 +27,9 @@ func addAuditedTool[In, Out any](srv *mcp.Server, tool *mcp.Tool, st store.Store
 			Metadata:     map[string]string{"token_source": contextString(ctx, mcpContextTokenSourceKey)},
 			OccurredAt:   start.UTC(),
 		}
+		if cmd := commandField(input); cmd != "" {
+			entry.Metadata["command"] = cmd
+		}
 		if err != nil {
 			entry.Error = err.Error()
 		}
@@ -69,6 +72,8 @@ func contextString(ctx context.Context, key mcpContextKey) string {
 
 func mcpResourceType(toolName string) string {
 	switch {
+	case strings.HasPrefix(toolName, "ssh"):
+		return "ssh"
 	case strings.Contains(toolName, "notify_group"):
 		return "notify_group"
 	case strings.Contains(toolName, "monitor_group"):
@@ -82,6 +87,29 @@ func mcpResourceType(toolName string) string {
 	default:
 		return ""
 	}
+}
+
+// commandField extracts a Command string from the tool input so remote
+// executions are reconstructable from the audit log. Truncated to keep audit
+// entries bounded.
+func commandField(input any) string {
+	const maxCommandLen = 500
+	value := reflect.ValueOf(input)
+	if value.Kind() == reflect.Pointer && !value.IsNil() {
+		value = value.Elem()
+	}
+	if !value.IsValid() || value.Kind() != reflect.Struct {
+		return ""
+	}
+	field := value.FieldByName("Command")
+	if !field.IsValid() || field.Kind() != reflect.String {
+		return ""
+	}
+	cmd := field.String()
+	if len(cmd) > maxCommandLen {
+		cmd = cmd[:maxCommandLen] + "…"
+	}
+	return cmd
 }
 
 func resourceID(input any) string {

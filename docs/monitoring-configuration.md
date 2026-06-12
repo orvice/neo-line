@@ -431,7 +431,7 @@ alert_policy:
 - `on_recover`：非健康状态恢复为 `Healthy` 时派发（首次探测得到 `Healthy` 不算恢复）
 - `on_warning`：monitor 状态变为 `Warning` 时派发
 - `on_critical`：monitor 状态变为 `Critical` 时派发
-- `min_interval_seconds`：同 `(group, monitor)` 维度的派发节流窗口；`0` 或未填表示不节流
+- `min_interval_seconds`：同 `(group, monitor)` 维度的派发节流窗口；`0` 或未填表示不节流。恢复（变为 `Healthy`）不受节流限制，并会重置节流窗口
 - `notify_group_ids`：引用的通知组 ID 列表；派发时解析这些通知组并汇总它们的全部通道。为空时不派发
 
 ### 通知组（NotifyGroup）
