@@ -110,16 +110,43 @@ func (a *S3Archiver) Run(ctx context.Context) {
 	defer ticker.Stop()
 
 	batch := make([]store.CheckResult, 0, a.cfg.BatchSize)
-	flush := func() {
+	flushFailed := false
+
+	// flush uploads the current batch. On retryable failure the batch is kept
+	// (capped at bufferCapacity, dropping oldest) and retried on the next
+	// ticker; final=true performs the one shutdown attempt and then accepts the
+	// loss so teardown is not stalled by an unavailable backend.
+	flush := func(final bool) {
 		if len(batch) == 0 {
 			return
 		}
 		uploadCtx, cancel := context.WithTimeout(context.Background(), flushTimeout)
 		defer cancel()
-		if err := a.flush(uploadCtx, batch); err != nil {
-			a.logger.Error("archive flush failed", "count", len(batch), "error", err.Error())
+		retryable, err := a.flush(uploadCtx, batch)
+		if err == nil {
+			batch = batch[:0]
+			flushFailed = false
+			return
 		}
-		batch = batch[:0]
+		a.logger.Error("archive flush failed", "count", len(batch), "final", final, "error", err.Error())
+		if final || !retryable {
+			batch = batch[:0]
+			return
+		}
+		flushFailed = true
+		if drop := len(batch) - bufferCapacity; drop > 0 {
+			a.logger.Warn("archive retry buffer full, dropping oldest results", "dropped", drop)
+			batch = append(batch[:0], batch[drop:]...)
+		}
+	}
+
+	// flushOnSize triggers a size-based flush, but not while the previous flush
+	// failed: retries are paced by the ticker so an S3 outage does not turn
+	// every enqueued result into a blocking upload attempt.
+	flushOnSize := func() {
+		if len(batch) >= a.cfg.BatchSize && !flushFailed {
+			flush(false)
+		}
 	}
 
 	for {
@@ -129,31 +156,29 @@ func (a *S3Archiver) Run(ctx context.Context) {
 				select {
 				case r := <-a.ch:
 					batch = append(batch, r)
-					if len(batch) >= a.cfg.BatchSize {
-						flush()
-					}
+					flushOnSize()
 				default:
-					flush()
+					flush(true)
 					a.logger.Info("archive stopped")
 					return
 				}
 			}
 		case r := <-a.ch:
 			batch = append(batch, r)
-			if len(batch) >= a.cfg.BatchSize {
-				flush()
-			}
+			flushOnSize()
 		case <-ticker.C:
-			flush()
+			flush(false)
 		}
 	}
 }
 
-// flush uploads one NDJSON object containing the batch.
-func (a *S3Archiver) flush(ctx context.Context, batch []store.CheckResult) error {
+// flush uploads one NDJSON object containing the batch. retryable reports
+// whether a failure is worth retrying with the same batch: encoding errors are
+// permanent, upload errors are transient.
+func (a *S3Archiver) flush(ctx context.Context, batch []store.CheckResult) (retryable bool, err error) {
 	body, err := encodeBatch(batch)
 	if err != nil {
-		return err
+		return false, err
 	}
 	key := objectKey(a.cfg.Prefix, time.Now().UTC(), len(batch))
 	_, err = a.client.PutObject(ctx, &s3.PutObjectInput{
@@ -163,10 +188,10 @@ func (a *S3Archiver) flush(ctx context.Context, batch []store.CheckResult) error
 		ContentType: aws.String("application/x-ndjson"),
 	})
 	if err != nil {
-		return err
+		return true, err
 	}
 	a.logger.Debug("archive flushed", "key", key, "count", len(batch), "bytes", len(body))
-	return nil
+	return false, nil
 }
 
 // encodeBatch serializes results as newline-delimited JSON (one result per line).

@@ -267,19 +267,53 @@ func (s *MongoStore) EnsureServerIndexes(ctx context.Context) error {
 	}); err != nil {
 		return err
 	}
+	// Lookups and updates filter on the application-level id; unique to reject
+	// duplicate caller-supplied ids.
+	if _, err := s.servers().Indexes().CreateOne(ctx, mongo.IndexModel{
+		Keys:    bson.D{{Key: "id", Value: 1}},
+		Options: options.Index().SetName("by_id").SetUnique(true),
+	}); err != nil {
+		return err
+	}
+	// Server events are listed by server_id, most recent first.
+	if _, err := s.events().Indexes().CreateOne(ctx, mongo.IndexModel{
+		Keys: bson.D{
+			{Key: "server_id", Value: 1},
+			{Key: "occurred_at", Value: -1},
+		},
+		Options: options.Index().SetName("by_server_occurred_at"),
+	}); err != nil {
+		return err
+	}
 	return nil
 }
 
 // EnsureMonitorIndexes creates indexes and backfills monitor fields introduced
 // after initial deployments.
 func (s *MongoStore) EnsureMonitorIndexes(ctx context.Context) error {
+	// Backfill only monitors without a meaningful threshold (missing or 0);
+	// never overwrite a user-configured value.
 	if _, err := s.monitors().UpdateMany(ctx,
 		bson.M{
-			"kind":         bson.M{"$in": []string{"tls", "tls_port", "tls_certificate"}},
-			"warning_days": bson.M{"$in": []uint32{0, 30}},
+			"kind": bson.M{"$in": []string{"tls", "tls_port", "tls_certificate"}},
+			"$or": []bson.M{
+				{"warning_days": bson.M{"$exists": false}},
+				{"warning_days": 0},
+			},
 		},
 		bson.M{"$set": bson.M{"warning_days": DefaultTLSWarningDays}},
 	); err != nil {
+		return err
+	}
+	// Monitor lookups and updates filter on (server_id, id); unique to reject
+	// duplicate caller-supplied ids within a server.
+	if _, err := s.monitors().Indexes().CreateOne(ctx, mongo.IndexModel{
+		Keys: bson.D{
+			{Key: "server_id", Value: 1},
+			{Key: "id", Value: 1},
+		},
+		Options: options.Index().SetName("by_server_id_id").SetUnique(true),
+	}); err != nil {
 		return err
 	}
 	return nil
@@ -415,8 +449,14 @@ func (s *MongoStore) UpdateServer(ctx context.Context, id string, server Server)
 	server.LastStatusChangeAt = existing.LastStatusChangeAt
 	server.LastCheckAt = existing.LastCheckAt
 	server.UpdatedAt = time.Now().UTC()
-	_, err = s.servers().ReplaceOne(ctx, bson.M{"id": id}, server)
-	return server, err
+	res, err := s.servers().ReplaceOne(ctx, bson.M{"id": id}, server)
+	if err != nil {
+		return Server{}, err
+	}
+	if res.MatchedCount == 0 {
+		return Server{}, mongo.ErrNoDocuments
+	}
+	return server, nil
 }
 
 func (s *MongoStore) DeleteServer(ctx context.Context, id string) error {
@@ -427,7 +467,13 @@ func (s *MongoStore) DeleteServer(ctx context.Context, id string) error {
 	if res.DeletedCount == 0 {
 		return mongo.ErrNoDocuments
 	}
-	_, err = s.monitors().DeleteMany(ctx, bson.M{"server_id": id})
+	if _, err := s.monitors().DeleteMany(ctx, bson.M{"server_id": id}); err != nil {
+		return err
+	}
+	if _, err := s.results().DeleteMany(ctx, bson.M{"server_id": id}); err != nil {
+		return err
+	}
+	_, err = s.events().DeleteMany(ctx, bson.M{"server_id": id})
 	return err
 }
 
@@ -475,10 +521,17 @@ func (s *MongoStore) UpdateMonitor(ctx context.Context, serverID, monitorID stri
 	monitor.Status = valueOr(monitor.Status, existing.Status)
 	monitor.LastCheckAt = existing.LastCheckAt
 	monitor.LastStatusChangeAt = existing.LastStatusChangeAt
+	monitor.Certificate = existing.Certificate
 	monitor.UpdatedAt = time.Now().UTC()
 	applyMonitorDefaults(&monitor)
-	_, err = s.monitors().ReplaceOne(ctx, bson.M{"server_id": serverID, "id": monitorID}, monitor)
-	return monitor, err
+	res, err := s.monitors().ReplaceOne(ctx, bson.M{"server_id": serverID, "id": monitorID}, monitor)
+	if err != nil {
+		return Monitor{}, err
+	}
+	if res.MatchedCount == 0 {
+		return Monitor{}, mongo.ErrNoDocuments
+	}
+	return monitor, nil
 }
 
 func (s *MongoStore) DeleteMonitor(ctx context.Context, serverID, monitorID string) error {
@@ -489,7 +542,8 @@ func (s *MongoStore) DeleteMonitor(ctx context.Context, serverID, monitorID stri
 	if res.DeletedCount == 0 {
 		return mongo.ErrNoDocuments
 	}
-	return nil
+	_, err = s.results().DeleteMany(ctx, bson.M{"server_id": serverID, "monitor_id": monitorID})
+	return err
 }
 
 func (s *MongoStore) ListCheckResults(ctx context.Context, serverID, monitorID string, limit int64, pageToken string, start, end *time.Time) ([]CheckResult, string, error) {

@@ -85,7 +85,12 @@ func (d *Dispatcher) OnMonitorStatusChange(ctx context.Context, monitor store.Mo
 				"prev", normalize(prev), "curr", normalize(curr))
 			continue
 		}
-		if !d.allowThrottle(groupID, monitor.ID, policy.MinIntervalSeconds, occurredAt) {
+		// Recovery notifications are never throttled: suppressing them would
+		// leave receivers believing the service is still down. A recovery also
+		// resets the throttle window so the next incident alerts immediately.
+		if normalize(curr) == "Healthy" {
+			d.resetThrottle(groupID, monitor.ID)
+		} else if !d.allowThrottle(groupID, monitor.ID, policy.MinIntervalSeconds, occurredAt) {
 			d.logger.Info("alert throttled",
 				"group_id", groupID, "monitor_id", monitor.ID,
 				"min_interval_seconds", policy.MinIntervalSeconds)
@@ -137,8 +142,10 @@ func (d *Dispatcher) resolveChannels(ctx context.Context, notifyGroupIDs []strin
 func shouldFire(policy store.AlertPolicy, prev, curr string) bool {
 	p := normalize(prev)
 	c := normalize(curr)
-	// recovery: any non-healthy -> Healthy
-	if policy.OnRecover && p != "Healthy" && p != "" && c == "Healthy" {
+	// recovery: any non-healthy -> Healthy. A previous status of "" or
+	// "Unknown" means the monitor never had a definite state (new monitors are
+	// created with StatusUnknown), so its first Healthy probe is not a recovery.
+	if policy.OnRecover && p != "Healthy" && p != "" && p != "Unknown" && c == "Healthy" {
 		return true
 	}
 	switch c {
@@ -150,6 +157,12 @@ func shouldFire(policy store.AlertPolicy, prev, curr string) bool {
 		return policy.OnWarning
 	}
 	return false
+}
+
+func (d *Dispatcher) resetThrottle(groupID, monitorID string) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	delete(d.last, groupID+"|"+monitorID)
 }
 
 func (d *Dispatcher) allowThrottle(groupID, monitorID string, minIntervalSeconds uint32, now time.Time) bool {

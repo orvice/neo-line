@@ -80,14 +80,15 @@ func (s *MongoStore) SaveCheckResult(ctx context.Context, result CheckResult) (s
 
 	var current Monitor
 	var prevStatus string
-	err := s.monitors().FindOne(ctx, bson.M{"id": result.MonitorID}).Decode(&current)
+	monitorFilter := bson.M{"server_id": result.ServerID, "id": result.MonitorID}
+	err := s.monitors().FindOne(ctx, monitorFilter).Decode(&current)
 	if err == nil {
 		prevStatus = current.Status
 		if normalizeStatus(current.Status) != normalizeStatus(result.Status) {
 			update["last_status_change_at"] = now
 		}
 	}
-	if _, err := s.monitors().UpdateOne(ctx, bson.M{"id": result.MonitorID}, bson.M{"$set": update}); err != nil {
+	if _, err := s.monitors().UpdateOne(ctx, monitorFilter, bson.M{"$set": update}); err != nil {
 		return prevStatus, err
 	}
 

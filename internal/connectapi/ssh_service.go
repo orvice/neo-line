@@ -23,7 +23,7 @@ func (s *Service) Exec(ctx context.Context, req *connect.Request[pb.SshServiceEx
 	}
 	res, err := s.ssh.Exec(ctx, target, command, time.Duration(req.Msg.GetTimeoutSeconds())*time.Second)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
+		return nil, sshExecError(err)
 	}
 	return connect.NewResponse(&pb.SshServiceExecResponse{
 		ServerId: req.Msg.GetServerId(),
@@ -41,7 +41,7 @@ func (s *Service) TestConnection(ctx context.Context, req *connect.Request[pb.Ss
 	}
 	res, err := s.ssh.Exec(ctx, target, "echo neo-line-ssh-ok", 15*time.Second)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
+		return nil, sshExecError(err)
 	}
 	return connect.NewResponse(&pb.SshServiceTestConnectionResponse{
 		ServerId: req.Msg.GetServerId(),
@@ -49,6 +49,16 @@ func (s *Service) TestConnection(ctx context.Context, req *connect.Request[pb.Ss
 		Ok:       res.ExitCode == 0,
 		Output:   res.Stdout,
 	}), nil
+}
+
+// sshExecError surfaces SSH connection failures (dial, handshake, timeout) to
+// the admin caller — they describe the remote target and are needed for
+// troubleshooting — without classifying them as internal server errors.
+func sshExecError(err error) error {
+	if errors.Is(err, context.DeadlineExceeded) {
+		return connect.NewError(connect.CodeDeadlineExceeded, errors.New("ssh command timed out"))
+	}
+	return connect.NewError(connect.CodeUnavailable, err)
 }
 
 func (s *Service) sshTarget(ctx context.Context, serverID string) (nlssh.Target, error) {
@@ -64,6 +74,6 @@ func (s *Service) sshTarget(ctx context.Context, serverID string) (nlssh.Target,
 	case strings.HasPrefix(err.Error(), "ssh is not enabled for server"):
 		return nlssh.Target{}, connect.NewError(connect.CodePermissionDenied, err)
 	default:
-		return nlssh.Target{}, connect.NewError(connect.CodeInternal, err)
+		return nlssh.Target{}, internalError(err)
 	}
 }

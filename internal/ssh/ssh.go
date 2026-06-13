@@ -28,9 +28,12 @@ type Config struct {
 	User string
 	// Port is the default SSH port when a server does not override it.
 	Port int
-	// KnownHostsPath enables host key verification. When empty, host keys are
-	// not verified (unrestricted mode).
+	// KnownHostsPath enables host key verification against an OpenSSH
+	// known_hosts file. Required unless InsecureSkipHostKey is set.
 	KnownHostsPath string
+	// InsecureSkipHostKey disables host key verification. Only for trusted
+	// networks or local development; leaves connections open to MITM.
+	InsecureSkipHostKey bool
 }
 
 // Target identifies a single SSH endpoint. Empty fields fall back to the
@@ -72,12 +75,17 @@ func New(cfg Config) (*Runner, error) {
 		return nil, fmt.Errorf("parse ssh key %q: %w", cfg.KeyPath, err)
 	}
 
-	hostKeyCb := ssh.InsecureIgnoreHostKey()
-	if cfg.KnownHostsPath != "" {
+	var hostKeyCb ssh.HostKeyCallback
+	switch {
+	case cfg.KnownHostsPath != "":
 		hostKeyCb, err = knownhosts.New(cfg.KnownHostsPath)
 		if err != nil {
 			return nil, fmt.Errorf("load known_hosts %q: %w", cfg.KnownHostsPath, err)
 		}
+	case cfg.InsecureSkipHostKey:
+		hostKeyCb = ssh.InsecureIgnoreHostKey()
+	default:
+		return nil, errors.New("ssh host key verification requires known_hosts_path; set insecure_skip_host_key: true to explicitly disable verification")
 	}
 
 	port := cfg.Port
@@ -112,6 +120,10 @@ func (r *Runner) Exec(ctx context.Context, target Target, command string, timeou
 	if timeout <= 0 {
 		timeout = 30 * time.Second
 	}
+	// Bound the whole exec (dial, handshake, and command run), not just the
+	// connection setup.
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
 
 	clientCfg := &ssh.ClientConfig{
 		User:            user,
@@ -148,20 +160,27 @@ func (r *Runner) Exec(ctx context.Context, target Target, command string, timeou
 	done := make(chan error, 1)
 	go func() { done <- session.Run(command) }()
 
+	var runErr error
 	select {
 	case <-ctx.Done():
+		// Closing the session is the reliable way to abort a remote command
+		// (SIGKILL signals are ignored by older OpenSSH servers); closing the
+		// TCP conn guarantees Run unblocks even on a dead network. Wait for
+		// the Run goroutine to finish so the output buffers are no longer
+		// written to before reading them.
 		_ = session.Signal(ssh.SIGKILL)
+		session.Close()
+		conn.Close()
+		<-done
 		return Result{Stdout: stdout.String(), Stderr: stderr.String()}, ctx.Err()
-	case runErr := <-done:
-		res := Result{Stdout: stdout.String(), Stderr: stderr.String()}
-		var exitErr *ssh.ExitError
-		if errors.As(runErr, &exitErr) {
-			res.ExitCode = exitErr.ExitStatus()
-			return res, nil
-		}
-		if runErr != nil {
-			return res, runErr
-		}
+	case runErr = <-done:
+	}
+
+	res := Result{Stdout: stdout.String(), Stderr: stderr.String()}
+	var exitErr *ssh.ExitError
+	if errors.As(runErr, &exitErr) {
+		res.ExitCode = exitErr.ExitStatus()
 		return res, nil
 	}
+	return res, runErr
 }

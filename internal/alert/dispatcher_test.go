@@ -50,6 +50,13 @@ func TestShouldFire(t *testing.T) {
 			want:   false,
 		},
 		{
+			name:   "recover ignored when prev is Unknown (first probe of new monitor)",
+			policy: store.AlertPolicy{OnRecover: true},
+			prev:   "Unknown",
+			curr:   "Healthy",
+			want:   false,
+		},
+		{
 			name:   "recover not triggered when staying healthy",
 			policy: store.AlertPolicy{OnRecover: true},
 			prev:   "Healthy",
@@ -98,6 +105,23 @@ func TestAllowThrottle(t *testing.T) {
 	}
 	if !d.allowThrottle("grp1", "mon1", 0, now.Add(1*time.Second)) {
 		t.Fatal("zero interval disables throttling")
+	}
+}
+
+func TestResetThrottleClearsWindow(t *testing.T) {
+	d := New(nil, nil)
+	now := time.Date(2026, 5, 30, 10, 0, 0, 0, time.UTC)
+
+	if !d.allowThrottle("grp1", "mon1", 300, now) {
+		t.Fatal("first call should be allowed")
+	}
+	if d.allowThrottle("grp1", "mon1", 300, now.Add(time.Minute)) {
+		t.Fatal("second call within window should be throttled")
+	}
+	// A recovery resets the window so the next incident alerts immediately.
+	d.resetThrottle("grp1", "mon1")
+	if !d.allowThrottle("grp1", "mon1", 300, now.Add(2*time.Minute)) {
+		t.Fatal("call after reset should be allowed")
 	}
 }
 

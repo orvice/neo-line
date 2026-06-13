@@ -47,12 +47,14 @@ ssh:
   user: "root"
   port: 22
   known_hosts_path: "/etc/neo-line/known_hosts"
+  # insecure_skip_host_key: true  # 显式跳过主机密钥校验，仅限受信任内网/本地开发
 ```
 
 - `ssh.key_path`：本地私钥路径，是所有 SSH 连接的唯一私钥来源。为空时不启用 SSH 远程执行能力（API 调用返回未配置错误，MCP 不注册 SSH 工具）。私钥不存在或解析失败会导致服务启动报错。
 - `ssh.user`：默认 SSH 用户，server 未覆盖时使用，默认 `root`。
 - `ssh.port`：默认 SSH 端口，server 未覆盖时使用，默认 `22`。
-- `ssh.known_hosts_path`：known_hosts 文件路径，配置后按其校验主机密钥；为空时不校验主机密钥（仅适用于受信任内网）。
+- `ssh.known_hosts_path`：known_hosts 文件路径，启用 SSH 时必须配置并按其校验主机密钥。
+- `ssh.insecure_skip_host_key`：显式跳过主机密钥校验，默认 `false`。`known_hosts_path` 为空且此项未设为 `true` 时服务启动报错（防止无校验地连接远端主机）。
 
 每台 server 通过 `servers` 文档中的 `ssh` 子文档启用并覆盖连接目标，详见下文「Server」。
 
@@ -140,7 +142,7 @@ retries: 3
 
 字段说明：
 
-- `id`：monitor 唯一标识；创建时如果未提供，会自动生成 `mon_<uuid>`。
+- `id`：monitor 标识；在所属 server 内唯一（唯一索引为 `(server_id, id)`）。创建时如果未提供，会自动生成 `mon_<uuid>`。运行时写入探测结果与查询 monitor 状态时均以 `(server_id, id)` 为条件，避免不同 server 下同名 id 互相串改状态。
 - `server_id`：关联的 server ID，由 URL 路径中的 server ID 写入
 - `group_ids`：所属分组 ID 列表，可选；每个 ID 必须在 `monitor_groups` 中存在，否则写入返回 `400`
 - `name`：monitor 显示名称
@@ -429,7 +431,7 @@ alert_policy:
 - `on_recover`：非健康状态恢复为 `Healthy` 时派发（首次探测得到 `Healthy` 不算恢复）
 - `on_warning`：monitor 状态变为 `Warning` 时派发
 - `on_critical`：monitor 状态变为 `Critical` 时派发
-- `min_interval_seconds`：同 `(group, monitor)` 维度的派发节流窗口；`0` 或未填表示不节流
+- `min_interval_seconds`：同 `(group, monitor)` 维度的派发节流窗口；`0` 或未填表示不节流。恢复（变为 `Healthy`）不受节流限制，并会重置节流窗口
 - `notify_group_ids`：引用的通知组 ID 列表；派发时解析这些通知组并汇总它们的全部通道。为空时不派发
 
 ### 通知组（NotifyGroup）

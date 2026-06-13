@@ -59,24 +59,23 @@ func serverToProto(s store.Server) *pb.Server {
 	return out
 }
 
+// serverFromProto maps client-supplied fields onto a store.Server. Computed and
+// server-managed fields (health status, status-change/check timestamps,
+// created/updated timestamps) are intentionally omitted: the store derives them
+// so a client cannot forge a monitor's health or rewrite its history.
 func serverFromProto(p *pb.Server) store.Server {
 	if p == nil {
 		return store.Server{}
 	}
 	out := store.Server{
-		ID:                 p.GetId(),
-		Name:               p.GetName(),
-		Host:               p.GetHost(),
-		Environment:        p.GetEnvironment(),
-		Region:             p.GetRegion(),
-		Tags:               p.GetTags(),
-		SortOrder:          p.GetSortOrder(),
-		Enabled:            p.GetEnabled(),
-		HealthStatus:       p.GetHealthStatus(),
-		LastStatusChangeAt: tsToTime(p.GetLastStatusChangeAt()),
-		LastCheckAt:        tsToTime(p.GetLastCheckAt()),
-		CreatedAt:          tsToTime(p.GetCreatedAt()),
-		UpdatedAt:          tsToTime(p.GetUpdatedAt()),
+		ID:          p.GetId(),
+		Name:        p.GetName(),
+		Host:        p.GetHost(),
+		Environment: p.GetEnvironment(),
+		Region:      p.GetRegion(),
+		Tags:        p.GetTags(),
+		SortOrder:   p.GetSortOrder(),
+		Enabled:     p.GetEnabled(),
 	}
 	if ssh := p.GetSsh(); ssh != nil {
 		out.SSH = &store.ServerSSH{
@@ -132,21 +131,6 @@ func certToProto(c *store.CertificateInfo) *pb.CertificateInfo {
 	}
 }
 
-func certFromProto(c *pb.CertificateInfo) *store.CertificateInfo {
-	if c == nil {
-		return nil
-	}
-	return &store.CertificateInfo{
-		Subject:       c.GetSubject(),
-		Issuer:        c.GetIssuer(),
-		DNSNames:      c.GetDnsNames(),
-		SerialNumber:  c.GetSerialNumber(),
-		NotBefore:     tsToTime(c.GetNotBefore()),
-		NotAfter:      tsToTime(c.GetNotAfter()),
-		DaysRemaining: c.GetDaysRemaining(),
-	}
-}
-
 // --- Monitor ---
 
 func monitorToProto(m store.Monitor) *pb.Monitor {
@@ -180,6 +164,11 @@ func monitorToProto(m store.Monitor) *pb.Monitor {
 	}
 }
 
+// monitorFromProto maps client-supplied fields onto a store.Monitor. Computed
+// and probe-managed fields (status, last-check/status-change timestamps, the
+// observed certificate, created/updated timestamps) are intentionally omitted so
+// a client cannot forge a monitor's status or certificate; the store and probe
+// own those values.
 func monitorFromProto(p *pb.Monitor) store.Monitor {
 	if p == nil {
 		return store.Monitor{}
@@ -205,12 +194,6 @@ func monitorFromProto(p *pb.Monitor) store.Monitor {
 		IntervalSeconds:     p.GetIntervalSeconds(),
 		TimeoutSeconds:      p.GetTimeoutSeconds(),
 		Retries:             p.GetRetries(),
-		Status:              p.GetStatus(),
-		LastCheckAt:         tsToTime(p.GetLastCheckAt()),
-		LastStatusChangeAt:  tsToTime(p.GetLastStatusChangeAt()),
-		Certificate:         certFromProto(p.GetCertificate()),
-		CreatedAt:           tsToTime(p.GetCreatedAt()),
-		UpdatedAt:           tsToTime(p.GetUpdatedAt()),
 	}
 }
 

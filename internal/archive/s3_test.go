@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"log/slog"
 	"strings"
@@ -16,14 +17,19 @@ import (
 )
 
 type fakeUploader struct {
-	mu   sync.Mutex
-	puts [][]byte
-	keys []string
+	mu       sync.Mutex
+	puts     [][]byte
+	keys     []string
+	failures int
 }
 
 func (f *fakeUploader) PutObject(_ context.Context, in *s3.PutObjectInput, _ ...func(*s3.Options)) (*s3.PutObjectOutput, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
+	if f.failures > 0 {
+		f.failures--
+		return nil, errors.New("s3 unavailable")
+	}
 	body, _ := io.ReadAll(in.Body)
 	f.puts = append(f.puts, body)
 	f.keys = append(f.keys, *in.Key)
@@ -133,6 +139,42 @@ func TestRunDrainsAndFlushesOnShutdown(t *testing.T) {
 	lines := bytes.Split(bytes.TrimRight(puts[0], "\n"), []byte("\n"))
 	if len(lines) != 2 {
 		t.Fatalf("shutdown flush wrote %d results, want 2", len(lines))
+	}
+}
+
+func TestRunRetriesFailedFlush(t *testing.T) {
+	fake := &fakeUploader{failures: 1}
+	a := newWithClient(fake, Config{Bucket: "b", Prefix: "p", BatchSize: 2, FlushInterval: 50 * time.Millisecond}, discardLogger())
+
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	go func() { a.Run(ctx); close(done) }()
+
+	// First flush attempt (size-triggered) fails; the ticker retry must
+	// re-upload the same batch instead of dropping it.
+	a.Enqueue(store.CheckResult{ID: "res_1", MonitorID: "mon_1", Status: store.StatusHealthy})
+	a.Enqueue(store.CheckResult{ID: "res_2", MonitorID: "mon_1", Status: store.StatusDown})
+
+	deadline := time.After(2 * time.Second)
+	for {
+		puts, _ := fake.snapshot()
+		if len(puts) >= 1 {
+			break
+		}
+		select {
+		case <-deadline:
+			t.Fatal("expected the failed batch to be retried and uploaded")
+		case <-time.After(10 * time.Millisecond):
+		}
+	}
+
+	cancel()
+	<-done
+
+	puts, _ := fake.snapshot()
+	lines := bytes.Split(bytes.TrimRight(puts[0], "\n"), []byte("\n"))
+	if len(lines) != 2 {
+		t.Fatalf("retried flush wrote %d results, want 2", len(lines))
 	}
 }
 

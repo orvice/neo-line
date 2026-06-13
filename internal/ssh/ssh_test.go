@@ -60,6 +60,45 @@ func TestNewLoadsDefaultsAndKnownHosts(t *testing.T) {
 	}
 }
 
+func TestNewRequiresHostKeyVerification(t *testing.T) {
+	dir := t.TempDir()
+	keyPath := filepath.Join(dir, "id_ed25519")
+	writeTestKey(t, keyPath)
+
+	if _, err := New(Config{KeyPath: keyPath}); err == nil {
+		t.Fatal("New() without known_hosts and without insecure opt-in should error")
+	}
+}
+
+func TestNewAllowsExplicitInsecureHostKey(t *testing.T) {
+	dir := t.TempDir()
+	keyPath := filepath.Join(dir, "id_ed25519")
+	writeTestKey(t, keyPath)
+
+	runner, err := New(Config{KeyPath: keyPath, InsecureSkipHostKey: true})
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+	if runner == nil || runner.hostKeyCb == nil {
+		t.Fatal("New() runner or hostKeyCb is nil")
+	}
+}
+
+func writeTestKey(t *testing.T, keyPath string) {
+	t.Helper()
+	_, privateKey, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		t.Fatalf("generate key: %v", err)
+	}
+	pemBlock, err := ssh.MarshalPrivateKey(privateKey, "test@neo-line")
+	if err != nil {
+		t.Fatalf("marshal key: %v", err)
+	}
+	if err := os.WriteFile(keyPath, pem.EncodeToMemory(pemBlock), 0o600); err != nil {
+		t.Fatalf("write key: %v", err)
+	}
+}
+
 func TestExecDisabled(t *testing.T) {
 	var runner *Runner
 	_, err := runner.Exec(t.Context(), Target{Host: "example.com"}, "true", 0)

@@ -2,6 +2,7 @@ package connectapi
 
 import (
 	"errors"
+	"log/slog"
 
 	"connectrpc.com/connect"
 	"github.com/orvice/neo-line/internal/store"
@@ -25,6 +26,13 @@ func toConnectError(err error) error {
 	case err.Error() == "invalid page_token":
 		return connect.NewError(connect.CodeInvalidArgument, err)
 	default:
-		return connect.NewError(connect.CodeInternal, err)
+		return internalError(err)
 	}
+}
+
+// internalError logs the real error server-side and returns a generic message
+// so store/driver details never reach clients.
+func internalError(err error) error {
+	slog.Error("internal error", "error", err)
+	return connect.NewError(connect.CodeInternal, errors.New("internal error"))
 }

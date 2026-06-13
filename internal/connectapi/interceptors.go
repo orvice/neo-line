@@ -21,12 +21,38 @@ var publicProcedures = map[string]bool{
 	neolinev1connect.SettingsServiceGetSettingsProcedure:     true,
 }
 
-// authInterceptor validates the bearer token for non-public procedures and
-// attaches the resolved session to the context.
+// adminProcedureExempt lists services whose procedures never require the admin
+// role even when their method names look mutating (login/logout manage the
+// caller's own session).
+var adminProcedureExempt = map[string]bool{
+	"AuthService": true,
+}
+
+// requiresAdmin reports whether a procedure is restricted to admin sessions:
+// remote command execution, MCP token management, and every mutating
+// (Create/Update/Delete) procedure.
+func requiresAdmin(procedure string) bool {
+	service, method := splitProcedure(procedure)
+	if adminProcedureExempt[service] {
+		return false
+	}
+	switch service {
+	case "SshService", "McpTokenService":
+		return true
+	}
+	return strings.HasPrefix(method, "Create") ||
+		strings.HasPrefix(method, "Update") ||
+		strings.HasPrefix(method, "Delete")
+}
+
+// authInterceptor validates the bearer token for non-public procedures,
+// attaches the resolved session to the context, and enforces the admin role on
+// restricted procedures.
 func (s *Service) authInterceptor() connect.UnaryInterceptorFunc {
 	return func(next connect.UnaryFunc) connect.UnaryFunc {
 		return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
-			if publicProcedures[req.Spec().Procedure] {
+			procedure := req.Spec().Procedure
+			if publicProcedures[procedure] {
 				return next(ctx, req)
 			}
 			token := bearerToken(req.Header().Get("Authorization"))
@@ -38,7 +64,11 @@ func (s *Service) authInterceptor() connect.UnaryInterceptorFunc {
 				if store.IsNotFound(err) {
 					return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("invalid or expired token"))
 				}
-				return nil, connect.NewError(connect.CodeInternal, err)
+				slog.ErrorContext(ctx, "resolve session", "error", err)
+				return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+			}
+			if requiresAdmin(procedure) && session.Role != store.RoleAdmin {
+				return nil, connect.NewError(connect.CodePermissionDenied, errors.New("admin role required"))
 			}
 			return next(withSession(ctx, session), req)
 		}
@@ -46,12 +76,15 @@ func (s *Service) authInterceptor() connect.UnaryInterceptorFunc {
 }
 
 // auditInterceptor records each call to the audit log and structured logger,
-// mirroring the metadata captured by the legacy REST audit middleware.
+// mirroring the metadata captured by the legacy REST audit middleware. It must
+// be the outermost interceptor so that requests rejected by the auth
+// interceptor are audited too.
 func (s *Service) auditInterceptor() connect.UnaryInterceptorFunc {
 	logger := slog.Default().With("component", "audit", "source", "api")
 	return func(next connect.UnaryFunc) connect.UnaryFunc {
 		return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
 			start := time.Now()
+			ctx, holder := withSessionHolder(ctx)
 			res, err := next(ctx, req)
 
 			procedure := req.Spec().Procedure
@@ -69,9 +102,9 @@ func (s *Service) auditInterceptor() connect.UnaryInterceptorFunc {
 				UserAgent:    req.Header().Get("User-Agent"),
 				OccurredAt:   start.UTC(),
 			}
-			if session, ok := sessionFromContext(ctx); ok {
-				entry.ActorID = session.UserID
-				entry.ActorEmail = session.Email
+			if holder.session != nil {
+				entry.ActorID = holder.session.UserID
+				entry.ActorEmail = holder.session.Email
 			}
 			if err != nil {
 				entry.Error = err.Error()
@@ -201,6 +234,14 @@ func auditStatusCode(err error) int {
 		return 404
 	case connect.CodeAlreadyExists:
 		return 409
+	case connect.CodeFailedPrecondition:
+		return 412
+	case connect.CodeResourceExhausted:
+		return 429
+	case connect.CodeUnavailable:
+		return 503
+	case connect.CodeDeadlineExceeded:
+		return 504
 	default:
 		return 500
 	}

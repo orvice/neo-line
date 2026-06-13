@@ -19,18 +19,21 @@ const BasePath = "/api/grpc"
 
 // Service implements every neoline.v1 Connect handler against the store.
 type Service struct {
-	store store.Store
-	ssh   *nlssh.Runner
+	store        store.Store
+	ssh          *nlssh.Runner
+	loginLimiter *loginLimiter
 }
 
 func New(st store.Store, ssh *nlssh.Runner) *Service {
-	return &Service{store: st, ssh: ssh}
+	return &Service{store: st, ssh: ssh, loginLimiter: newLoginLimiter()}
 }
 
 // Register mounts the Connect handlers on the Gin engine under BasePath.
 func Register(r *gin.Engine, st store.Store, ssh *nlssh.Runner) {
 	svc := New(st, ssh)
-	opts := connect.WithInterceptors(svc.authInterceptor(), svc.auditInterceptor())
+	// Audit must wrap auth so rejected (unauthenticated/forbidden) calls are
+	// recorded too; auth fills the session holder for actor attribution.
+	opts := connect.WithInterceptors(svc.auditInterceptor(), svc.authInterceptor())
 
 	mux := http.NewServeMux()
 	mux.Handle(neolinev1connect.NewAuthServiceHandler(svc, opts))

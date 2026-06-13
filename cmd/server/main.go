@@ -36,8 +36,12 @@ type sshConfig struct {
 	User string `yaml:"user"`
 	// Port is the default SSH port when a server does not override it.
 	Port int `yaml:"port"`
-	// KnownHostsPath enables host key verification. Empty skips verification.
+	// KnownHostsPath enables host key verification. Required when SSH is
+	// enabled unless InsecureSkipHostKey is set.
 	KnownHostsPath string `yaml:"known_hosts_path"`
+	// InsecureSkipHostKey explicitly disables host key verification. Only for
+	// trusted networks or local development.
+	InsecureSkipHostKey bool `yaml:"insecure_skip_host_key"`
 }
 
 type mongoConfig struct {
@@ -78,6 +82,7 @@ func main() {
 
 	schedCtx, cancelSched := context.WithCancel(context.Background())
 	archiveDone := make(chan struct{})
+	schedDone := make(chan struct{})
 
 	config := &app.Config{
 		Service: "neo-line",
@@ -133,10 +138,11 @@ func main() {
 				}
 
 				sshRunner, err = nlssh.New(nlssh.Config{
-					KeyPath:        appCfg.SSH.KeyPath,
-					User:           appCfg.SSH.User,
-					Port:           appCfg.SSH.Port,
-					KnownHostsPath: appCfg.SSH.KnownHostsPath,
+					KeyPath:             appCfg.SSH.KeyPath,
+					User:                appCfg.SSH.User,
+					Port:                appCfg.SSH.Port,
+					KnownHostsPath:      appCfg.SSH.KnownHostsPath,
+					InsecureSkipHostKey: appCfg.SSH.InsecureSkipHostKey,
 				})
 				if err != nil {
 					return fmt.Errorf("init ssh: %w", err)
@@ -152,13 +158,24 @@ func main() {
 					close(archiveDone)
 				}()
 				alerter := alert.New(mongoStore, slog.Default().With("component", "alert"))
-				go scheduler.New(mongoStore, archiver).WithAlerter(alerter).Start(schedCtx)
+				sched := scheduler.New(mongoStore, archiver).WithAlerter(alerter)
+				go func() {
+					sched.Start(schedCtx)
+					close(schedDone)
+				}()
 				return nil
 			},
 		},
 		TeardownFunc: []func() error{
 			func() error {
 				cancelSched()
+				// Wait for in-flight probes to finish before closing the store
+				// so no probe writes to a closed MongoDB client.
+				select {
+				case <-schedDone:
+				case <-time.After(15 * time.Second):
+					log.Println("scheduler shutdown timed out")
+				}
 				// Wait for the archiver to drain and flush any buffered
 				// results before the process exits.
 				select {
