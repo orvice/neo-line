@@ -19,12 +19,13 @@ const BasePath = "/api/grpc"
 
 // Service implements every neoline.v1 Connect handler against the store.
 type Service struct {
-	store store.Store
-	ssh   *nlssh.Runner
+	store        store.Store
+	ssh          *nlssh.Runner
+	loginLimiter *loginLimiter
 }
 
 func New(st store.Store, ssh *nlssh.Runner) *Service {
-	return &Service{store: st, ssh: ssh}
+	return &Service{store: st, ssh: ssh, loginLimiter: newLoginLimiter()}
 }
 
 // Register mounts the Connect handlers on the Gin engine under BasePath.

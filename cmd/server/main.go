@@ -82,6 +82,7 @@ func main() {
 
 	schedCtx, cancelSched := context.WithCancel(context.Background())
 	archiveDone := make(chan struct{})
+	schedDone := make(chan struct{})
 
 	config := &app.Config{
 		Service: "neo-line",
@@ -157,13 +158,24 @@ func main() {
 					close(archiveDone)
 				}()
 				alerter := alert.New(mongoStore, slog.Default().With("component", "alert"))
-				go scheduler.New(mongoStore, archiver).WithAlerter(alerter).Start(schedCtx)
+				sched := scheduler.New(mongoStore, archiver).WithAlerter(alerter)
+				go func() {
+					sched.Start(schedCtx)
+					close(schedDone)
+				}()
 				return nil
 			},
 		},
 		TeardownFunc: []func() error{
 			func() error {
 				cancelSched()
+				// Wait for in-flight probes to finish before closing the store
+				// so no probe writes to a closed MongoDB client.
+				select {
+				case <-schedDone:
+				case <-time.After(15 * time.Second):
+					log.Println("scheduler shutdown timed out")
+				}
 				// Wait for the archiver to drain and flush any buffered
 				// results before the process exits.
 				select {

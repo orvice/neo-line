@@ -40,6 +40,7 @@ type Scheduler struct {
 	lastRun  map[string]time.Time
 	inFlight map[string]bool
 	sem      chan struct{}
+	wg       sync.WaitGroup
 }
 
 // New builds a Scheduler backed by the given store. An optional archiver
@@ -78,7 +79,9 @@ func (s *Scheduler) Start(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
-			s.logger.Info("scheduler stopping")
+			s.logger.Info("scheduler stopping, waiting for in-flight probes")
+			s.wg.Wait()
+			s.logger.Info("scheduler stopped")
 			return
 		case <-ticker.C:
 			s.reconcile(ctx)
@@ -133,7 +136,7 @@ func (s *Scheduler) dispatch(ctx context.Context, m store.Monitor) {
 	s.lastRun[m.ID] = time.Now()
 	s.mu.Unlock()
 
-	go func() {
+	s.wg.Go(func() {
 		s.sem <- struct{}{}
 		defer func() {
 			<-s.sem
@@ -170,7 +173,7 @@ func (s *Scheduler) dispatch(ctx context.Context, m store.Monitor) {
 			"status", result.Status,
 			"duration_ms", result.DurationMS,
 		)
-	}()
+	})
 }
 
 // recordMetrics updates Prometheus metrics for a completed probe.

@@ -3,6 +3,8 @@ package connectapi
 import (
 	"context"
 	"errors"
+	"strings"
+	"time"
 
 	"connectrpc.com/connect"
 	pb "github.com/orvice/neo-line/pkg/proto/neoline/v1"
@@ -14,10 +16,17 @@ func (s *Service) Login(ctx context.Context, req *connect.Request[pb.LoginReques
 	if email == "" || password == "" {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("email and password are required"))
 	}
+	limiterKey := strings.ToLower(email) + "|" + req.Peer().Addr
+	now := time.Now()
+	if !s.loginLimiter.allow(limiterKey, now) {
+		return nil, connect.NewError(connect.CodeResourceExhausted, errors.New("too many login attempts, try again later"))
+	}
 	user, err := s.store.Authenticate(ctx, email, password)
 	if err != nil {
+		s.loginLimiter.fail(limiterKey, now)
 		return nil, toConnectError(err)
 	}
+	s.loginLimiter.reset(limiterKey)
 	session, err := s.store.CreateSession(ctx, user)
 	if err != nil {
 		return nil, toConnectError(err)
