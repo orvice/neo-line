@@ -1,0 +1,63 @@
+# neo-line 配置示例
+#
+# 复制为 config.yaml 后按需修改：
+#   cp config.sample.yaml config.yaml
+#
+# 启动时通过环境变量指向该文件：
+#   export BUTTERFLY_CONFIG_TYPE=file
+#   export BUTTERFLY_CONFIG_FILE_PATH=$PWD/config.yaml
+#
+# 所有监控业务配置（server / monitor / 通知组等）存储在 MongoDB，
+# 本文件只包含服务启动所需的运行时配置。
+
+# Butterfly 框架管理的底层 store 客户端（MongoDB / Redis / S3）。
+store:
+  mongo:
+    primary:
+      uri: "mongodb://localhost:27017"
+  redis:
+    session:
+      addr: "localhost:6379"
+      password: ""
+      db: 0
+  # S3 / S3 兼容对象存储，仅在启用检查结果归档时需要。
+  # 详见 https://butterfly.orz.ee/stores/s3.html
+  # s3:
+  #   archive:
+  #     endpoint: "s3.amazonaws.com"
+  #     region: "us-east-1"
+  #     bucket: "neo-line-archive"
+  #     access_key_id: "AKIAIOSFODNN7EXAMPLE"
+  #     secret_access_key: "wJalrXUtnFEMI/K7MDENG"
+  #     use_ssl: true
+  #     use_path_style: false   # MinIO 等兼容存储设为 true
+
+# neo-line 使用的 Mongo client key 与数据库名。
+mongo:
+  client_key: "primary"
+  database: "neo_line"
+
+# 登录 Bearer token 会话使用的 Redis client key。
+redis:
+  session_client_key: "session"
+
+# 检查结果归档（可选）。client_key 为空时不启用归档。
+# archive:
+#   client_key: "archive"          # 指向上面 store.s3.<key>
+#   prefix: "monitor_results"      # 对象 key 前缀，默认 monitor_results
+#   batch_size: 100                # 单批最大结果数，默认 100
+#   flush_interval_seconds: 60     # 刷写间隔秒数，默认 60
+
+# SSH 远程执行（可选）。key_path 为空时不启用 SSH API 与 MCP SSH 工具。
+# 私钥是本地文件资源，不存入 MongoDB；server 文档只保存连接目标。
+# ssh:
+#   key_path: "/etc/neo-line/id_ed25519"      # 唯一私钥来源，启动时一次性加载
+#   user: "root"                              # 默认 SSH 用户，server 可覆盖
+#   port: 22                                  # 默认 SSH 端口，server 可覆盖
+#   known_hosts_path: "/etc/neo-line/known_hosts"  # 启用 SSH 时必须配置
+#   insecure_skip_host_key: false             # 显式跳过主机密钥校验，仅限受信任内网/本地开发
+
+# 日志。
+log:
+  level: "info"    # debug / info / warn / error
+  format: "text"   # text / json

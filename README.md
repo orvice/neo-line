@@ -35,7 +35,13 @@ MongoDB 是监控业务配置和运行状态的主要数据源；Redis 用于登
 
 ## 本地启动
 
-准备 MongoDB 和 Redis，然后创建 Butterfly 配置文件，例如 `config.yaml`：
+准备 MongoDB 和 Redis，然后基于仓库根目录的 [`config.sample.yaml`](./config.sample.yaml) 创建本地配置文件：
+
+```bash
+cp config.sample.yaml config.yaml
+```
+
+最小可运行配置只需 MongoDB 和 Redis：
 
 ```yaml
 store:
@@ -59,6 +65,8 @@ log:
   level: "info"
   format: "text"
 ```
+
+S3 归档（`store.s3` / `archive`）和 SSH 远程执行（`ssh`）为可选能力，示例见 [`config.sample.yaml`](./config.sample.yaml)，字段说明见下文「配置项」。
 
 启动后端：
 
@@ -86,7 +94,26 @@ VITE_API_TARGET=http://localhost:8080 pnpm dev
 
 前端开发服务器默认运行在 `http://localhost:5173`。
 
-## 常用配置
+## 配置项
+
+服务启动配置通过 Butterfly 从 YAML 文件加载，完整示例见 [`config.sample.yaml`](./config.sample.yaml)。监控业务配置（server / monitor / 通知组等）存储在 MongoDB，不在此文件中。
+
+### 配置文件（YAML）
+
+| 配置组 | 必需 | 说明 |
+| --- | --- | --- |
+| `store.mongo.<key>` | 是 | Butterfly MongoDB store 配置（`uri` 等），框架按 key 初始化 client |
+| `store.redis.<key>` | 是 | Butterfly Redis store 配置（`addr` / `password` / `db`） |
+| `store.s3.<key>` | 否 | Butterfly S3 store 配置，启用检查结果归档时需要 |
+| `mongo.client_key` / `mongo.database` | 是 | neo-line 使用的 Mongo client key（默认 `primary`）与数据库名（默认 `neo_line`） |
+| `redis.session_client_key` | 是 | Bearer token 会话使用的 Redis client key（默认 `session`） |
+| `archive.*` | 否 | 检查结果归档：`client_key`、`prefix`、`batch_size`、`flush_interval_seconds`；`client_key` 为空时不启用 |
+| `ssh.*` | 否 | SSH 远程执行：`key_path`、`user`、`port`、`known_hosts_path`、`insecure_skip_host_key`；`key_path` 为空时不启用 SSH API 与 MCP SSH 工具 |
+| `log.level` / `log.format` | 否 | 日志级别（`debug`/`info`/`warn`/`error`）与格式（`text`/`json`） |
+
+S3 归档字段说明见 [功能说明](./docs/features.md)，SSH 字段说明见 [监控配置文档](./docs/monitoring-configuration.md)。
+
+### 环境变量
 
 | 变量 | 说明 |
 | --- | --- |
