@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net"
 	"os"
 	"strconv"
@@ -125,6 +126,11 @@ func (r *Runner) Exec(ctx context.Context, target Target, command string, timeou
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
+	addr := net.JoinHostPort(target.Host, strconv.Itoa(port))
+	logger := slog.Default().With("component", "ssh", "addr", addr, "user", user)
+	start := time.Now()
+	logger.DebugContext(ctx, "ssh exec starting", "command", truncate(command, 500), "timeout", timeout.String())
+
 	clientCfg := &ssh.ClientConfig{
 		User:            user,
 		Auth:            []ssh.AuthMethod{ssh.PublicKeys(r.signer)},
@@ -132,23 +138,27 @@ func (r *Runner) Exec(ctx context.Context, target Target, command string, timeou
 		Timeout:         timeout,
 	}
 
-	addr := net.JoinHostPort(target.Host, strconv.Itoa(port))
 	dialer := net.Dialer{Timeout: timeout}
 	conn, err := dialer.DialContext(ctx, "tcp", addr)
 	if err != nil {
+		logger.DebugContext(ctx, "ssh dial failed", "error", err.Error(), "elapsed", time.Since(start).String())
 		return Result{}, fmt.Errorf("dial %s: %w", addr, err)
 	}
 	defer conn.Close()
+	logger.DebugContext(ctx, "ssh dialed", "elapsed", time.Since(start).String())
 
 	sshConn, chans, reqs, err := ssh.NewClientConn(conn, addr, clientCfg)
 	if err != nil {
+		logger.DebugContext(ctx, "ssh handshake failed", "error", err.Error(), "elapsed", time.Since(start).String())
 		return Result{}, fmt.Errorf("ssh handshake %s: %w", addr, err)
 	}
 	client := ssh.NewClient(sshConn, chans, reqs)
 	defer client.Close()
+	logger.DebugContext(ctx, "ssh handshake complete", "elapsed", time.Since(start).String())
 
 	session, err := client.NewSession()
 	if err != nil {
+		logger.DebugContext(ctx, "ssh open session failed", "error", err.Error())
 		return Result{}, fmt.Errorf("ssh session: %w", err)
 	}
 	defer session.Close()
@@ -172,6 +182,8 @@ func (r *Runner) Exec(ctx context.Context, target Target, command string, timeou
 		session.Close()
 		conn.Close()
 		<-done
+		logger.WarnContext(ctx, "ssh exec aborted", "error", ctx.Err().Error(), "elapsed", time.Since(start).String(),
+			"stdout_bytes", stdout.Len(), "stderr_bytes", stderr.Len())
 		return Result{Stdout: stdout.String(), Stderr: stderr.String()}, ctx.Err()
 	case runErr = <-done:
 	}
@@ -180,7 +192,24 @@ func (r *Runner) Exec(ctx context.Context, target Target, command string, timeou
 	var exitErr *ssh.ExitError
 	if errors.As(runErr, &exitErr) {
 		res.ExitCode = exitErr.ExitStatus()
+		logger.DebugContext(ctx, "ssh exec finished", "exit_code", res.ExitCode, "elapsed", time.Since(start).String(),
+			"stdout_bytes", len(res.Stdout), "stderr_bytes", len(res.Stderr))
 		return res, nil
 	}
-	return res, runErr
+	if runErr != nil {
+		logger.DebugContext(ctx, "ssh exec run error", "error", runErr.Error(), "elapsed", time.Since(start).String())
+		return res, runErr
+	}
+	logger.DebugContext(ctx, "ssh exec finished", "exit_code", res.ExitCode, "elapsed", time.Since(start).String(),
+		"stdout_bytes", len(res.Stdout), "stderr_bytes", len(res.Stderr))
+	return res, nil
+}
+
+// truncate bounds a string for log fields so a large command does not bloat
+// log lines.
+func truncate(s string, max int) string {
+	if len(s) > max {
+		return s[:max] + "…"
+	}
+	return s
 }
