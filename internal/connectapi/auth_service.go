@@ -3,6 +3,7 @@ package connectapi
 import (
 	"context"
 	"errors"
+	"net"
 	"strings"
 	"time"
 
@@ -16,7 +17,11 @@ func (s *Service) Login(ctx context.Context, req *connect.Request[pb.LoginReques
 	if email == "" || password == "" {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("email and password are required"))
 	}
-	limiterKey := strings.ToLower(email) + "|" + req.Peer().Addr
+	peerHost := req.Peer().Addr
+	if host, _, err := net.SplitHostPort(peerHost); err == nil {
+		peerHost = host
+	}
+	limiterKey := strings.ToLower(email) + "|" + peerHost
 	now := time.Now()
 	if !s.loginLimiter.allow(limiterKey, now) {
 		return nil, connect.NewError(connect.CodeResourceExhausted, errors.New("too many login attempts, try again later"))

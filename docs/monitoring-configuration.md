@@ -142,7 +142,7 @@ retries: 3
 
 字段说明：
 
-- `id`：monitor 唯一标识；创建时如果未提供，会自动生成 `mon_<uuid>`。
+- `id`：monitor 标识；在所属 server 内唯一（唯一索引为 `(server_id, id)`）。创建时如果未提供，会自动生成 `mon_<uuid>`。运行时写入探测结果与查询 monitor 状态时均以 `(server_id, id)` 为条件，避免不同 server 下同名 id 互相串改状态。
 - `server_id`：关联的 server ID，由 URL 路径中的 server ID 写入
 - `group_ids`：所属分组 ID 列表，可选；每个 ID 必须在 `monitor_groups` 中存在，否则写入返回 `400`
 - `name`：monitor 显示名称
