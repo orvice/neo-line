@@ -521,6 +521,7 @@ func (s *MongoStore) UpdateMonitor(ctx context.Context, serverID, monitorID stri
 	monitor.Status = valueOr(monitor.Status, existing.Status)
 	monitor.LastCheckAt = existing.LastCheckAt
 	monitor.LastStatusChangeAt = existing.LastStatusChangeAt
+	monitor.Certificate = existing.Certificate
 	monitor.UpdatedAt = time.Now().UTC()
 	applyMonitorDefaults(&monitor)
 	res, err := s.monitors().ReplaceOne(ctx, bson.M{"server_id": serverID, "id": monitorID}, monitor)

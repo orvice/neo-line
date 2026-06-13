@@ -426,6 +426,7 @@ neo-line 在 Butterfly 框架自动暴露的 Prometheus registry 上注册自身
 - 每个窗口返回总检查次数、可用次数、不可用次数、可用率（0–1）以及可用检查的平均耗时（平均耗时只统计可用检查，避免超时拉高数值）。
 - 心跳序列返回最近最多 `50` 条检查（状态、开始时间、耗时），按时间从旧到新排序，便于从左到右渲染心跳条。
 - 数据完全来自 `monitor_results`，不在 monitor 文档上做反规范化冗余；聚合读取最多回溯 `24h`。
+- 可用率窗口通过 MongoDB `$facet` 聚合管线在数据库侧计算（按窗口统计总次数、不可用次数与可用检查耗时之和），不会把整段历史拉进内存；心跳序列单独查询且只取最近 `50` 条，因此高频探测（如 `5s` 间隔）下的内存占用也保持有界。
 
 前端在 monitor 详情页展示：最近 1 小时 / 24 小时可用率，以及 Kuma 风格的心跳条（悬停显示该次检查的状态、时间与耗时）。
 
@@ -515,6 +516,8 @@ ServerService.ListServerEvents
 
 其中创建、更新、删除为 Admin 写操作，需携带 Bearer token；查询接口保持公开。删除 server 会级联清除其下所有 monitor、历史 `monitor_results` 与 `server_events`，避免遗留孤儿数据。
 
+创建 / 更新时，server 的计算字段（`health_status`、`last_status_change_at`、`last_check_at`、`created_at`、`updated_at`）不接受客户端赋值：这些值由服务端依据探测结果推导，请求体中携带也会被忽略，防止客户端伪造健康状态或改写历史时间。
+
 支持的查询参数：
 
 - `ListServersRequest`：`page_size`、`page_token`、`environment`、`tags`
@@ -525,6 +528,8 @@ ServerService.ListServerEvents
 **状态：** 已实现
 
 提供 API 用于管理 server 下的端口探测配置和查询探测结果。Monitor 配置的写入、更新和删除都会落到 MongoDB。删除 monitor 会级联清除其历史 `monitor_results`。
+
+创建 / 更新时，monitor 的计算与探测托管字段（`status`、`last_check_at`、`last_status_change_at`、`certificate`、`created_at`、`updated_at`）不接受客户端赋值：状态与证书信息由调度器探测后写入，更新配置时会保留已观测到的证书，请求体中携带这些字段也会被忽略。
 
 ```text
 MonitorService.ListMonitors

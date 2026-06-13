@@ -2,7 +2,6 @@ package store
 
 import (
 	"context"
-	"sort"
 	"time"
 
 	"go.mongodb.org/mongo-driver/v2/bson"
@@ -33,6 +32,11 @@ const uptimeMaxWindow = 24 * time.Hour
 
 // uptimeBeatLimit caps how many recent heartbeats are returned for the bar.
 const uptimeBeatLimit = 50
+
+// downStatusVariants enumerates every persisted spelling of a "down" status so
+// the aggregation pipeline can count outages without normalizing in Go. It must
+// stay in sync with the down case of normalizeStatus.
+var downStatusVariants = bson.A{StatusDown, "down", "DOWN", "HEALTH_STATUS_DOWN"}
 
 // UptimeWindow summarizes availability over a single rolling time window.
 type UptimeWindow struct {
@@ -67,65 +71,124 @@ var uptimeWindows = []struct {
 	{"24h", 24 * time.Hour},
 }
 
-// GetMonitorUptime reads recent check results for a monitor and computes its
-// availability windows and heartbeat history. monitor_results is the source of
-// truth; nothing is denormalized onto the monitor document.
+// GetMonitorUptime computes a monitor's availability windows and heartbeat
+// history from monitor_results. The windows are aggregated server-side via a
+// single $facet pipeline so the whole result history never lands in memory;
+// only the most recent uptimeBeatLimit heartbeats are fetched for rendering.
 func (s *MongoStore) GetMonitorUptime(ctx context.Context, serverID, monitorID string) (MonitorUptime, error) {
 	now := time.Now().UTC()
-	cutoff := now.Add(-uptimeMaxWindow)
+	windows, err := s.aggregateUptimeWindows(ctx, serverID, monitorID, now)
+	if err != nil {
+		return MonitorUptime{}, err
+	}
+	beats, err := s.recentHeartbeats(ctx, serverID, monitorID, now)
+	if err != nil {
+		return MonitorUptime{}, err
+	}
+	return MonitorUptime{Windows: windows, Heartbeats: beats}, nil
+}
+
+// windowAccumulator captures the raw aggregation output for one window.
+type windowAccumulator struct {
+	Total      int     `bson:"total"`
+	Down       int     `bson:"down"`
+	LatencySum float64 `bson:"latency_sum"`
+}
+
+// aggregateUptimeWindows runs one $facet pipeline that computes per-window totals,
+// outage counts, and up-check latency sums entirely in MongoDB.
+func (s *MongoStore) aggregateUptimeWindows(ctx context.Context, serverID, monitorID string, now time.Time) (map[string]UptimeWindow, error) {
+	isDown := bson.D{{Key: "$in", Value: bson.A{"$status", downStatusVariants}}}
+	facet := bson.D{}
+	for _, w := range uptimeWindows {
+		facet = append(facet, bson.E{Key: w.key, Value: bson.A{
+			bson.D{{Key: "$match", Value: bson.D{{Key: "started_at", Value: bson.D{{Key: "$gte", Value: now.Add(-w.dur)}}}}}},
+			bson.D{{Key: "$group", Value: bson.D{
+				{Key: "_id", Value: nil},
+				{Key: "total", Value: bson.D{{Key: "$sum", Value: 1}}},
+				{Key: "down", Value: bson.D{{Key: "$sum", Value: bson.D{{Key: "$cond", Value: bson.A{isDown, 1, 0}}}}}},
+				{Key: "latency_sum", Value: bson.D{{Key: "$sum", Value: bson.D{{Key: "$cond", Value: bson.A{isDown, 0, "$duration_ms"}}}}}},
+			}}},
+		}})
+	}
+
+	pipeline := mongo.Pipeline{
+		bson.D{{Key: "$match", Value: bson.D{
+			{Key: "server_id", Value: serverID},
+			{Key: "monitor_id", Value: monitorID},
+			{Key: "started_at", Value: bson.D{{Key: "$gte", Value: now.Add(-uptimeMaxWindow)}}},
+		}}},
+		bson.D{{Key: "$facet", Value: facet}},
+	}
+
+	cursor, err := s.results().Aggregate(ctx, pipeline)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var facets []map[string][]windowAccumulator
+	if err := cursor.All(ctx, &facets); err != nil {
+		return nil, err
+	}
+
+	out := make(map[string]UptimeWindow, len(uptimeWindows))
+	for _, w := range uptimeWindows {
+		acc := windowAccumulator{}
+		if len(facets) > 0 {
+			if branch := facets[0][w.key]; len(branch) > 0 {
+				acc = branch[0]
+			}
+		}
+		out[w.key] = buildWindow(int64(w.dur/time.Second), acc)
+	}
+	return out, nil
+}
+
+// buildWindow turns the raw aggregation counts for one window into a populated
+// UptimeWindow. A check counts as down only when its status is Down; every other
+// status means the target responded and is treated as up. Average latency is
+// taken over up checks so timeouts do not skew the value.
+func buildWindow(windowSeconds int64, acc windowAccumulator) UptimeWindow {
+	win := UptimeWindow{WindowSeconds: windowSeconds, Total: acc.Total, Down: acc.Down}
+	win.Up = acc.Total - acc.Down
+	if win.Total > 0 {
+		win.Uptime = float64(win.Up) / float64(win.Total)
+	}
+	if win.Up > 0 {
+		win.AvgLatencyMS = acc.LatencySum / float64(win.Up)
+	}
+	return win
+}
+
+// recentHeartbeats fetches the most recent checks (capped at uptimeBeatLimit)
+// and returns them oldest-first for a left-to-right bar.
+func (s *MongoStore) recentHeartbeats(ctx context.Context, serverID, monitorID string, now time.Time) ([]Heartbeat, error) {
 	filter := bson.M{
 		"server_id":  serverID,
 		"monitor_id": monitorID,
-		"started_at": bson.M{"$gte": cutoff},
+		"started_at": bson.M{"$gte": now.Add(-uptimeMaxWindow)},
 	}
-	opts := options.Find().SetSort(bson.D{{Key: "started_at", Value: -1}})
+	opts := options.Find().
+		SetSort(bson.D{{Key: "started_at", Value: -1}}).
+		SetLimit(uptimeBeatLimit).
+		SetProjection(bson.D{{Key: "status", Value: 1}, {Key: "started_at", Value: 1}, {Key: "duration_ms", Value: 1}})
 	cursor, err := s.results().Find(ctx, filter, opts)
 	if err != nil {
-		return MonitorUptime{}, err
+		return nil, err
 	}
 	defer cursor.Close(ctx)
 	var results []CheckResult
 	if err := cursor.All(ctx, &results); err != nil {
-		return MonitorUptime{}, err
+		return nil, err
 	}
-	return computeUptime(results, now, uptimeBeatLimit), nil
+	return toHeartbeats(results), nil
 }
 
-// computeUptime turns check results (newest first) into uptime windows and the
-// most recent heartbeats. A check counts as down only when its status is Down;
-// every other status means the target responded and is treated as up. Average
-// latency is taken over up checks so timeouts do not skew the value.
-func computeUptime(results []CheckResult, now time.Time, beatLimit int) MonitorUptime {
-	out := MonitorUptime{Windows: make(map[string]UptimeWindow, len(uptimeWindows))}
-
-	for _, w := range uptimeWindows {
-		win := UptimeWindow{WindowSeconds: int64(w.dur / time.Second)}
-		cutoff := now.Add(-w.dur)
-		var latencySum float64
-		for _, r := range results {
-			if r.StartedAt.Before(cutoff) {
-				continue
-			}
-			win.Total++
-			if normalizeStatus(r.Status) == StatusDown {
-				win.Down++
-				continue
-			}
-			win.Up++
-			latencySum += float64(r.DurationMS)
-		}
-		if win.Total > 0 {
-			win.Uptime = float64(win.Up) / float64(win.Total)
-		}
-		if win.Up > 0 {
-			win.AvgLatencyMS = latencySum / float64(win.Up)
-		}
-		out.Windows[w.key] = win
-	}
-
-	limit := min(beatLimit, len(results))
-	beats := make([]Heartbeat, 0, limit)
-	for i := range limit {
+// toHeartbeats converts newest-first check results into oldest-first heartbeats.
+func toHeartbeats(results []CheckResult) []Heartbeat {
+	beats := make([]Heartbeat, 0, len(results))
+	for i := len(results) - 1; i >= 0; i-- {
 		r := results[i]
 		beats = append(beats, Heartbeat{
 			Status:     normalizeStatus(r.Status),
@@ -133,11 +196,5 @@ func computeUptime(results []CheckResult, now time.Time, beatLimit int) MonitorU
 			DurationMS: r.DurationMS,
 		})
 	}
-	// results arrive newest-first; present oldest-first for a left-to-right bar.
-	sort.SliceStable(beats, func(i, j int) bool {
-		return beats[i].StartedAt.Before(beats[j].StartedAt)
-	})
-	out.Heartbeats = beats
-
-	return out
+	return beats
 }
