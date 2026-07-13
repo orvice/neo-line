@@ -4,14 +4,10 @@
 package alert
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
-	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
-	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -19,12 +15,23 @@ import (
 	"github.com/orvice/neo-line/internal/store"
 )
 
+// Store is the slice of the monitoring store the dispatcher needs: resolving
+// a MonitorGroup for its AlertPolicy and the NotifyGroups it references.
+type Store interface {
+	GetMonitorGroup(ctx context.Context, id string) (store.MonitorGroup, error)
+	GetNotifyGroup(ctx context.Context, id string) (store.NotifyGroup, error)
+}
+
 // Dispatcher fans out per-group notifications for monitor status
 // transitions. It is safe for concurrent use.
 type Dispatcher struct {
-	store  store.Store
-	logger *slog.Logger
-	client *http.Client
+	store   Store
+	logger  *slog.Logger
+	senders map[string]channelSender
+
+	// deliveries tracks in-flight background sends so tests (and a future
+	// graceful shutdown) can wait for the fan-out to drain.
+	deliveries sync.WaitGroup
 
 	mu   sync.Mutex
 	last map[string]time.Time // key: groupID + "|" + monitorID
@@ -33,15 +40,15 @@ type Dispatcher struct {
 // New builds a Dispatcher backed by st. logger may be nil; the package logger
 // will then be used. The shared http.Client has a small timeout so a slow
 // webhook receiver cannot stall the goroutine pool.
-func New(st store.Store, logger *slog.Logger) *Dispatcher {
+func New(st Store, logger *slog.Logger) *Dispatcher {
 	if logger == nil {
 		logger = slog.Default().With("component", "alert")
 	}
 	return &Dispatcher{
-		store:  st,
-		logger: logger,
-		client: &http.Client{Timeout: 5 * time.Second},
-		last:   make(map[string]time.Time),
+		store:   st,
+		logger:  logger,
+		senders: builtinSenders(&http.Client{Timeout: 5 * time.Second}),
+		last:    make(map[string]time.Time),
 	}
 }
 
@@ -119,7 +126,9 @@ func (d *Dispatcher) OnMonitorStatusChange(ctx context.Context, monitor store.Mo
 		}
 		for _, channel := range channels {
 			ch := channel
-			go d.deliver(ch, payload)
+			d.deliveries.Go(func() {
+				d.deliver(ch, payload)
+			})
 		}
 	}
 }
@@ -180,22 +189,19 @@ func (d *Dispatcher) allowThrottle(groupID, monitorID string, minIntervalSeconds
 	return true
 }
 
+// deliver routes the payload to the sender registered for the channel's type.
+// An empty type means webhook, the original channel kind.
 func (d *Dispatcher) deliver(channel store.AlertChannel, payload Payload) {
-	var err error
-	switch channel.Type {
-	case "", "webhook":
-		err = d.postWebhook(channel, payload)
-	case "telegram":
-		err = d.postTelegram(channel, payload)
-	case "discord":
-		err = d.postDiscord(channel, payload)
-	case "mastodon":
-		err = d.postMastodon(channel, payload)
-	default:
+	kind := channel.Type
+	if kind == "" {
+		kind = "webhook"
+	}
+	sender, ok := d.senders[kind]
+	if !ok {
 		d.logger.Warn("unsupported alert channel type", "type", channel.Type)
 		return
 	}
-	if err != nil {
+	if err := sender.send(channel, payload); err != nil {
 		d.logger.Warn("alert delivery failed",
 			"type", channel.Type,
 			"target", channel.Target,
@@ -211,127 +217,6 @@ func (d *Dispatcher) deliver(channel store.AlertChannel, payload Payload) {
 		"monitor_id", payload.MonitorID,
 		"group_id", payload.GroupID,
 	)
-}
-
-func (d *Dispatcher) postWebhook(channel store.AlertChannel, payload Payload) error {
-	if channel.Target == "" {
-		return errors.New("empty webhook target")
-	}
-	body, err := json.Marshal(payload)
-	if err != nil {
-		return err
-	}
-	req, err := http.NewRequest(http.MethodPost, channel.Target, bytes.NewReader(body))
-	if err != nil {
-		return err
-	}
-	req.Header.Set("Content-Type", "application/json")
-	for key, value := range channel.Extra {
-		req.Header.Set(key, value)
-	}
-	resp, err := d.client.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode >= 400 {
-		return fmt.Errorf("webhook returned status %d", resp.StatusCode)
-	}
-	return nil
-}
-
-// postTelegram sends the alert as a Bot API message. Target is the chat_id and
-// extra["bot_token"] holds the bot token.
-func (d *Dispatcher) postTelegram(channel store.AlertChannel, payload Payload) error {
-	chatID := strings.TrimSpace(channel.Target)
-	if chatID == "" {
-		return errors.New("empty telegram chat_id (target)")
-	}
-	token := strings.TrimSpace(channel.Extra["bot_token"])
-	if token == "" {
-		return errors.New("missing telegram bot_token in extra")
-	}
-	body, err := json.Marshal(map[string]string{
-		"chat_id": chatID,
-		"text":    formatMessage(payload),
-	})
-	if err != nil {
-		return err
-	}
-	endpoint := fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", token)
-	return d.postJSON(endpoint, nil, body, "telegram")
-}
-
-// postDiscord posts to a Discord webhook URL given in Target.
-func (d *Dispatcher) postDiscord(channel store.AlertChannel, payload Payload) error {
-	if strings.TrimSpace(channel.Target) == "" {
-		return errors.New("empty discord webhook url (target)")
-	}
-	body, err := json.Marshal(map[string]string{
-		"content": formatMessage(payload),
-	})
-	if err != nil {
-		return err
-	}
-	return d.postJSON(channel.Target, nil, body, "discord")
-}
-
-// postMastodon publishes a status to a Mastodon instance. Target is the
-// instance base URL (e.g. https://mastodon.social) and extra["access_token"]
-// holds the application access token. Optional extra["visibility"] sets the
-// status visibility (defaults to "unlisted").
-func (d *Dispatcher) postMastodon(channel store.AlertChannel, payload Payload) error {
-	base := strings.TrimRight(strings.TrimSpace(channel.Target), "/")
-	if base == "" {
-		return errors.New("empty mastodon instance url (target)")
-	}
-	token := strings.TrimSpace(channel.Extra["access_token"])
-	if token == "" {
-		return errors.New("missing mastodon access_token in extra")
-	}
-	visibility := strings.TrimSpace(channel.Extra["visibility"])
-	if visibility == "" {
-		visibility = "unlisted"
-	}
-	form := url.Values{}
-	form.Set("status", formatMessage(payload))
-	form.Set("visibility", visibility)
-	endpoint := base + "/api/v1/statuses"
-	header := http.Header{}
-	header.Set("Authorization", "Bearer "+token)
-	header.Set("Content-Type", "application/x-www-form-urlencoded")
-	return d.postRaw(endpoint, header, []byte(form.Encode()), "mastodon")
-}
-
-// postJSON sends body as application/json to endpoint with optional extra
-// headers. label names the channel for error messages.
-func (d *Dispatcher) postJSON(endpoint string, header http.Header, body []byte, label string) error {
-	if header == nil {
-		header = http.Header{}
-	}
-	header.Set("Content-Type", "application/json")
-	return d.postRaw(endpoint, header, body, label)
-}
-
-func (d *Dispatcher) postRaw(endpoint string, header http.Header, body []byte, label string) error {
-	req, err := http.NewRequest(http.MethodPost, endpoint, bytes.NewReader(body))
-	if err != nil {
-		return err
-	}
-	for key, values := range header {
-		for _, v := range values {
-			req.Header.Add(key, v)
-		}
-	}
-	resp, err := d.client.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode >= 400 {
-		return fmt.Errorf("%s returned status %d", label, resp.StatusCode)
-	}
-	return nil
 }
 
 // formatMessage renders a human-readable alert line shared by the chat-style
