@@ -160,8 +160,8 @@ func TestPostDiscord(t *testing.T) {
 	defer srv.Close()
 
 	d := New(nil, nil)
-	if err := d.postDiscord(store.AlertChannel{Type: "discord", Target: srv.URL}, samplePayload()); err != nil {
-		t.Fatalf("postDiscord() error = %v", err)
+	if err := d.senders["discord"].send(store.AlertChannel{Type: "discord", Target: srv.URL}, samplePayload()); err != nil {
+		t.Fatalf("discord send() error = %v", err)
 	}
 	if !strings.Contains(body["content"], "api-health") {
 		t.Fatalf("discord content missing monitor name: %q", body["content"])
@@ -170,7 +170,7 @@ func TestPostDiscord(t *testing.T) {
 
 func TestPostDiscordEmptyTarget(t *testing.T) {
 	d := New(nil, nil)
-	if err := d.postDiscord(store.AlertChannel{Type: "discord"}, samplePayload()); err == nil {
+	if err := d.senders["discord"].send(store.AlertChannel{Type: "discord"}, samplePayload()); err == nil {
 		t.Fatal("expected error for empty discord target")
 	}
 }
@@ -193,8 +193,8 @@ func TestPostMastodon(t *testing.T) {
 
 	d := New(nil, nil)
 	ch := store.AlertChannel{Type: "mastodon", Target: srv.URL, Extra: map[string]string{"access_token": "tok123"}}
-	if err := d.postMastodon(ch, samplePayload()); err != nil {
-		t.Fatalf("postMastodon() error = %v", err)
+	if err := d.senders["mastodon"].send(ch, samplePayload()); err != nil {
+		t.Fatalf("mastodon send() error = %v", err)
 	}
 	if path != "/api/v1/statuses" {
 		t.Errorf("path = %q, want /api/v1/statuses", path)
@@ -209,17 +209,17 @@ func TestPostMastodon(t *testing.T) {
 
 func TestPostMastodonMissingToken(t *testing.T) {
 	d := New(nil, nil)
-	if err := d.postMastodon(store.AlertChannel{Type: "mastodon", Target: "https://example.social"}, samplePayload()); err == nil {
+	if err := d.senders["mastodon"].send(store.AlertChannel{Type: "mastodon", Target: "https://example.social"}, samplePayload()); err == nil {
 		t.Fatal("expected error for missing mastodon access_token")
 	}
 }
 
 func TestPostTelegramValidation(t *testing.T) {
 	d := New(nil, nil)
-	if err := d.postTelegram(store.AlertChannel{Type: "telegram", Extra: map[string]string{"bot_token": "t"}}, samplePayload()); err == nil {
+	if err := d.senders["telegram"].send(store.AlertChannel{Type: "telegram", Extra: map[string]string{"bot_token": "t"}}, samplePayload()); err == nil {
 		t.Fatal("expected error for empty telegram chat_id")
 	}
-	if err := d.postTelegram(store.AlertChannel{Type: "telegram", Target: "123"}, samplePayload()); err == nil {
+	if err := d.senders["telegram"].send(store.AlertChannel{Type: "telegram", Target: "123"}, samplePayload()); err == nil {
 		t.Fatal("expected error for missing telegram bot_token")
 	}
 }
