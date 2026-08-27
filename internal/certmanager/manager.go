@@ -39,6 +39,10 @@ type Store interface {
 	ClaimPendingIssueOperation(ctx context.Context, opID string) (store.CertificateOperation, error)
 	FailIssueOperation(ctx context.Context, opID, errorSummary string) error
 	FindPendingIssueOperations(ctx context.Context, limit int64) ([]store.CertificateOperation, error)
+	ClaimPendingRenewOperation(ctx context.Context, opID string) (store.CertificateOperation, error)
+	FailRenewOperation(ctx context.Context, opID, errorSummary string) error
+	FindPendingRenewOperations(ctx context.Context, limit int64) ([]store.CertificateOperation, error)
+	ListAutoRenewManagedCertificates(ctx context.Context) ([]store.ManagedCertificate, error)
 	UpdateCertificateOperation(ctx context.Context, id string, op store.CertificateOperation) (store.CertificateOperation, error)
 	ActivateFirstIssueVersion(ctx context.Context, managedCertID string, version store.CertificateVersion, opID, warning string) error
 	ActivateSubsequentIssueVersion(ctx context.Context, managedCertID string, version store.CertificateVersion, expectedActiveID, opID, warning string) error

@@ -303,6 +303,8 @@ export interface ManagedCertificate {
   key_type: CertificateKeyType
   auto_renew_enabled: boolean
   renew_before_days: number
+  effective_renewal_window_days?: number
+  next_renewal_at?: string
   notify_group_ids?: string[]
   server_ids?: string[]
   active_validity: CertificateValidity

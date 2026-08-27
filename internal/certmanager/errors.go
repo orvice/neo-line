@@ -49,3 +49,9 @@ var ErrIssuerNotReady = errors.New("certificate issuer is not ready for issuance
 
 // ErrIssueFieldsLocked is returned when issue fields are changed during a running operation.
 var ErrIssueFieldsLocked = errors.New("issue fields cannot be changed while an operation is running")
+
+// ErrNoActiveVersion is returned when Renew is requested without an active version.
+var ErrNoActiveVersion = errors.New("managed certificate has no active version to renew")
+
+// ErrIssuanceOperationInFlight is returned when another Issue or Renew operation is running.
+var ErrIssuanceOperationInFlight = errors.New("another certificate issuance operation is already running")

@@ -290,6 +290,64 @@ func (f *managedCertFakeStore) FindPendingIssueOperations(_ context.Context, _ i
 	return out, nil
 }
 
+func (f *managedCertFakeStore) ClaimPendingRenewOperation(_ context.Context, opID string) (store.CertificateOperation, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	op, ok := f.ops[opID]
+	if !ok || op.Status != store.CertOpStatusPending || op.Type != store.CertOpTypeRenew {
+		return store.CertificateOperation{}, errors.New("not claimable")
+	}
+	now := time.Now().UTC()
+	op.Status = store.CertOpStatusRunning
+	op.AttemptCount++
+	op.StartedAt = &now
+	op.UpdatedAt = now
+	f.ops[opID] = op
+	return op, nil
+}
+
+func (f *managedCertFakeStore) FailRenewOperation(_ context.Context, opID, summary string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	op, ok := f.ops[opID]
+	if !ok {
+		return errors.New("not found")
+	}
+	now := time.Now().UTC()
+	op.Status = store.CertOpStatusFailed
+	op.ErrorSummary = summary
+	op.FinishedAt = &now
+	op.UpdatedAt = now
+	f.ops[opID] = op
+	return nil
+}
+
+func (f *managedCertFakeStore) FindPendingRenewOperations(_ context.Context, _ int64) ([]store.CertificateOperation, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	var out []store.CertificateOperation
+	for _, id := range f.opOrd {
+		op := f.ops[id]
+		if op.Status == store.CertOpStatusPending && op.Type == store.CertOpTypeRenew {
+			out = append(out, op)
+		}
+	}
+	return out, nil
+}
+
+func (f *managedCertFakeStore) ListAutoRenewManagedCertificates(_ context.Context) ([]store.ManagedCertificate, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	out := make([]store.ManagedCertificate, 0)
+	for _, id := range f.certOrd {
+		c := f.certs[id]
+		if c.AutoRenewEnabled && c.ActiveVersion != nil {
+			out = append(out, c)
+		}
+	}
+	return out, nil
+}
+
 func (f *managedCertFakeStore) UpdateCertificateOperation(_ context.Context, id string, op store.CertificateOperation) (store.CertificateOperation, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()

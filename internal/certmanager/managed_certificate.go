@@ -48,6 +48,8 @@ type PublicManagedCertificate struct {
 	KeyType                      string
 	AutoRenewEnabled             bool
 	RenewBeforeDays              uint32
+	EffectiveRenewalWindowDays   uint32
+	NextRenewalAt                *time.Time
 	NotifyGroupIDs               []string
 	ServerIDs                    []string
 	ActiveValidity               string
@@ -102,6 +104,7 @@ func publicVersionFromStore(v *store.CertificateVersion) *PublicCertificateVersi
 
 func publicCertFromStore(cert store.ManagedCertificate, latest *store.CertificateOperation, now time.Time) PublicManagedCertificate {
 	validity, available := computeValidity(cert, now)
+	effectiveDays, nextAt := renewalMetadata(cert, now)
 	out := PublicManagedCertificate{
 		ID:                           cert.ID,
 		Name:                         cert.Name,
@@ -111,6 +114,8 @@ func publicCertFromStore(cert store.ManagedCertificate, latest *store.Certificat
 		KeyType:                      cert.KeyType,
 		AutoRenewEnabled:             cert.AutoRenewEnabled,
 		RenewBeforeDays:              cert.RenewBeforeDays,
+		EffectiveRenewalWindowDays:   effectiveDays,
+		NextRenewalAt:                nextAt,
 		NotifyGroupIDs:               append([]string(nil), cert.NotifyGroupIDs...),
 		ServerIDs:                    append([]string(nil), cert.ServerIDs...),
 		ActiveValidity:               validity,
@@ -188,14 +193,21 @@ func (m *Manager) UpdateManagedCertificate(ctx context.Context, id string, input
 	if err := m.validateManagedCertificateRefs(ctx, updated); err != nil {
 		return PublicManagedCertificate{}, err
 	}
-	running, err := m.store.FindRunningCertificateOperation(ctx, id, store.CertOpTypeIssue)
+	runningIssue, err := m.store.FindRunningCertificateOperation(ctx, id, store.CertOpTypeIssue)
 	if err != nil && !store.IsNotFound(err) {
 		return PublicManagedCertificate{}, err
 	}
-	if err == nil && issueFieldsChanged(existing, updated) {
+	issueRunning := err == nil
+	runningRenew, err := m.store.FindRunningCertificateOperation(ctx, id, store.CertOpTypeRenew)
+	if err != nil && !store.IsNotFound(err) {
+		return PublicManagedCertificate{}, err
+	}
+	renewRunning := err == nil
+	if (issueRunning || renewRunning) && issueFieldsChanged(existing, updated) {
 		return PublicManagedCertificate{}, ErrIssueFieldsLocked
 	}
-	_ = running // running Issue op blocks issue-field changes only
+	_ = runningIssue
+	_ = runningRenew
 
 	updated.ActiveVersion = existing.ActiveVersion
 	updated.PreviousVersion = existing.PreviousVersion
@@ -220,6 +232,9 @@ func (m *Manager) SubmitIssueOperation(ctx context.Context, managedCertificateID
 	if existing, err := m.store.FindRunningCertificateOperation(ctx, managedCertificateID, store.CertOpTypeIssue); err == nil {
 		return publicOperationFromStore(existing), nil
 	} else if !store.IsNotFound(err) {
+		return PublicOperation{}, err
+	}
+	if err := m.ensureNoConflictingIssuance(ctx, managedCertificateID, store.CertOpTypeIssue); err != nil {
 		return PublicOperation{}, err
 	}
 	cert, err := m.store.GetManagedCertificate(ctx, managedCertificateID)

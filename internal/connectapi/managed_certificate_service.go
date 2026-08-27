@@ -70,6 +70,16 @@ func (s *Service) SubmitIssueOperation(ctx context.Context, req *connect.Request
 	}), nil
 }
 
+func (s *Service) SubmitRenewOperation(ctx context.Context, req *connect.Request[pb.SubmitRenewOperationRequest]) (*connect.Response[pb.SubmitRenewOperationResponse], error) {
+	op, err := s.certManager.SubmitRenewOperation(ctx, req.Msg.GetManagedCertificateId())
+	if err != nil {
+		return nil, toConnectError(err)
+	}
+	return connect.NewResponse(&pb.SubmitRenewOperationResponse{
+		Operation: certificateOperationToProto(op),
+	}), nil
+}
+
 func (s *Service) GetCertificateBundle(ctx context.Context, req *connect.Request[pb.GetCertificateBundleRequest]) (*connect.Response[pb.GetCertificateBundleResponse], error) {
 	slot := versionSlotFromProto(req.Msg.GetVersionSlot())
 	bundle, err := s.certManager.GetCertificateBundle(ctx, req.Msg.GetManagedCertificateId(), slot)

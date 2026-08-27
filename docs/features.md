@@ -1030,6 +1030,7 @@ Admin 可在 Web 控制台「证书 → 托管证书」或通过 `ManagedCertifi
 - 有序 `domains`（≤100）：trim、小写、IDNA、去尾点、泛域名校验、去重；**第一个为主域名**。
 - 引用 **Ready** CertificateIssuer 与存在的 DNSProviderAccount；可选 NotifyGroup 与 Server（**允许零 Server**）。
 - 密钥类型 **EC P-256**（默认）或 **RSA-2048**；`renew_before_days` 默认 **30**；`auto_renew_enabled` 默认 **true**。
+- **自动续期（#22）：** 独立 certificate reconciler 每小时扫描 RenewalDue 证书并提交 Renew（使用 active 快照）；有效续期窗口 `min(renew_before_days, 有效期/3)`；手动「续期 active」与「签发新版本」语义分离。
 - 创建成功后自动提交 **Pending Issue** operation；重复提交运行中 Issue 返回现有 operation。
 - 尚无 active version 时 `active_validity` 为 **Missing**，bundle 不可用。
 - Operation 进行中禁止修改签发字段；名称、Server 分配与 NotifyGroup 仍可更新。

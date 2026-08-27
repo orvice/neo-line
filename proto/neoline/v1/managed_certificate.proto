@@ -125,6 +125,14 @@ message SubmitIssueOperationResponse {
   CertificateOperation operation = 1;
 }
 
+message SubmitRenewOperationRequest {
+  string managed_certificate_id = 1;
+}
+
+message SubmitRenewOperationResponse {
+  CertificateOperation operation = 1;
+}
+
 // ManagedCertificate holds desired config, assignments, and version container.
 // Secrets are never returned on read.
 message ManagedCertificate {
@@ -149,6 +157,10 @@ message ManagedCertificate {
   CertificateVersionMetadata previous_version = 17;
   // True when desired config differs from the active version issuance snapshot.
   bool has_unpublished_desired_changes = 18;
+  // Effective renewal window in days: min(renew_before_days, lifetime / 3).
+  uint32 effective_renewal_window_days = 19;
+  // When auto-renew should next trigger (not_after minus effective window).
+  google.protobuf.Timestamp next_renewal_at = 20;
 }
 
 message ListManagedCertificatesRequest {
@@ -193,6 +205,7 @@ service ManagedCertificateService {
   rpc GetManagedCertificate(GetManagedCertificateRequest) returns (GetManagedCertificateResponse) {}
   rpc UpdateManagedCertificate(UpdateManagedCertificateRequest) returns (UpdateManagedCertificateResponse) {}
   rpc SubmitIssueOperation(SubmitIssueOperationRequest) returns (SubmitIssueOperationResponse) {}
+  rpc SubmitRenewOperation(SubmitRenewOperationRequest) returns (SubmitRenewOperationResponse) {}
   rpc GetCertificateBundle(GetCertificateBundleRequest) returns (GetCertificateBundleResponse) {}
   rpc ActivatePreviousVersion(ActivatePreviousVersionRequest) returns (ActivatePreviousVersionResponse) {}
 }

@@ -161,6 +161,23 @@ func (s *MongoStore) ListManagedCertificatesByServer(ctx context.Context, server
 	return certs, nil
 }
 
+// ListAutoRenewManagedCertificates returns certificates with auto-renew enabled and an active version.
+func (s *MongoStore) ListAutoRenewManagedCertificates(ctx context.Context) ([]ManagedCertificate, error) {
+	cursor, err := s.managedCertificates().Find(ctx, bson.M{
+		"auto_renew_enabled": true,
+		"active_version":     bson.M{"$exists": true, "$ne": nil},
+	}, options.Find().SetSort(bson.D{{Key: "name", Value: 1}}))
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+	certs := make([]ManagedCertificate, 0)
+	if err := cursor.All(ctx, &certs); err != nil {
+		return nil, err
+	}
+	return certs, nil
+}
+
 func (s *MongoStore) UpdateManagedCertificate(ctx context.Context, id string, cert ManagedCertificate) (ManagedCertificate, error) {
 	existing, err := s.GetManagedCertificate(ctx, id)
 	if err != nil {
