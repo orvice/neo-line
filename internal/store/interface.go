@@ -86,6 +86,7 @@ type Store interface {
 	EnsureManagedCertificateIndexes(ctx context.Context) error
 	EnsureCertificateOperationIndexes(ctx context.Context) error
 	EnsureMcpTokenIndexes(ctx context.Context) error
+	EnsureCertificateAccessTokenIndexes(ctx context.Context) error
 	EnsureResultIndexes(ctx context.Context) error
 
 	CacheGet(ctx context.Context, key string) ([]byte, bool, error)
@@ -96,6 +97,12 @@ type Store interface {
 	DeleteMcpToken(ctx context.Context, id string) error
 	CountMcpTokens(ctx context.Context) (int64, error)
 	ValidateMcpToken(ctx context.Context, plaintext string) (bool, error)
+
+	ListCertificateAccessTokensByServer(ctx context.Context, serverID string) ([]CertificateAccessToken, error)
+	CreateCertificateAccessToken(ctx context.Context, serverID, name string, expiresAt *time.Time) (CertificateAccessToken, string, error)
+	DeleteCertificateAccessToken(ctx context.Context, serverID, tokenID string) error
+	ValidateCertificateAccessToken(ctx context.Context, serverID, plaintext string) (bool, error)
+
 	EnsureAdminUser(ctx context.Context, email, password string) error
 	Authenticate(ctx context.Context, email, password string) (User, error)
 	CreateSession(ctx context.Context, user User) (Session, error)

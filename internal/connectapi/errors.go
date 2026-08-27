@@ -20,7 +20,7 @@ func toConnectError(err error) error {
 		return connect.NewError(connect.CodeNotFound, errors.New("not found"))
 	case errors.Is(err, store.ErrInvalidCredentials):
 		return connect.NewError(connect.CodeUnauthenticated, errors.New("invalid email or password"))
-	case errors.Is(err, store.ErrGroupNameTaken), errors.Is(err, store.ErrNotifyGroupNameTaken), errors.Is(err, store.ErrDNSProviderAccountNameTaken), errors.Is(err, store.ErrCertificateIssuerNameTaken), errors.Is(err, store.ErrManagedCertificateNameTaken):
+	case errors.Is(err, store.ErrGroupNameTaken), errors.Is(err, store.ErrNotifyGroupNameTaken), errors.Is(err, store.ErrDNSProviderAccountNameTaken), errors.Is(err, store.ErrCertificateIssuerNameTaken), errors.Is(err, store.ErrManagedCertificateNameTaken), errors.Is(err, store.ErrCertificateAccessTokenNameTaken):
 		return connect.NewError(connect.CodeAlreadyExists, err)
 	case errors.Is(err, store.ErrInvalidGroupIDs), errors.Is(err, store.ErrInvalidNotifyGroupIDs), errors.Is(err, store.ErrInvalidServerIDs):
 		return connect.NewError(connect.CodeInvalidArgument, err)

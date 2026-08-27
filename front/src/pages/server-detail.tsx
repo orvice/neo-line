@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { Link, useParams } from "react-router-dom"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { ArrowLeft, Pencil, Play, Plus, Terminal, Trash2 } from "lucide-react"
+import { ArrowLeft, Pencil, Play, Plus, Shield, Terminal, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 
 import { api, ApiError } from "@/lib/api"
@@ -17,6 +17,7 @@ import {
 import { StatusBadge } from "@/components/status-badge"
 import { MonitorForm } from "@/components/monitor-form"
 import { ConfirmDialog } from "@/components/confirm-dialog"
+import { CertificateAccessTokenPanel } from "@/components/certificate-access-token-panel"
 import { TableSkeleton } from "@/components/table-skeleton"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -57,6 +58,11 @@ export function ServerDetailPage() {
     queryKey: ["events", serverId],
     queryFn: () => api.listServerEvents(serverId, { page_size: 50 }),
   })
+  const managedCertsQuery = useQuery({
+    queryKey: ["managed-certificates"],
+    queryFn: () => api.listManagedCertificates({ page_size: 200 }),
+    enabled: Boolean(serverId),
+  })
 
   const deleteMutation = useMutation({
     mutationFn: (monitorId: string) => api.deleteMonitor(serverId, monitorId),
@@ -74,6 +80,10 @@ export function ServerDetailPage() {
   const health = healthQuery.data?.health
   const monitors = monitorsQuery.data?.monitors ?? []
   const events = eventsQuery.data?.events ?? []
+  const assignedCerts =
+    managedCertsQuery.data?.certificates?.filter((c) =>
+      (c.server_ids ?? []).includes(serverId)
+    ) ?? []
 
   if (serverQuery.isLoading) {
     return <div className="text-muted-foreground py-10 text-center">加载中…</div>
@@ -150,6 +160,9 @@ export function ServerDetailPage() {
         <TabsList>
           <TabsTrigger value="monitors">监控项 ({monitors.length})</TabsTrigger>
           <TabsTrigger value="events">状态事件 ({events.length})</TabsTrigger>
+          <TabsTrigger value="certificates">
+            证书授权 ({assignedCerts.length})
+          </TabsTrigger>
           <TabsTrigger value="ssh">SSH 运维</TabsTrigger>
         </TabsList>
 
@@ -282,6 +295,46 @@ export function ServerDetailPage() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="certificates" className="flex flex-col gap-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Shield className="size-4" />
+                已分配的托管证书
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {managedCertsQuery.isLoading ? (
+                <p className="text-muted-foreground text-sm">加载中…</p>
+              ) : assignedCerts.length === 0 ? (
+                <p className="text-muted-foreground text-sm">
+                  本 Server 尚未被分配任何 ManagedCertificate。请在「证书 → 托管证书」详情页进行分配。
+                </p>
+              ) : (
+                <ul className="flex flex-col gap-2 text-sm">
+                  {assignedCerts.map((c) => (
+                    <li key={c.id}>
+                      <Link
+                        to={`/certificates/managed/${c.id}`}
+                        className="font-medium hover:underline"
+                      >
+                        {c.name}
+                      </Link>
+                      <span className="text-muted-foreground ml-2 font-mono text-xs">
+                        {c.domains[0]}
+                      </span>
+                      <Badge variant="secondary" className="ml-2">
+                        {c.active_validity}
+                      </Badge>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+          {user ? <CertificateAccessTokenPanel serverId={serverId} /> : null}
         </TabsContent>
 
         <TabsContent value="ssh">

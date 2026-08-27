@@ -1039,6 +1039,19 @@ Admin 可在 Web 控制台「证书 → 托管证书」或通过 `ManagedCertifi
 
 详见 [证书管理 — 托管证书](./certificate-management-managed-certificates.md)。
 
+### Server 分配与 CertificateAccessToken
+
+**状态：** 已实现（#19）
+
+- Admin 在托管证书详情页分配/取消分配多台 Server；变更立即写入 MongoDB，**不触发**额外签发。
+- `CertificateAccessTokenService` 按 Server 创建、列出、删除 token；全部方法要求 admin。
+- Secret 前缀 `nlct_` + 高熵随机值；MongoDB 仅存 SHA-256 hash、短 prefix 与元数据；明文仅创建时返回一次。
+- 名称在同一 Server 内唯一；可选 `expires_at`；过期 token 保留列表直至删除；多台 Server 可同时持有多个 token 以支持轮换。
+- 删除 Server 级联删除其 token 并从所有证书的 `server_ids` 移除该 Server；ManagedCertificate 保留。
+- Server 详情「证书授权」Tab：已分配证书列表 + token 管理与一次性 secret / 吊销确认。
+
+详见 [证书管理 — 访问 Token 与 Server 分配](./certificate-management-access-tokens.md)。
+
 ## 未来增强
 
 ### 更多探测类型

@@ -136,6 +136,9 @@ func main() {
 				if err := mongoStore.EnsureMcpTokenIndexes(ctx); err != nil {
 					return fmt.Errorf("ensure mcp token indexes: %w", err)
 				}
+				if err := mongoStore.EnsureCertificateAccessTokenIndexes(ctx); err != nil {
+					return fmt.Errorf("ensure certificate access token indexes: %w", err)
+				}
 				if err := mongoStore.EnsureResultIndexes(ctx); err != nil {
 					return fmt.Errorf("ensure result indexes: %w", err)
 				}

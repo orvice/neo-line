@@ -59,6 +59,10 @@ import {
   type IssueConfigSnapshot as PbIssueConfigSnapshot,
 } from "@/gen/neoline/v1/managed_certificate_pb"
 import {
+  CertificateAccessTokenService,
+  type CertificateAccessToken as PbCertificateAccessToken,
+} from "@/gen/neoline/v1/certificate_access_token_pb"
+import {
   type StatusGroup as PbStatusGroup,
   type StatusServer as PbStatusServer,
   type StatusMonitor as PbStatusMonitor,
@@ -73,6 +77,8 @@ import type {
   CertificateInfo,
   CheckResult,
   CreateMcpTokenResponse,
+  CertificateAccessToken,
+  CreateCertificateAccessTokenResponse,
   Heartbeat,
   LoginResponse,
   McpToken,
@@ -149,6 +155,7 @@ const notifyClient = createClient(NotifyGroupService, transport)
 const dnsAccountClient = createClient(DNSProviderAccountService, transport)
 const issuerClient = createClient(CertificateIssuerService, transport)
 const managedCertClient = createClient(ManagedCertificateService, transport)
+const certAccessTokenClient = createClient(CertificateAccessTokenService, transport)
 const mcpClient = createClient(McpTokenService, transport)
 const sshClient = createClient(SshService, transport)
 const auditClient = createClient(AuditLogService, transport)
@@ -597,6 +604,21 @@ function mcpTokenFromProto(t: McpTokenPb): McpToken {
     prefix: t.prefix,
     created_at: iso(t.createdAt) ?? "",
     last_used_at: iso(t.lastUsedAt),
+  }
+}
+
+function certificateAccessTokenFromProto(
+  t: PbCertificateAccessToken
+): CertificateAccessToken {
+  return {
+    id: t.id,
+    server_id: t.serverId,
+    name: t.name,
+    prefix: t.prefix,
+    created_at: iso(t.createdAt) ?? "",
+    last_used_at: iso(t.lastUsedAt),
+    expires_at: iso(t.expiresAt),
+    expired: t.expired,
   }
 }
 
@@ -1224,6 +1246,38 @@ export const api = {
   deleteMcpToken: (id: string) =>
     call<void>(async () => {
       await mcpClient.deleteMcpToken({ tokenId: id })
+    }),
+
+  // Certificate access tokens (per server)
+  listCertificateAccessTokens: (serverId: string) =>
+    call<{ tokens: CertificateAccessToken[] }>(async () => {
+      const res = await certAccessTokenClient.listCertificateAccessTokens({
+        serverId,
+      })
+      return { tokens: res.tokens.map(certificateAccessTokenFromProto) }
+    }),
+  createCertificateAccessToken: (
+    serverId: string,
+    name: string,
+    expiresAt?: Date
+  ) =>
+    call<CreateCertificateAccessTokenResponse>(async () => {
+      const res = await certAccessTokenClient.createCertificateAccessToken({
+        serverId,
+        name,
+        expiresAt: expiresAt ? timestampFromDate(expiresAt) : undefined,
+      })
+      return {
+        token: certificateAccessTokenFromProto(res.token!),
+        secret: res.secret,
+      }
+    }),
+  deleteCertificateAccessToken: (serverId: string, tokenId: string) =>
+    call<void>(async () => {
+      await certAccessTokenClient.deleteCertificateAccessToken({
+        serverId,
+        tokenId,
+      })
     }),
 
   // Audit logs

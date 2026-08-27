@@ -76,7 +76,7 @@
 ### Operation 进行中（Pending 或 Running）
 
 - 修改 **domains、issuer、DNS 账户、key_type** → Connect `failed_precondition`。  
-- 仍可修改 **name、server_ids、notify_group_ids**。  
+- 仍可修改 **name、server_ids、notify_group_ids**（详情页可独立保存 Server 分配，见 [访问 Token 与 Server 分配](./certificate-management-access-tokens.md)）。  
 
 ### 幂等 Issue 提交
 
