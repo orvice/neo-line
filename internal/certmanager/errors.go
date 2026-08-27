@@ -55,3 +55,9 @@ var ErrNoActiveVersion = errors.New("managed certificate has no active version t
 
 // ErrIssuanceOperationInFlight is returned when another Issue or Renew operation is running.
 var ErrIssuanceOperationInFlight = errors.New("another certificate issuance operation is already running")
+
+// ErrInvalidRevocationReason is returned for unsupported RFC 5280 reason codes.
+var ErrInvalidRevocationReason = errors.New("invalid certificate revocation reason")
+
+// ErrInvalidCertificatePEM is returned when PEM material cannot be parsed for revoke.
+var ErrInvalidCertificatePEM = errors.New("invalid certificate PEM")

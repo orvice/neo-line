@@ -431,6 +431,187 @@ func (f *managedCertFakeStore) ActivatePreviousVersion(_ context.Context, manage
 	return nil
 }
 
+func (f *managedCertFakeStore) DeleteManagedCertificate(_ context.Context, id string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	cert, ok := f.certs[id]
+	if !ok {
+		return mongo.ErrNoDocuments
+	}
+	if len(cert.ServerIDs) > 0 {
+		return store.ErrManagedCertificateHasServerAssignments
+	}
+	for _, opID := range f.opOrd {
+		op := f.ops[opID]
+		if op.ManagedCertificateID != id {
+			continue
+		}
+		for _, st := range store.CertOpInFlightStatuses {
+			if op.Status == st {
+				return store.ErrManagedCertificateOperationInFlight
+			}
+		}
+	}
+	delete(f.certs, id)
+	for i, cid := range f.certOrd {
+		if cid == id {
+			f.certOrd = append(f.certOrd[:i], f.certOrd[i+1:]...)
+			break
+		}
+	}
+	for opID, op := range f.ops {
+		if op.ManagedCertificateID == id {
+			delete(f.ops, opID)
+		}
+	}
+	var kept []string
+	for _, opID := range f.opOrd {
+		if _, ok := f.ops[opID]; ok {
+			kept = append(kept, opID)
+		}
+	}
+	f.opOrd = kept
+	return nil
+}
+
+func (f *managedCertFakeStore) MarkVersionRevokePending(_ context.Context, managedCertID, versionID string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	cert, ok := f.certs[managedCertID]
+	if !ok {
+		return mongo.ErrNoDocuments
+	}
+	slot := ""
+	if cert.ActiveVersion != nil && cert.ActiveVersion.ID == versionID {
+		slot = "active"
+	} else if cert.PreviousVersion != nil && cert.PreviousVersion.ID == versionID {
+		slot = "previous"
+	} else {
+		return store.ErrVersionNotFound
+	}
+	var v *store.CertificateVersion
+	if slot == "active" {
+		v = cert.ActiveVersion
+	} else {
+		v = cert.PreviousVersion
+	}
+	if v.RevokedAt != nil {
+		return store.ErrVersionRevoked
+	}
+	if v.RevokePending {
+		return store.ErrVersionRevokePending
+	}
+	v.RevokePending = true
+	cert.UpdatedAt = time.Now().UTC()
+	f.certs[managedCertID] = cert
+	return nil
+}
+
+func (f *managedCertFakeStore) ClearVersionRevokePending(_ context.Context, managedCertID, versionID string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	cert, ok := f.certs[managedCertID]
+	if !ok {
+		return mongo.ErrNoDocuments
+	}
+	if cert.ActiveVersion != nil && cert.ActiveVersion.ID == versionID {
+		cert.ActiveVersion.RevokePending = false
+	} else if cert.PreviousVersion != nil && cert.PreviousVersion.ID == versionID {
+		cert.PreviousVersion.RevokePending = false
+	} else {
+		return store.ErrVersionNotFound
+	}
+	f.certs[managedCertID] = cert
+	return nil
+}
+
+func (f *managedCertFakeStore) CompleteRevokeVersion(_ context.Context, managedCertID, versionID, opID, leaseOwner string, revokedAt time.Time) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	op, ok := f.ops[opID]
+	if !ok || op.Status != store.CertOpStatusRunning || op.LeaseOwner != leaseOwner {
+		return store.ErrCertificateOperationConflict
+	}
+	cert, ok := f.certs[managedCertID]
+	if !ok {
+		return mongo.ErrNoDocuments
+	}
+	var v *store.CertificateVersion
+	if cert.ActiveVersion != nil && cert.ActiveVersion.ID == versionID {
+		v = cert.ActiveVersion
+	} else if cert.PreviousVersion != nil && cert.PreviousVersion.ID == versionID {
+		v = cert.PreviousVersion
+	} else {
+		return store.ErrVersionNotFound
+	}
+	v.RevokedAt = &revokedAt
+	v.RevokePending = false
+	cert.UpdatedAt = time.Now().UTC()
+	f.certs[managedCertID] = cert
+	now := time.Now().UTC()
+	op.Status = store.CertOpStatusSucceeded
+	op.FinishedAt = &now
+	op.UpdatedAt = now
+	op.LeaseOwner = ""
+	op.LeaseExpiresAt = nil
+	f.ops[opID] = op
+	return nil
+}
+
+func (f *managedCertFakeStore) CountManagedCertificatesReferencingIssuer(_ context.Context, issuerID string) (int64, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	var count int64
+	for _, cert := range f.certs {
+		if certReferencesIssuer(cert, issuerID) {
+			count++
+		}
+	}
+	return count, nil
+}
+
+func (f *managedCertFakeStore) CountManagedCertificatesReferencingDNSAccount(_ context.Context, dnsID string) (int64, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	var count int64
+	for _, cert := range f.certs {
+		if certReferencesDNS(cert, dnsID) {
+			count++
+		}
+	}
+	return count, nil
+}
+
+func certReferencesIssuer(cert store.ManagedCertificate, issuerID string) bool {
+	if cert.CertificateIssuerID == issuerID {
+		return true
+	}
+	if cert.ActiveVersion != nil {
+		if cert.ActiveVersion.CertificateIssuerID == issuerID || cert.ActiveVersion.ConfigSnapshot.CertificateIssuerID == issuerID {
+			return true
+		}
+	}
+	if cert.PreviousVersion != nil {
+		if cert.PreviousVersion.CertificateIssuerID == issuerID || cert.PreviousVersion.ConfigSnapshot.CertificateIssuerID == issuerID {
+			return true
+		}
+	}
+	return false
+}
+
+func certReferencesDNS(cert store.ManagedCertificate, dnsID string) bool {
+	if cert.DNSProviderAccountID == dnsID {
+		return true
+	}
+	if cert.ActiveVersion != nil && cert.ActiveVersion.ConfigSnapshot.DNSProviderAccountID == dnsID {
+		return true
+	}
+	if cert.PreviousVersion != nil && cert.PreviousVersion.ConfigSnapshot.DNSProviderAccountID == dnsID {
+		return true
+	}
+	return false
+}
+
 func boolPtr(v bool) *bool { return &v }
 
 func TestNormalizeDomains(t *testing.T) {

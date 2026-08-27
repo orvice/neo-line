@@ -80,6 +80,46 @@ func (s *Service) SubmitRenewOperation(ctx context.Context, req *connect.Request
 	}), nil
 }
 
+func (s *Service) SubmitRevokeVersion(ctx context.Context, req *connect.Request[pb.SubmitRevokeVersionRequest]) (*connect.Response[pb.SubmitRevokeVersionResponse], error) {
+	op, err := s.certManager.SubmitRevokeVersion(ctx, req.Msg.GetManagedCertificateId(), req.Msg.GetVersionId(), revocationReasonFromProto(req.Msg.GetRevocationReason()))
+	if err != nil {
+		return nil, toConnectError(err)
+	}
+	return connect.NewResponse(&pb.SubmitRevokeVersionResponse{
+		Operation: certificateOperationToProto(op),
+	}), nil
+}
+
+func (s *Service) DeleteManagedCertificate(ctx context.Context, req *connect.Request[pb.DeleteManagedCertificateRequest]) (*connect.Response[pb.DeleteManagedCertificateResponse], error) {
+	if err := s.certManager.DeleteManagedCertificate(ctx, req.Msg.GetManagedCertificateId()); err != nil {
+		return nil, toConnectError(err)
+	}
+	return connect.NewResponse(&pb.DeleteManagedCertificateResponse{}), nil
+}
+
+func revocationReasonFromProto(r pb.CertificateRevocationReason) uint32 {
+	switch r {
+	case pb.CertificateRevocationReason_CERTIFICATE_REVOCATION_REASON_KEY_COMPROMISE:
+		return 1
+	case pb.CertificateRevocationReason_CERTIFICATE_REVOCATION_REASON_CA_COMPROMISE:
+		return 2
+	case pb.CertificateRevocationReason_CERTIFICATE_REVOCATION_REASON_AFFILIATION_CHANGED:
+		return 3
+	case pb.CertificateRevocationReason_CERTIFICATE_REVOCATION_REASON_SUPERSEDED:
+		return 4
+	case pb.CertificateRevocationReason_CERTIFICATE_REVOCATION_REASON_CESSATION_OF_OPERATION:
+		return 5
+	case pb.CertificateRevocationReason_CERTIFICATE_REVOCATION_REASON_CERTIFICATE_HOLD:
+		return 6
+	case pb.CertificateRevocationReason_CERTIFICATE_REVOCATION_REASON_PRIVILEGE_WITHDRAWN:
+		return 9
+	case pb.CertificateRevocationReason_CERTIFICATE_REVOCATION_REASON_AA_COMPROMISE:
+		return 10
+	default:
+		return 0
+	}
+}
+
 func (s *Service) GetCertificateBundle(ctx context.Context, req *connect.Request[pb.GetCertificateBundleRequest]) (*connect.Response[pb.GetCertificateBundleResponse], error) {
 	slot := versionSlotFromProto(req.Msg.GetVersionSlot())
 	bundle, err := s.certManager.GetCertificateBundle(ctx, req.Msg.GetManagedCertificateId(), slot)

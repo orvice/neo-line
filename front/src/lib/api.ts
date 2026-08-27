@@ -54,6 +54,7 @@ import {
   CertificateValidity as PbCertValidity,
   CertificateOperationType as PbCertOpType,
   CertificateOperationStatus as PbCertOpStatus,
+  CertificateRevocationReason as PbCertRevocationReason,
   CertificateVersionSlot as PbCertVersionSlot,
   type ManagedCertificate as PbManagedCertificate,
   type CertificateVersionMetadata as PbCertificateVersionMetadata,
@@ -97,6 +98,7 @@ import type {
   CertificateOperation,
   CertificateOperationStatus,
   CertificateOperationType,
+  CertificateRevocationReason,
   CertificateValidity,
   CertificateVersionMetadata,
   CertificateBundle,
@@ -518,6 +520,52 @@ function opStatusFromProto(s: PbCertOpStatus): CertificateOperationStatus {
   }
 }
 
+function revocationReasonFromProto(r: PbCertRevocationReason): CertificateRevocationReason {
+  switch (r) {
+    case PbCertRevocationReason.KEY_COMPROMISE:
+      return "key_compromise"
+    case PbCertRevocationReason.CA_COMPROMISE:
+      return "ca_compromise"
+    case PbCertRevocationReason.AFFILIATION_CHANGED:
+      return "affiliation_changed"
+    case PbCertRevocationReason.SUPERSEDED:
+      return "superseded"
+    case PbCertRevocationReason.CESSATION_OF_OPERATION:
+      return "cessation_of_operation"
+    case PbCertRevocationReason.CERTIFICATE_HOLD:
+      return "certificate_hold"
+    case PbCertRevocationReason.PRIVILEGE_WITHDRAWN:
+      return "privilege_withdrawn"
+    case PbCertRevocationReason.AA_COMPROMISE:
+      return "aa_compromise"
+    default:
+      return "unspecified"
+  }
+}
+
+function revocationReasonToProto(r: CertificateRevocationReason): PbCertRevocationReason {
+  switch (r) {
+    case "key_compromise":
+      return PbCertRevocationReason.KEY_COMPROMISE
+    case "ca_compromise":
+      return PbCertRevocationReason.CA_COMPROMISE
+    case "affiliation_changed":
+      return PbCertRevocationReason.AFFILIATION_CHANGED
+    case "superseded":
+      return PbCertRevocationReason.SUPERSEDED
+    case "cessation_of_operation":
+      return PbCertRevocationReason.CESSATION_OF_OPERATION
+    case "certificate_hold":
+      return PbCertRevocationReason.CERTIFICATE_HOLD
+    case "privilege_withdrawn":
+      return PbCertRevocationReason.PRIVILEGE_WITHDRAWN
+    case "aa_compromise":
+      return PbCertRevocationReason.AA_COMPROMISE
+    default:
+      return PbCertRevocationReason.UNSPECIFIED
+  }
+}
+
 function issueSnapshotFromProto(s: PbIssueConfigSnapshot): IssueConfigSnapshot {
   return {
     domains: [...s.domains],
@@ -544,6 +592,10 @@ function certificateOperationFromProto(op: PbCertificateOperation): CertificateO
     next_attempt_at: iso(op.nextAttemptAt),
     created_at: iso(op.createdAt) ?? "",
     updated_at: iso(op.updatedAt) ?? "",
+    target_version_id: op.targetVersionId || undefined,
+    revocation_reason: op.revocationReason
+      ? revocationReasonFromProto(op.revocationReason)
+      : undefined,
   }
 }
 
@@ -562,6 +614,7 @@ function certificateVersionFromProto(v: PbCertificateVersionMetadata): Certifica
     staging_untrusted: v.stagingUntrusted,
     created_at: iso(v.createdAt),
     revoked_at: iso(v.revokedAt),
+    revoke_pending: v.revokePending,
   }
 }
 
@@ -1311,6 +1364,23 @@ export const api = {
         versionId,
       })
       return { certificate: managedCertificateFromProto(res.certificate!) }
+    }),
+  submitRevokeVersion: (
+    id: string,
+    versionId: string,
+    reason: CertificateRevocationReason = "unspecified"
+  ) =>
+    call<{ operation: CertificateOperation }>(async () => {
+      const res = await managedCertClient.submitRevokeVersion({
+        managedCertificateId: id,
+        versionId,
+        revocationReason: revocationReasonToProto(reason),
+      })
+      return { operation: certificateOperationFromProto(res.operation!) }
+    }),
+  deleteManagedCertificate: (id: string) =>
+    call<void>(async () => {
+      await managedCertClient.deleteManagedCertificate({ managedCertificateId: id })
     }),
 
   // MCP tokens

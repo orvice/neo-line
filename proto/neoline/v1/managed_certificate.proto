@@ -38,6 +38,19 @@ enum CertificateOperationStatus {
   CERTIFICATE_OPERATION_STATUS_FAILED = 4;
 }
 
+// CertificateRevocationReason maps to RFC 5280 CRLReason codes for ACME revoke.
+enum CertificateRevocationReason {
+  CERTIFICATE_REVOCATION_REASON_UNSPECIFIED = 0;
+  CERTIFICATE_REVOCATION_REASON_KEY_COMPROMISE = 1;
+  CERTIFICATE_REVOCATION_REASON_CA_COMPROMISE = 2;
+  CERTIFICATE_REVOCATION_REASON_AFFILIATION_CHANGED = 3;
+  CERTIFICATE_REVOCATION_REASON_SUPERSEDED = 4;
+  CERTIFICATE_REVOCATION_REASON_CESSATION_OF_OPERATION = 5;
+  CERTIFICATE_REVOCATION_REASON_CERTIFICATE_HOLD = 6;
+  CERTIFICATE_REVOCATION_REASON_PRIVILEGE_WITHDRAWN = 9;
+  CERTIFICATE_REVOCATION_REASON_AA_COMPROMISE = 10;
+}
+
 // IssueConfigSnapshot captures issuance parameters frozen at operation creation.
 message IssueConfigSnapshot {
   repeated string domains = 1;
@@ -60,6 +73,9 @@ message CertificateOperation {
   google.protobuf.Timestamp next_attempt_at = 11;
   google.protobuf.Timestamp created_at = 12;
   google.protobuf.Timestamp updated_at = 13;
+  // Revoke operations only: target CertificateVersion id.
+  string target_version_id = 14;
+  CertificateRevocationReason revocation_reason = 15;
 }
 
 // CertificateVersionSlot selects which stored version to download.
@@ -82,6 +98,8 @@ message CertificateVersionMetadata {
   bool staging_untrusted = 9;
   google.protobuf.Timestamp created_at = 10;
   google.protobuf.Timestamp revoked_at = 11;
+  // True while a Revoke operation is pending or running for this version.
+  bool revoke_pending = 12;
 }
 
 message CertificateBundle {
@@ -132,6 +150,23 @@ message SubmitRenewOperationRequest {
 message SubmitRenewOperationResponse {
   CertificateOperation operation = 1;
 }
+
+message SubmitRevokeVersionRequest {
+  string managed_certificate_id = 1;
+  string version_id = 2;
+  // Defaults to unspecified (RFC 5280 reason 0) when omitted.
+  CertificateRevocationReason revocation_reason = 3;
+}
+
+message SubmitRevokeVersionResponse {
+  CertificateOperation operation = 1;
+}
+
+message DeleteManagedCertificateRequest {
+  string managed_certificate_id = 1;
+}
+
+message DeleteManagedCertificateResponse {}
 
 // ManagedCertificate holds desired config, assignments, and version container.
 // Secrets are never returned on read.
@@ -206,6 +241,8 @@ service ManagedCertificateService {
   rpc UpdateManagedCertificate(UpdateManagedCertificateRequest) returns (UpdateManagedCertificateResponse) {}
   rpc SubmitIssueOperation(SubmitIssueOperationRequest) returns (SubmitIssueOperationResponse) {}
   rpc SubmitRenewOperation(SubmitRenewOperationRequest) returns (SubmitRenewOperationResponse) {}
+  rpc SubmitRevokeVersion(SubmitRevokeVersionRequest) returns (SubmitRevokeVersionResponse) {}
   rpc GetCertificateBundle(GetCertificateBundleRequest) returns (GetCertificateBundleResponse) {}
   rpc ActivatePreviousVersion(ActivatePreviousVersionRequest) returns (ActivatePreviousVersionResponse) {}
+  rpc DeleteManagedCertificate(DeleteManagedCertificateRequest) returns (DeleteManagedCertificateResponse) {}
 }

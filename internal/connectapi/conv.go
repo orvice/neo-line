@@ -484,6 +484,31 @@ func certificateOperationToProto(op certmanager.PublicOperation) *pb.Certificate
 		NextAttemptAt:        timeToTSPtr(op.NextAttemptAt),
 		CreatedAt:            timeToTS(op.CreatedAt),
 		UpdatedAt:            timeToTS(op.UpdatedAt),
+		TargetVersionId:      op.TargetVersionID,
+		RevocationReason:     revocationReasonToProto(op.RevokeReason),
+	}
+}
+
+func revocationReasonToProto(reason uint32) pb.CertificateRevocationReason {
+	switch reason {
+	case 1:
+		return pb.CertificateRevocationReason_CERTIFICATE_REVOCATION_REASON_KEY_COMPROMISE
+	case 2:
+		return pb.CertificateRevocationReason_CERTIFICATE_REVOCATION_REASON_CA_COMPROMISE
+	case 3:
+		return pb.CertificateRevocationReason_CERTIFICATE_REVOCATION_REASON_AFFILIATION_CHANGED
+	case 4:
+		return pb.CertificateRevocationReason_CERTIFICATE_REVOCATION_REASON_SUPERSEDED
+	case 5:
+		return pb.CertificateRevocationReason_CERTIFICATE_REVOCATION_REASON_CESSATION_OF_OPERATION
+	case 6:
+		return pb.CertificateRevocationReason_CERTIFICATE_REVOCATION_REASON_CERTIFICATE_HOLD
+	case 9:
+		return pb.CertificateRevocationReason_CERTIFICATE_REVOCATION_REASON_PRIVILEGE_WITHDRAWN
+	case 10:
+		return pb.CertificateRevocationReason_CERTIFICATE_REVOCATION_REASON_AA_COMPROMISE
+	default:
+		return pb.CertificateRevocationReason_CERTIFICATE_REVOCATION_REASON_UNSPECIFIED
 	}
 }
 
@@ -502,6 +527,7 @@ func certificateVersionToProto(v *certmanager.PublicCertificateVersion) *pb.Cert
 		KeyType:          certificateKeyTypeToProto(v.KeyType),
 		StagingUntrusted: v.StagingUntrusted,
 		CreatedAt:        unixToTS(v.CreatedAt),
+		RevokePending:    v.RevokePending,
 	}
 	if v.RevokedAt != 0 {
 		out.RevokedAt = unixToTS(v.RevokedAt)

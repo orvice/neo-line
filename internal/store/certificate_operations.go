@@ -85,6 +85,8 @@ type CertificateOperation struct {
 	LeaseOwner           string               `bson:"lease_owner,omitempty" json:"lease_owner,omitempty"`
 	LeaseExpiresAt       *time.Time           `bson:"lease_expires_at,omitempty" json:"lease_expires_at,omitempty"`
 	PendingTXTRecords    []DNSChallengeRecord `bson:"pending_txt_records,omitempty" json:"pending_txt_records,omitempty"`
+	TargetVersionID      string               `bson:"target_version_id,omitempty" json:"target_version_id,omitempty"`
+	RevokeReason         uint32               `bson:"revoke_reason,omitempty" json:"revoke_reason,omitempty"`
 	StartedAt            *time.Time           `bson:"started_at,omitempty" json:"started_at,omitempty"`
 	FinishedAt           *time.Time           `bson:"finished_at,omitempty" json:"finished_at,omitempty"`
 	NextAttemptAt        *time.Time           `bson:"next_attempt_at,omitempty" json:"next_attempt_at,omitempty"`

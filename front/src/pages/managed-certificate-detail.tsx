@@ -1,12 +1,13 @@
 import { useState } from "react"
-import { Link, useParams } from "react-router-dom"
+import { Link, useNavigate, useParams } from "react-router-dom"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { ChevronLeft, Download, Pencil, RefreshCw, Repeat, Rocket } from "lucide-react"
+import { ChevronLeft, Download, Pencil, RefreshCw, Repeat, Rocket, ShieldOff, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 
 import { api, ApiError } from "@/lib/api"
 import type {
   CertificateKeyType,
+  CertificateRevocationReason,
   CertificateVersionMetadata,
   ManagedCertificate,
 } from "@/lib/types"
@@ -32,6 +33,18 @@ const VALIDITY_LABELS: Record<string, string> = {
   Expired: "Expired",
   Revoked: "Revoked",
   Unspecified: "—",
+}
+
+const REVOKE_REASON_LABELS: Record<CertificateRevocationReason, string> = {
+  unspecified: "未指定 (unspecified)",
+  key_compromise: "密钥泄露 (keyCompromise)",
+  ca_compromise: "CA 泄露 (cACompromise)",
+  affiliation_changed: "隶属关系变更 (affiliationChanged)",
+  superseded: "已被替代 (superseded)",
+  cessation_of_operation: "停止运营 (cessationOfOperation)",
+  certificate_hold: "证书挂起 (certificateHold)",
+  privilege_withdrawn: "权限撤销 (privilegeWithdrawn)",
+  aa_compromise: "AA 泄露 (aACompromise)",
 }
 
 function downloadBytes(filename: string, bytes: Uint8Array) {
@@ -97,6 +110,8 @@ function VersionPanel({
   readOnly,
   onActivate,
   activatePending,
+  onRevoke,
+  revokePending,
 }: {
   title: string
   version?: CertificateVersionMetadata
@@ -106,6 +121,8 @@ function VersionPanel({
   readOnly: boolean
   onActivate?: () => void
   activatePending?: boolean
+  onRevoke?: () => void
+  revokePending?: boolean
 }) {
   const downloadBundle = useMutation({
     mutationFn: () => api.getCertificateBundle(certId, versionSlot),
@@ -133,6 +150,7 @@ function VersionPanel({
 
   const expired = versionExpired(version)
   const revoked = Boolean(version.revoked_at)
+  const pendingRevoke = Boolean(version.revoke_pending)
 
   return (
     <Card>
@@ -162,6 +180,9 @@ function VersionPanel({
                 {revoked ? (
                   <span className="ml-2 text-destructive">（已吊销）</span>
                 ) : null}
+                {pendingRevoke ? (
+                  <span className="ml-2 text-destructive">（吊销处理中，已停止分发）</span>
+                ) : null}
               </dd>
             </div>
           )}
@@ -174,7 +195,7 @@ function VersionPanel({
             </div>
           )}
         </dl>
-        {!readOnly && !revoked ? (
+        {!readOnly && !revoked && !pendingRevoke ? (
           <div className="mt-2 flex flex-wrap gap-2">
             <Button
               variant="outline"
@@ -185,6 +206,17 @@ function VersionPanel({
               <Download className="size-4" />
               下载 PEM
             </Button>
+            {onRevoke ? (
+              <Button
+                variant="destructive"
+                size="sm"
+                disabled={revokePending}
+                onClick={onRevoke}
+              >
+                <ShieldOff className="size-4" />
+                吊销此版本
+              </Button>
+            ) : null}
             {versionSlot === "previous" && onActivate ? (
               <Button
                 variant="secondary"
@@ -204,11 +236,20 @@ function VersionPanel({
 
 export function ManagedCertificateDetailPage() {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { certId } = useParams<{ certId: string }>()
   const id = certId ?? ""
   const [formOpen, setFormOpen] = useState(false)
   const [activateConfirmOpen, setActivateConfirmOpen] = useState(false)
+  const [revokeConfirmOpen, setRevokeConfirmOpen] = useState(false)
+  const [revokeTarget, setRevokeTarget] = useState<{
+    versionId: string
+    slot: "active" | "previous"
+  } | null>(null)
+  const [revokeReason, setRevokeReason] =
+    useState<CertificateRevocationReason>("unspecified")
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
 
   const certQuery = useQuery({
     queryKey: ["managed-certificate", id],
@@ -287,12 +328,48 @@ export function ManagedCertificateDetailPage() {
     },
   })
 
+  const revokeMutation = useMutation({
+    mutationFn: () =>
+      api.submitRevokeVersion(id, revokeTarget!.versionId, revokeReason),
+    onSuccess: () => {
+      toast.success("吊销请求已接受；该版本已立即停止分发")
+      setRevokeConfirmOpen(false)
+      setRevokeTarget(null)
+      queryClient.invalidateQueries({ queryKey: ["managed-certificate", id] })
+    },
+    onError: (err: unknown) => {
+      toast.error(err instanceof ApiError ? err.message : "吊销提交失败")
+    },
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: () => api.deleteManagedCertificate(id),
+    onSuccess: () => {
+      toast.success("已删除托管证书（本地记录；未向 CA 隐式吊销）")
+      queryClient.invalidateQueries({ queryKey: ["managed-certificates"] })
+      navigate("/certificates/managed")
+    },
+    onError: (err: unknown) => {
+      toast.error(err instanceof ApiError ? err.message : "删除失败")
+    },
+  })
+
   const issueRunning =
     op?.type === "Issue" &&
     (op.status === "Pending" || op.status === "Running")
   const renewRunning =
     op?.type === "Renew" &&
     (op.status === "Pending" || op.status === "Running")
+  const revokeRunning =
+    op?.type === "Revoke" &&
+    (op.status === "Pending" || op.status === "Running")
+  const anyOpRunning = issueRunning || renewRunning || revokeRunning
+
+  const canDelete =
+    user &&
+    cert &&
+    (cert.server_ids ?? []).length === 0 &&
+    !anyOpRunning
 
   return (
     <div className="animate-enter flex flex-col gap-6">
@@ -356,6 +433,15 @@ export function ManagedCertificateDetailPage() {
                     <Pencil className="size-4" />
                     编辑
                   </Button>
+                  {canDelete ? (
+                    <Button
+                      variant="destructive"
+                      onClick={() => setDeleteConfirmOpen(true)}
+                    >
+                      <Trash2 className="size-4" />
+                      删除证书
+                    </Button>
+                  ) : null}
                 </>
               ) : null}
             </div>
@@ -497,6 +583,22 @@ export function ManagedCertificateDetailPage() {
               versionSlot="active"
               certId={id}
               readOnly={!user}
+              revokePending={revokeMutation.isPending}
+              onRevoke={
+                cert.active_version &&
+                !cert.active_version.revoked_at &&
+                !cert.active_version.revoke_pending &&
+                !anyOpRunning
+                  ? () => {
+                      setRevokeTarget({
+                        versionId: cert.active_version!.id,
+                        slot: "active",
+                      })
+                      setRevokeReason("unspecified")
+                      setRevokeConfirmOpen(true)
+                    }
+                  : undefined
+              }
             />
 
             <VersionPanel
@@ -507,6 +609,22 @@ export function ManagedCertificateDetailPage() {
               certId={id}
               readOnly={!user}
               activatePending={activateMutation.isPending}
+              revokePending={revokeMutation.isPending}
+              onRevoke={
+                cert.previous_version &&
+                !cert.previous_version.revoked_at &&
+                !cert.previous_version.revoke_pending &&
+                !anyOpRunning
+                  ? () => {
+                      setRevokeTarget({
+                        versionId: cert.previous_version!.id,
+                        slot: "previous",
+                      })
+                      setRevokeReason("unspecified")
+                      setRevokeConfirmOpen(true)
+                    }
+                  : undefined
+              }
               onActivate={
                 cert.previous_version && !cert.previous_version.revoked_at
                   ? () => {
@@ -598,6 +716,11 @@ export function ManagedCertificateDetailPage() {
               <CardContent className="text-muted-foreground pt-6 text-xs">
                 创建于 {formatTime(cert.created_at)} · 更新于{" "}
                 {formatTime(cert.updated_at)}
+                {user && (cert.server_ids ?? []).length > 0 ? (
+                  <p className="mt-2 text-amber-700">
+                    删除前须解除全部 Server 分配且无运行中 operation。
+                  </p>
+                ) : null}
               </CardContent>
             </Card>
           </div>
@@ -627,6 +750,55 @@ export function ManagedCertificateDetailPage() {
         confirmText="确认激活"
         pending={activateMutation.isPending}
         onConfirm={() => activateMutation.mutate()}
+      />
+
+      <ConfirmDialog
+        open={revokeConfirmOpen}
+        onOpenChange={setRevokeConfirmOpen}
+        title={`吊销 ${revokeTarget?.slot === "active" ? "active" : "previous"} 版本？`}
+        description={
+          <div className="flex flex-col gap-3 text-sm">
+            <p>
+              吊销请求一经接受，该版本将<strong>立即停止分发</strong>（不等待 CA
+              确认）。CA 调用失败时仍保持阻止并自动重试。
+            </p>
+            <p>
+              吊销 active <strong>不会</strong>自动激活 previous 或签发新版本；后续动作须由
+              Admin 明确选择。此操作向 CA 提交不可逆的吊销请求。
+            </p>
+            <label className="flex flex-col gap-1">
+              <span className="text-muted-foreground">RFC 5280 吊销原因</span>
+              <select
+                className="border-input bg-background rounded-md border px-2 py-1.5 text-sm"
+                value={revokeReason}
+                onChange={(e) =>
+                  setRevokeReason(e.target.value as CertificateRevocationReason)
+                }
+              >
+                {(Object.keys(REVOKE_REASON_LABELS) as CertificateRevocationReason[]).map(
+                  (key) => (
+                    <option key={key} value={key}>
+                      {REVOKE_REASON_LABELS[key]}
+                    </option>
+                  )
+                )}
+              </select>
+            </label>
+          </div>
+        }
+        confirmText="确认吊销"
+        pending={revokeMutation.isPending}
+        onConfirm={() => revokeMutation.mutate()}
+      />
+
+      <ConfirmDialog
+        open={deleteConfirmOpen}
+        onOpenChange={setDeleteConfirmOpen}
+        title="删除托管证书？"
+        description="此操作仅删除 neo-line 中的 desired config、active/previous 版本、operations 与通知节流状态；不会向 CA 隐式吊销证书。audit_logs 与 Server 的 CertificateAccessToken 不会被删除。此操作不可恢复。"
+        confirmText="确认删除本地记录"
+        pending={deleteMutation.isPending}
+        onConfirm={() => deleteMutation.mutate()}
       />
     </div>
   )

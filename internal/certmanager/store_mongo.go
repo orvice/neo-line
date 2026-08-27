@@ -77,6 +77,30 @@ func (s *mongoStore) UpdateManagedCertificate(ctx context.Context, id string, ce
 	return s.st.UpdateManagedCertificate(ctx, id, cert)
 }
 
+func (s *mongoStore) DeleteManagedCertificate(ctx context.Context, id string) error {
+	return s.st.DeleteManagedCertificate(ctx, id)
+}
+
+func (s *mongoStore) MarkVersionRevokePending(ctx context.Context, managedCertID, versionID string) error {
+	return s.st.MarkVersionRevokePending(ctx, managedCertID, versionID)
+}
+
+func (s *mongoStore) ClearVersionRevokePending(ctx context.Context, managedCertID, versionID string) error {
+	return s.st.ClearVersionRevokePending(ctx, managedCertID, versionID)
+}
+
+func (s *mongoStore) CompleteRevokeVersion(ctx context.Context, managedCertID, versionID, opID, leaseOwner string, revokedAt time.Time) error {
+	return s.st.CompleteRevokeVersion(ctx, managedCertID, versionID, opID, leaseOwner, revokedAt)
+}
+
+func (s *mongoStore) CountManagedCertificatesReferencingIssuer(ctx context.Context, issuerID string) (int64, error) {
+	return s.st.CountManagedCertificatesReferencingIssuer(ctx, issuerID)
+}
+
+func (s *mongoStore) CountManagedCertificatesReferencingDNSAccount(ctx context.Context, dnsID string) (int64, error) {
+	return s.st.CountManagedCertificatesReferencingDNSAccount(ctx, dnsID)
+}
+
 func (s *mongoStore) CreateCertificateOperation(ctx context.Context, op store.CertificateOperation) (store.CertificateOperation, error) {
 	return s.st.CreateCertificateOperation(ctx, op)
 }

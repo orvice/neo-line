@@ -67,3 +67,21 @@ func (noopIssueStore) ActivateSubsequentIssueVersion(context.Context, string, st
 func (noopIssueStore) ActivatePreviousVersion(context.Context, string, string) error {
 	return errors.New("not implemented")
 }
+func (noopIssueStore) DeleteManagedCertificate(context.Context, string) error {
+	return errors.New("not implemented")
+}
+func (noopIssueStore) MarkVersionRevokePending(context.Context, string, string) error {
+	return errors.New("not implemented")
+}
+func (noopIssueStore) ClearVersionRevokePending(context.Context, string, string) error {
+	return errors.New("not implemented")
+}
+func (noopIssueStore) CompleteRevokeVersion(context.Context, string, string, string, string, time.Time) error {
+	return errors.New("not implemented")
+}
+func (noopIssueStore) CountManagedCertificatesReferencingIssuer(context.Context, string) (int64, error) {
+	return 0, nil
+}
+func (noopIssueStore) CountManagedCertificatesReferencingDNSAccount(context.Context, string) (int64, error) {
+	return 0, nil
+}

@@ -13,6 +13,7 @@ neo-line 是一个基于 Go 和 Butterfly 应用框架构建的服务器监控�
 - [证书管理 — DNS 账户](./certificate-management-dns-accounts.md) — Cloudflare DNSProviderAccount 配置、权限与传播超时
 - [证书管理 — ACME Issuer](./certificate-management-issuers.md) — CertificateIssuer preset、EAB、ToS 与注册状态
 - [证书管理 — 托管证书](./certificate-management-managed-certificates.md) — ManagedCertificate desired config、领域区别与 Pending Issue
+- [证书管理 — 停用/吊销/回滚/删除](./certificate-management-destructive-operations.md) — 四类破坏性操作语义与约束（#25）
 
 ## 当前应用基础
 

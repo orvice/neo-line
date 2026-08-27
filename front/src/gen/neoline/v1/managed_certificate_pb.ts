@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file neoline/v1/managed_certificate.proto.
  */
 export const file_neoline_v1_managed_certificate: GenFile = /*@__PURE__*/
-  fileDesc("CiRuZW9saW5lL3YxL21hbmFnZWRfY2VydGlmaWNhdGUucHJvdG8SCm5lb2xpbmUudjEimAEKE0lzc3VlQ29uZmlnU25hcHNob3QSDwoHZG9tYWlucxgBIAMoCRIdChVjZXJ0aWZpY2F0ZV9pc3N1ZXJfaWQYAiABKAkSHwoXZG5zX3Byb3ZpZGVyX2FjY291bnRfaWQYAyABKAkSMAoIa2V5X3R5cGUYBCABKA4yHi5uZW9saW5lLnYxLkNlcnRpZmljYXRlS2V5VHlwZSKdBAoUQ2VydGlmaWNhdGVPcGVyYXRpb24SCgoCaWQYASABKAkSHgoWbWFuYWdlZF9jZXJ0aWZpY2F0ZV9pZBgCIAEoCRIyCgR0eXBlGAMgASgOMiQubmVvbGluZS52MS5DZXJ0aWZpY2F0ZU9wZXJhdGlvblR5cGUSNgoGc3RhdHVzGAQgASgOMiYubmVvbGluZS52MS5DZXJ0aWZpY2F0ZU9wZXJhdGlvblN0YXR1cxIVCg1hdHRlbXB0X2NvdW50GAUgASgNEjgKD2NvbmZpZ19zbmFwc2hvdBgGIAEoCzIfLm5lb2xpbmUudjEuSXNzdWVDb25maWdTbmFwc2hvdBIVCg1lcnJvcl9zdW1tYXJ5GAcgASgJEg8KB3dhcm5pbmcYCCABKAkSLgoKc3RhcnRlZF9hdBgJIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLwoLZmluaXNoZWRfYXQYCiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEjMKD25leHRfYXR0ZW1wdF9hdBgLIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLgoKY3JlYXRlZF9hdBgMIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLgoKdXBkYXRlZF9hdBgNIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAiuwMKGkNlcnRpZmljYXRlVmVyc2lvbk1ldGFkYXRhEgoKAmlkGAEgASgJEjgKD2NvbmZpZ19zbmFwc2hvdBgCIAEoCzIfLm5lb2xpbmUudjEuSXNzdWVDb25maWdTbmFwc2hvdBIYChBsZWFmX2ZpbmdlcnByaW50GAMgASgJEhUKDXNlcmlhbF9udW1iZXIYBCABKAkSGgoSaXNzdWVyX2NvbW1vbl9uYW1lGAUgASgJEi4KCm5vdF9iZWZvcmUYBiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi0KCW5vdF9hZnRlchgHIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASMAoIa2V5X3R5cGUYCCABKA4yHi5uZW9saW5lLnYxLkNlcnRpZmljYXRlS2V5VHlwZRIZChFzdGFnaW5nX3VudHJ1c3RlZBgJIAEoCBIuCgpjcmVhdGVkX2F0GAogASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIuCgpyZXZva2VkX2F0GAsgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCKBAwoRQ2VydGlmaWNhdGVCdW5kbGUSHgoWbWFuYWdlZF9jZXJ0aWZpY2F0ZV9pZBgBIAEoCRISCgp2ZXJzaW9uX2lkGAIgASgJEg8KB2RvbWFpbnMYAyADKAkSMAoIa2V5X3R5cGUYBCABKA4yHi5uZW9saW5lLnYxLkNlcnRpZmljYXRlS2V5VHlwZRIYChBsZWFmX2ZpbmdlcnByaW50GAUgASgJEi4KCm5vdF9iZWZvcmUYBiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi0KCW5vdF9hZnRlchgHIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASMQoIdmFsaWRpdHkYCCABKA4yHy5uZW9saW5lLnYxLkNlcnRpZmljYXRlVmFsaWRpdHkSGQoRc3RhZ2luZ191bnRydXN0ZWQYCSABKAgSFQoNZnVsbGNoYWluX3BlbRgKIAEoDBIXCg9wcml2YXRlX2tleV9wZW0YCyABKAwidwobR2V0Q2VydGlmaWNhdGVCdW5kbGVSZXF1ZXN0Eh4KFm1hbmFnZWRfY2VydGlmaWNhdGVfaWQYASABKAkSOAoMdmVyc2lvbl9zbG90GAIgASgOMiIubmVvbGluZS52MS5DZXJ0aWZpY2F0ZVZlcnNpb25TbG90IlQKHkFjdGl2YXRlUHJldmlvdXNWZXJzaW9uUmVxdWVzdBIeChZtYW5hZ2VkX2NlcnRpZmljYXRlX2lkGAEgASgJEhIKCnZlcnNpb25faWQYAiABKAkiVgofQWN0aXZhdGVQcmV2aW91c1ZlcnNpb25SZXNwb25zZRIzCgtjZXJ0aWZpY2F0ZRgBIAEoCzIeLm5lb2xpbmUudjEuTWFuYWdlZENlcnRpZmljYXRlIk0KHEdldENlcnRpZmljYXRlQnVuZGxlUmVzcG9uc2USLQoGYnVuZGxlGAEgASgLMh0ubmVvbGluZS52MS5DZXJ0aWZpY2F0ZUJ1bmRsZSI9ChtTdWJtaXRJc3N1ZU9wZXJhdGlvblJlcXVlc3QSHgoWbWFuYWdlZF9jZXJ0aWZpY2F0ZV9pZBgBIAEoCSJTChxTdWJtaXRJc3N1ZU9wZXJhdGlvblJlc3BvbnNlEjMKCW9wZXJhdGlvbhgBIAEoCzIgLm5lb2xpbmUudjEuQ2VydGlmaWNhdGVPcGVyYXRpb24iPQobU3VibWl0UmVuZXdPcGVyYXRpb25SZXF1ZXN0Eh4KFm1hbmFnZWRfY2VydGlmaWNhdGVfaWQYASABKAkiUwocU3VibWl0UmVuZXdPcGVyYXRpb25SZXNwb25zZRIzCglvcGVyYXRpb24YASABKAsyIC5uZW9saW5lLnYxLkNlcnRpZmljYXRlT3BlcmF0aW9uIqkGChJNYW5hZ2VkQ2VydGlmaWNhdGUSCgoCaWQYASABKAkSDAoEbmFtZRgCIAEoCRIPCgdkb21haW5zGAMgAygJEh0KFWNlcnRpZmljYXRlX2lzc3Vlcl9pZBgEIAEoCRIfChdkbnNfcHJvdmlkZXJfYWNjb3VudF9pZBgFIAEoCRIwCghrZXlfdHlwZRgGIAEoDjIeLm5lb2xpbmUudjEuQ2VydGlmaWNhdGVLZXlUeXBlEh8KEmF1dG9fcmVuZXdfZW5hYmxlZBgHIAEoCEgAiAEBEhkKEXJlbmV3X2JlZm9yZV9kYXlzGAggASgNEhgKEG5vdGlmeV9ncm91cF9pZHMYCSADKAkSEgoKc2VydmVyX2lkcxgKIAMoCRI4Cg9hY3RpdmVfdmFsaWRpdHkYCyABKA4yHy5uZW9saW5lLnYxLkNlcnRpZmljYXRlVmFsaWRpdHkSGAoQYnVuZGxlX2F2YWlsYWJsZRgMIAEoCBI6ChBsYXRlc3Rfb3BlcmF0aW9uGA0gASgLMiAubmVvbGluZS52MS5DZXJ0aWZpY2F0ZU9wZXJhdGlvbhIuCgpjcmVhdGVkX2F0GA4gASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIuCgp1cGRhdGVkX2F0GA8gASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBI+Cg5hY3RpdmVfdmVyc2lvbhgQIAEoCzImLm5lb2xpbmUudjEuQ2VydGlmaWNhdGVWZXJzaW9uTWV0YWRhdGESQAoQcHJldmlvdXNfdmVyc2lvbhgRIAEoCzImLm5lb2xpbmUudjEuQ2VydGlmaWNhdGVWZXJzaW9uTWV0YWRhdGESJwofaGFzX3VucHVibGlzaGVkX2Rlc2lyZWRfY2hhbmdlcxgSIAEoCBIlCh1lZmZlY3RpdmVfcmVuZXdhbF93aW5kb3dfZGF5cxgTIAEoDRIzCg9uZXh0X3JlbmV3YWxfYXQYFCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQhUKE19hdXRvX3JlbmV3X2VuYWJsZWQiRwoeTGlzdE1hbmFnZWRDZXJ0aWZpY2F0ZXNSZXF1ZXN0EhEKCXBhZ2Vfc2l6ZRgBIAEoDRISCgpwYWdlX3Rva2VuGAIgASgJInAKH0xpc3RNYW5hZ2VkQ2VydGlmaWNhdGVzUmVzcG9uc2USNAoMY2VydGlmaWNhdGVzGAEgAygLMh4ubmVvbGluZS52MS5NYW5hZ2VkQ2VydGlmaWNhdGUSFwoPbmV4dF9wYWdlX3Rva2VuGAIgASgJIlYKH0NyZWF0ZU1hbmFnZWRDZXJ0aWZpY2F0ZVJlcXVlc3QSMwoLY2VydGlmaWNhdGUYASABKAsyHi5uZW9saW5lLnYxLk1hbmFnZWRDZXJ0aWZpY2F0ZSJXCiBDcmVhdGVNYW5hZ2VkQ2VydGlmaWNhdGVSZXNwb25zZRIzCgtjZXJ0aWZpY2F0ZRgBIAEoCzIeLm5lb2xpbmUudjEuTWFuYWdlZENlcnRpZmljYXRlIj4KHEdldE1hbmFnZWRDZXJ0aWZpY2F0ZVJlcXVlc3QSHgoWbWFuYWdlZF9jZXJ0aWZpY2F0ZV9pZBgBIAEoCSJUCh1HZXRNYW5hZ2VkQ2VydGlmaWNhdGVSZXNwb25zZRIzCgtjZXJ0aWZpY2F0ZRgBIAEoCzIeLm5lb2xpbmUudjEuTWFuYWdlZENlcnRpZmljYXRlInYKH1VwZGF0ZU1hbmFnZWRDZXJ0aWZpY2F0ZVJlcXVlc3QSHgoWbWFuYWdlZF9jZXJ0aWZpY2F0ZV9pZBgBIAEoCRIzCgtjZXJ0aWZpY2F0ZRgCIAEoCzIeLm5lb2xpbmUudjEuTWFuYWdlZENlcnRpZmljYXRlIlcKIFVwZGF0ZU1hbmFnZWRDZXJ0aWZpY2F0ZVJlc3BvbnNlEjMKC2NlcnRpZmljYXRlGAEgASgLMh4ubmVvbGluZS52MS5NYW5hZ2VkQ2VydGlmaWNhdGUqfwoSQ2VydGlmaWNhdGVLZXlUeXBlEiQKIENFUlRJRklDQVRFX0tFWV9UWVBFX1VOU1BFQ0lGSUVEEAASIAocQ0VSVElGSUNBVEVfS0VZX1RZUEVfRUNfUDI1NhABEiEKHUNFUlRJRklDQVRFX0tFWV9UWVBFX1JTQV8yMDQ4EAIq5wEKE0NlcnRpZmljYXRlVmFsaWRpdHkSJAogQ0VSVElGSUNBVEVfVkFMSURJVFlfVU5TUEVDSUZJRUQQABIgChxDRVJUSUZJQ0FURV9WQUxJRElUWV9NSVNTSU5HEAESHgoaQ0VSVElGSUNBVEVfVkFMSURJVFlfVkFMSUQQAhIkCiBDRVJUSUZJQ0FURV9WQUxJRElUWV9SRU5FV0FMX0RVRRADEiAKHENFUlRJRklDQVRFX1ZBTElESVRZX0VYUElSRUQQBBIgChxDRVJUSUZJQ0FURV9WQUxJRElUWV9SRVZPS0VEEAUquQEKGENlcnRpZmljYXRlT3BlcmF0aW9uVHlwZRIqCiZDRVJUSUZJQ0FURV9PUEVSQVRJT05fVFlQRV9VTlNQRUNJRklFRBAAEiQKIENFUlRJRklDQVRFX09QRVJBVElPTl9UWVBFX0lTU1VFEAESJAogQ0VSVElGSUNBVEVfT1BFUkFUSU9OX1RZUEVfUkVORVcQAhIlCiFDRVJUSUZJQ0FURV9PUEVSQVRJT05fVFlQRV9SRVZPS0UQAyrzAQoaQ2VydGlmaWNhdGVPcGVyYXRpb25TdGF0dXMSLAooQ0VSVElGSUNBVEVfT1BFUkFUSU9OX1NUQVRVU19VTlNQRUNJRklFRBAAEigKJENFUlRJRklDQVRFX09QRVJBVElPTl9TVEFUVVNfUEVORElORxABEigKJENFUlRJRklDQVRFX09QRVJBVElPTl9TVEFUVVNfUlVOTklORxACEioKJkNFUlRJRklDQVRFX09QRVJBVElPTl9TVEFUVVNfU1VDQ0VFREVEEAMSJwojQ0VSVElGSUNBVEVfT1BFUkFUSU9OX1NUQVRVU19GQUlMRUQQBCqOAQoWQ2VydGlmaWNhdGVWZXJzaW9uU2xvdBIoCiRDRVJUSUZJQ0FURV9WRVJTSU9OX1NMT1RfVU5TUEVDSUZJRUQQABIjCh9DRVJUSUZJQ0FURV9WRVJTSU9OX1NMT1RfQUNUSVZFEAESJQohQ0VSVElGSUNBVEVfVkVSU0lPTl9TTE9UX1BSRVZJT1VTEAIysAcKGU1hbmFnZWRDZXJ0aWZpY2F0ZVNlcnZpY2USdAoXTGlzdE1hbmFnZWRDZXJ0aWZpY2F0ZXMSKi5uZW9saW5lLnYxLkxpc3RNYW5hZ2VkQ2VydGlmaWNhdGVzUmVxdWVzdBorLm5lb2xpbmUudjEuTGlzdE1hbmFnZWRDZXJ0aWZpY2F0ZXNSZXNwb25zZSIAEncKGENyZWF0ZU1hbmFnZWRDZXJ0aWZpY2F0ZRIrLm5lb2xpbmUudjEuQ3JlYXRlTWFuYWdlZENlcnRpZmljYXRlUmVxdWVzdBosLm5lb2xpbmUudjEuQ3JlYXRlTWFuYWdlZENlcnRpZmljYXRlUmVzcG9uc2UiABJuChVHZXRNYW5hZ2VkQ2VydGlmaWNhdGUSKC5uZW9saW5lLnYxLkdldE1hbmFnZWRDZXJ0aWZpY2F0ZVJlcXVlc3QaKS5uZW9saW5lLnYxLkdldE1hbmFnZWRDZXJ0aWZpY2F0ZVJlc3BvbnNlIgASdwoYVXBkYXRlTWFuYWdlZENlcnRpZmljYXRlEisubmVvbGluZS52MS5VcGRhdGVNYW5hZ2VkQ2VydGlmaWNhdGVSZXF1ZXN0GiwubmVvbGluZS52MS5VcGRhdGVNYW5hZ2VkQ2VydGlmaWNhdGVSZXNwb25zZSIAEmsKFFN1Ym1pdElzc3VlT3BlcmF0aW9uEicubmVvbGluZS52MS5TdWJtaXRJc3N1ZU9wZXJhdGlvblJlcXVlc3QaKC5uZW9saW5lLnYxLlN1Ym1pdElzc3VlT3BlcmF0aW9uUmVzcG9uc2UiABJrChRTdWJtaXRSZW5ld09wZXJhdGlvbhInLm5lb2xpbmUudjEuU3VibWl0UmVuZXdPcGVyYXRpb25SZXF1ZXN0GigubmVvbGluZS52MS5TdWJtaXRSZW5ld09wZXJhdGlvblJlc3BvbnNlIgASawoUR2V0Q2VydGlmaWNhdGVCdW5kbGUSJy5uZW9saW5lLnYxLkdldENlcnRpZmljYXRlQnVuZGxlUmVxdWVzdBooLm5lb2xpbmUudjEuR2V0Q2VydGlmaWNhdGVCdW5kbGVSZXNwb25zZSIAEnQKF0FjdGl2YXRlUHJldmlvdXNWZXJzaW9uEioubmVvbGluZS52MS5BY3RpdmF0ZVByZXZpb3VzVmVyc2lvblJlcXVlc3QaKy5uZW9saW5lLnYxLkFjdGl2YXRlUHJldmlvdXNWZXJzaW9uUmVzcG9uc2UiAEI7WjlnaXRodWIuY29tL29ydmljZS9uZW8tbGluZS9wa2cvcHJvdG8vbmVvbGluZS92MTtuZW9saW5ldjFiBnByb3RvMw", [file_google_protobuf_timestamp]);
+  fileDesc("CiRuZW9saW5lL3YxL21hbmFnZWRfY2VydGlmaWNhdGUucHJvdG8SCm5lb2xpbmUudjEimAEKE0lzc3VlQ29uZmlnU25hcHNob3QSDwoHZG9tYWlucxgBIAMoCRIdChVjZXJ0aWZpY2F0ZV9pc3N1ZXJfaWQYAiABKAkSHwoXZG5zX3Byb3ZpZGVyX2FjY291bnRfaWQYAyABKAkSMAoIa2V5X3R5cGUYBCABKA4yHi5uZW9saW5lLnYxLkNlcnRpZmljYXRlS2V5VHlwZSL8BAoUQ2VydGlmaWNhdGVPcGVyYXRpb24SCgoCaWQYASABKAkSHgoWbWFuYWdlZF9jZXJ0aWZpY2F0ZV9pZBgCIAEoCRIyCgR0eXBlGAMgASgOMiQubmVvbGluZS52MS5DZXJ0aWZpY2F0ZU9wZXJhdGlvblR5cGUSNgoGc3RhdHVzGAQgASgOMiYubmVvbGluZS52MS5DZXJ0aWZpY2F0ZU9wZXJhdGlvblN0YXR1cxIVCg1hdHRlbXB0X2NvdW50GAUgASgNEjgKD2NvbmZpZ19zbmFwc2hvdBgGIAEoCzIfLm5lb2xpbmUudjEuSXNzdWVDb25maWdTbmFwc2hvdBIVCg1lcnJvcl9zdW1tYXJ5GAcgASgJEg8KB3dhcm5pbmcYCCABKAkSLgoKc3RhcnRlZF9hdBgJIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLwoLZmluaXNoZWRfYXQYCiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEjMKD25leHRfYXR0ZW1wdF9hdBgLIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLgoKY3JlYXRlZF9hdBgMIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLgoKdXBkYXRlZF9hdBgNIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASGQoRdGFyZ2V0X3ZlcnNpb25faWQYDiABKAkSQgoRcmV2b2NhdGlvbl9yZWFzb24YDyABKA4yJy5uZW9saW5lLnYxLkNlcnRpZmljYXRlUmV2b2NhdGlvblJlYXNvbiLTAwoaQ2VydGlmaWNhdGVWZXJzaW9uTWV0YWRhdGESCgoCaWQYASABKAkSOAoPY29uZmlnX3NuYXBzaG90GAIgASgLMh8ubmVvbGluZS52MS5Jc3N1ZUNvbmZpZ1NuYXBzaG90EhgKEGxlYWZfZmluZ2VycHJpbnQYAyABKAkSFQoNc2VyaWFsX251bWJlchgEIAEoCRIaChJpc3N1ZXJfY29tbW9uX25hbWUYBSABKAkSLgoKbm90X2JlZm9yZRgGIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLQoJbm90X2FmdGVyGAcgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIwCghrZXlfdHlwZRgIIAEoDjIeLm5lb2xpbmUudjEuQ2VydGlmaWNhdGVLZXlUeXBlEhkKEXN0YWdpbmdfdW50cnVzdGVkGAkgASgIEi4KCmNyZWF0ZWRfYXQYCiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi4KCnJldm9rZWRfYXQYCyABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhYKDnJldm9rZV9wZW5kaW5nGAwgASgIIoEDChFDZXJ0aWZpY2F0ZUJ1bmRsZRIeChZtYW5hZ2VkX2NlcnRpZmljYXRlX2lkGAEgASgJEhIKCnZlcnNpb25faWQYAiABKAkSDwoHZG9tYWlucxgDIAMoCRIwCghrZXlfdHlwZRgEIAEoDjIeLm5lb2xpbmUudjEuQ2VydGlmaWNhdGVLZXlUeXBlEhgKEGxlYWZfZmluZ2VycHJpbnQYBSABKAkSLgoKbm90X2JlZm9yZRgGIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLQoJbm90X2FmdGVyGAcgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIxCgh2YWxpZGl0eRgIIAEoDjIfLm5lb2xpbmUudjEuQ2VydGlmaWNhdGVWYWxpZGl0eRIZChFzdGFnaW5nX3VudHJ1c3RlZBgJIAEoCBIVCg1mdWxsY2hhaW5fcGVtGAogASgMEhcKD3ByaXZhdGVfa2V5X3BlbRgLIAEoDCJ3ChtHZXRDZXJ0aWZpY2F0ZUJ1bmRsZVJlcXVlc3QSHgoWbWFuYWdlZF9jZXJ0aWZpY2F0ZV9pZBgBIAEoCRI4Cgx2ZXJzaW9uX3Nsb3QYAiABKA4yIi5uZW9saW5lLnYxLkNlcnRpZmljYXRlVmVyc2lvblNsb3QiVAoeQWN0aXZhdGVQcmV2aW91c1ZlcnNpb25SZXF1ZXN0Eh4KFm1hbmFnZWRfY2VydGlmaWNhdGVfaWQYASABKAkSEgoKdmVyc2lvbl9pZBgCIAEoCSJWCh9BY3RpdmF0ZVByZXZpb3VzVmVyc2lvblJlc3BvbnNlEjMKC2NlcnRpZmljYXRlGAEgASgLMh4ubmVvbGluZS52MS5NYW5hZ2VkQ2VydGlmaWNhdGUiTQocR2V0Q2VydGlmaWNhdGVCdW5kbGVSZXNwb25zZRItCgZidW5kbGUYASABKAsyHS5uZW9saW5lLnYxLkNlcnRpZmljYXRlQnVuZGxlIj0KG1N1Ym1pdElzc3VlT3BlcmF0aW9uUmVxdWVzdBIeChZtYW5hZ2VkX2NlcnRpZmljYXRlX2lkGAEgASgJIlMKHFN1Ym1pdElzc3VlT3BlcmF0aW9uUmVzcG9uc2USMwoJb3BlcmF0aW9uGAEgASgLMiAubmVvbGluZS52MS5DZXJ0aWZpY2F0ZU9wZXJhdGlvbiI9ChtTdWJtaXRSZW5ld09wZXJhdGlvblJlcXVlc3QSHgoWbWFuYWdlZF9jZXJ0aWZpY2F0ZV9pZBgBIAEoCSJTChxTdWJtaXRSZW5ld09wZXJhdGlvblJlc3BvbnNlEjMKCW9wZXJhdGlvbhgBIAEoCzIgLm5lb2xpbmUudjEuQ2VydGlmaWNhdGVPcGVyYXRpb24ilAEKGlN1Ym1pdFJldm9rZVZlcnNpb25SZXF1ZXN0Eh4KFm1hbmFnZWRfY2VydGlmaWNhdGVfaWQYASABKAkSEgoKdmVyc2lvbl9pZBgCIAEoCRJCChFyZXZvY2F0aW9uX3JlYXNvbhgDIAEoDjInLm5lb2xpbmUudjEuQ2VydGlmaWNhdGVSZXZvY2F0aW9uUmVhc29uIlIKG1N1Ym1pdFJldm9rZVZlcnNpb25SZXNwb25zZRIzCglvcGVyYXRpb24YASABKAsyIC5uZW9saW5lLnYxLkNlcnRpZmljYXRlT3BlcmF0aW9uIkEKH0RlbGV0ZU1hbmFnZWRDZXJ0aWZpY2F0ZVJlcXVlc3QSHgoWbWFuYWdlZF9jZXJ0aWZpY2F0ZV9pZBgBIAEoCSIiCiBEZWxldGVNYW5hZ2VkQ2VydGlmaWNhdGVSZXNwb25zZSKpBgoSTWFuYWdlZENlcnRpZmljYXRlEgoKAmlkGAEgASgJEgwKBG5hbWUYAiABKAkSDwoHZG9tYWlucxgDIAMoCRIdChVjZXJ0aWZpY2F0ZV9pc3N1ZXJfaWQYBCABKAkSHwoXZG5zX3Byb3ZpZGVyX2FjY291bnRfaWQYBSABKAkSMAoIa2V5X3R5cGUYBiABKA4yHi5uZW9saW5lLnYxLkNlcnRpZmljYXRlS2V5VHlwZRIfChJhdXRvX3JlbmV3X2VuYWJsZWQYByABKAhIAIgBARIZChFyZW5ld19iZWZvcmVfZGF5cxgIIAEoDRIYChBub3RpZnlfZ3JvdXBfaWRzGAkgAygJEhIKCnNlcnZlcl9pZHMYCiADKAkSOAoPYWN0aXZlX3ZhbGlkaXR5GAsgASgOMh8ubmVvbGluZS52MS5DZXJ0aWZpY2F0ZVZhbGlkaXR5EhgKEGJ1bmRsZV9hdmFpbGFibGUYDCABKAgSOgoQbGF0ZXN0X29wZXJhdGlvbhgNIAEoCzIgLm5lb2xpbmUudjEuQ2VydGlmaWNhdGVPcGVyYXRpb24SLgoKY3JlYXRlZF9hdBgOIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLgoKdXBkYXRlZF9hdBgPIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASPgoOYWN0aXZlX3ZlcnNpb24YECABKAsyJi5uZW9saW5lLnYxLkNlcnRpZmljYXRlVmVyc2lvbk1ldGFkYXRhEkAKEHByZXZpb3VzX3ZlcnNpb24YESABKAsyJi5uZW9saW5lLnYxLkNlcnRpZmljYXRlVmVyc2lvbk1ldGFkYXRhEicKH2hhc191bnB1Ymxpc2hlZF9kZXNpcmVkX2NoYW5nZXMYEiABKAgSJQodZWZmZWN0aXZlX3JlbmV3YWxfd2luZG93X2RheXMYEyABKA0SMwoPbmV4dF9yZW5ld2FsX2F0GBQgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIVChNfYXV0b19yZW5ld19lbmFibGVkIkcKHkxpc3RNYW5hZ2VkQ2VydGlmaWNhdGVzUmVxdWVzdBIRCglwYWdlX3NpemUYASABKA0SEgoKcGFnZV90b2tlbhgCIAEoCSJwCh9MaXN0TWFuYWdlZENlcnRpZmljYXRlc1Jlc3BvbnNlEjQKDGNlcnRpZmljYXRlcxgBIAMoCzIeLm5lb2xpbmUudjEuTWFuYWdlZENlcnRpZmljYXRlEhcKD25leHRfcGFnZV90b2tlbhgCIAEoCSJWCh9DcmVhdGVNYW5hZ2VkQ2VydGlmaWNhdGVSZXF1ZXN0EjMKC2NlcnRpZmljYXRlGAEgASgLMh4ubmVvbGluZS52MS5NYW5hZ2VkQ2VydGlmaWNhdGUiVwogQ3JlYXRlTWFuYWdlZENlcnRpZmljYXRlUmVzcG9uc2USMwoLY2VydGlmaWNhdGUYASABKAsyHi5uZW9saW5lLnYxLk1hbmFnZWRDZXJ0aWZpY2F0ZSI+ChxHZXRNYW5hZ2VkQ2VydGlmaWNhdGVSZXF1ZXN0Eh4KFm1hbmFnZWRfY2VydGlmaWNhdGVfaWQYASABKAkiVAodR2V0TWFuYWdlZENlcnRpZmljYXRlUmVzcG9uc2USMwoLY2VydGlmaWNhdGUYASABKAsyHi5uZW9saW5lLnYxLk1hbmFnZWRDZXJ0aWZpY2F0ZSJ2Ch9VcGRhdGVNYW5hZ2VkQ2VydGlmaWNhdGVSZXF1ZXN0Eh4KFm1hbmFnZWRfY2VydGlmaWNhdGVfaWQYASABKAkSMwoLY2VydGlmaWNhdGUYAiABKAsyHi5uZW9saW5lLnYxLk1hbmFnZWRDZXJ0aWZpY2F0ZSJXCiBVcGRhdGVNYW5hZ2VkQ2VydGlmaWNhdGVSZXNwb25zZRIzCgtjZXJ0aWZpY2F0ZRgBIAEoCzIeLm5lb2xpbmUudjEuTWFuYWdlZENlcnRpZmljYXRlKn8KEkNlcnRpZmljYXRlS2V5VHlwZRIkCiBDRVJUSUZJQ0FURV9LRVlfVFlQRV9VTlNQRUNJRklFRBAAEiAKHENFUlRJRklDQVRFX0tFWV9UWVBFX0VDX1AyNTYQARIhCh1DRVJUSUZJQ0FURV9LRVlfVFlQRV9SU0FfMjA0OBACKucBChNDZXJ0aWZpY2F0ZVZhbGlkaXR5EiQKIENFUlRJRklDQVRFX1ZBTElESVRZX1VOU1BFQ0lGSUVEEAASIAocQ0VSVElGSUNBVEVfVkFMSURJVFlfTUlTU0lORxABEh4KGkNFUlRJRklDQVRFX1ZBTElESVRZX1ZBTElEEAISJAogQ0VSVElGSUNBVEVfVkFMSURJVFlfUkVORVdBTF9EVUUQAxIgChxDRVJUSUZJQ0FURV9WQUxJRElUWV9FWFBJUkVEEAQSIAocQ0VSVElGSUNBVEVfVkFMSURJVFlfUkVWT0tFRBAFKrkBChhDZXJ0aWZpY2F0ZU9wZXJhdGlvblR5cGUSKgomQ0VSVElGSUNBVEVfT1BFUkFUSU9OX1RZUEVfVU5TUEVDSUZJRUQQABIkCiBDRVJUSUZJQ0FURV9PUEVSQVRJT05fVFlQRV9JU1NVRRABEiQKIENFUlRJRklDQVRFX09QRVJBVElPTl9UWVBFX1JFTkVXEAISJQohQ0VSVElGSUNBVEVfT1BFUkFUSU9OX1RZUEVfUkVWT0tFEAMq8wEKGkNlcnRpZmljYXRlT3BlcmF0aW9uU3RhdHVzEiwKKENFUlRJRklDQVRFX09QRVJBVElPTl9TVEFUVVNfVU5TUEVDSUZJRUQQABIoCiRDRVJUSUZJQ0FURV9PUEVSQVRJT05fU1RBVFVTX1BFTkRJTkcQARIoCiRDRVJUSUZJQ0FURV9PUEVSQVRJT05fU1RBVFVTX1JVTk5JTkcQAhIqCiZDRVJUSUZJQ0FURV9PUEVSQVRJT05fU1RBVFVTX1NVQ0NFRURFRBADEicKI0NFUlRJRklDQVRFX09QRVJBVElPTl9TVEFUVVNfRkFJTEVEEAQq6gMKG0NlcnRpZmljYXRlUmV2b2NhdGlvblJlYXNvbhItCilDRVJUSUZJQ0FURV9SRVZPQ0FUSU9OX1JFQVNPTl9VTlNQRUNJRklFRBAAEjAKLENFUlRJRklDQVRFX1JFVk9DQVRJT05fUkVBU09OX0tFWV9DT01QUk9NSVNFEAESLworQ0VSVElGSUNBVEVfUkVWT0NBVElPTl9SRUFTT05fQ0FfQ09NUFJPTUlTRRACEjUKMUNFUlRJRklDQVRFX1JFVk9DQVRJT05fUkVBU09OX0FGRklMSUFUSU9OX0NIQU5HRUQQAxIsCihDRVJUSUZJQ0FURV9SRVZPQ0FUSU9OX1JFQVNPTl9TVVBFUlNFREVEEAQSOAo0Q0VSVElGSUNBVEVfUkVWT0NBVElPTl9SRUFTT05fQ0VTU0FUSU9OX09GX09QRVJBVElPThAFEjIKLkNFUlRJRklDQVRFX1JFVk9DQVRJT05fUkVBU09OX0NFUlRJRklDQVRFX0hPTEQQBhI1CjFDRVJUSUZJQ0FURV9SRVZPQ0FUSU9OX1JFQVNPTl9QUklWSUxFR0VfV0lUSERSQVdOEAkSLworQ0VSVElGSUNBVEVfUkVWT0NBVElPTl9SRUFTT05fQUFfQ09NUFJPTUlTRRAKKo4BChZDZXJ0aWZpY2F0ZVZlcnNpb25TbG90EigKJENFUlRJRklDQVRFX1ZFUlNJT05fU0xPVF9VTlNQRUNJRklFRBAAEiMKH0NFUlRJRklDQVRFX1ZFUlNJT05fU0xPVF9BQ1RJVkUQARIlCiFDRVJUSUZJQ0FURV9WRVJTSU9OX1NMT1RfUFJFVklPVVMQAjKTCQoZTWFuYWdlZENlcnRpZmljYXRlU2VydmljZRJ0ChdMaXN0TWFuYWdlZENlcnRpZmljYXRlcxIqLm5lb2xpbmUudjEuTGlzdE1hbmFnZWRDZXJ0aWZpY2F0ZXNSZXF1ZXN0GisubmVvbGluZS52MS5MaXN0TWFuYWdlZENlcnRpZmljYXRlc1Jlc3BvbnNlIgASdwoYQ3JlYXRlTWFuYWdlZENlcnRpZmljYXRlEisubmVvbGluZS52MS5DcmVhdGVNYW5hZ2VkQ2VydGlmaWNhdGVSZXF1ZXN0GiwubmVvbGluZS52MS5DcmVhdGVNYW5hZ2VkQ2VydGlmaWNhdGVSZXNwb25zZSIAEm4KFUdldE1hbmFnZWRDZXJ0aWZpY2F0ZRIoLm5lb2xpbmUudjEuR2V0TWFuYWdlZENlcnRpZmljYXRlUmVxdWVzdBopLm5lb2xpbmUudjEuR2V0TWFuYWdlZENlcnRpZmljYXRlUmVzcG9uc2UiABJ3ChhVcGRhdGVNYW5hZ2VkQ2VydGlmaWNhdGUSKy5uZW9saW5lLnYxLlVwZGF0ZU1hbmFnZWRDZXJ0aWZpY2F0ZVJlcXVlc3QaLC5uZW9saW5lLnYxLlVwZGF0ZU1hbmFnZWRDZXJ0aWZpY2F0ZVJlc3BvbnNlIgASawoUU3VibWl0SXNzdWVPcGVyYXRpb24SJy5uZW9saW5lLnYxLlN1Ym1pdElzc3VlT3BlcmF0aW9uUmVxdWVzdBooLm5lb2xpbmUudjEuU3VibWl0SXNzdWVPcGVyYXRpb25SZXNwb25zZSIAEmsKFFN1Ym1pdFJlbmV3T3BlcmF0aW9uEicubmVvbGluZS52MS5TdWJtaXRSZW5ld09wZXJhdGlvblJlcXVlc3QaKC5uZW9saW5lLnYxLlN1Ym1pdFJlbmV3T3BlcmF0aW9uUmVzcG9uc2UiABJoChNTdWJtaXRSZXZva2VWZXJzaW9uEiYubmVvbGluZS52MS5TdWJtaXRSZXZva2VWZXJzaW9uUmVxdWVzdBonLm5lb2xpbmUudjEuU3VibWl0UmV2b2tlVmVyc2lvblJlc3BvbnNlIgASawoUR2V0Q2VydGlmaWNhdGVCdW5kbGUSJy5uZW9saW5lLnYxLkdldENlcnRpZmljYXRlQnVuZGxlUmVxdWVzdBooLm5lb2xpbmUudjEuR2V0Q2VydGlmaWNhdGVCdW5kbGVSZXNwb25zZSIAEnQKF0FjdGl2YXRlUHJldmlvdXNWZXJzaW9uEioubmVvbGluZS52MS5BY3RpdmF0ZVByZXZpb3VzVmVyc2lvblJlcXVlc3QaKy5uZW9saW5lLnYxLkFjdGl2YXRlUHJldmlvdXNWZXJzaW9uUmVzcG9uc2UiABJ3ChhEZWxldGVNYW5hZ2VkQ2VydGlmaWNhdGUSKy5uZW9saW5lLnYxLkRlbGV0ZU1hbmFnZWRDZXJ0aWZpY2F0ZVJlcXVlc3QaLC5uZW9saW5lLnYxLkRlbGV0ZU1hbmFnZWRDZXJ0aWZpY2F0ZVJlc3BvbnNlIgBCO1o5Z2l0aHViLmNvbS9vcnZpY2UvbmVvLWxpbmUvcGtnL3Byb3RvL25lb2xpbmUvdjE7bmVvbGluZXYxYgZwcm90bzM", [file_google_protobuf_timestamp]);
 
 /**
  * IssueConfigSnapshot captures issuance parameters frozen at operation creation.
@@ -116,6 +116,18 @@ export type CertificateOperation = Message<"neoline.v1.CertificateOperation"> & 
    * @generated from field: google.protobuf.Timestamp updated_at = 13;
    */
   updatedAt?: Timestamp | undefined;
+
+  /**
+   * Revoke operations only: target CertificateVersion id.
+   *
+   * @generated from field: string target_version_id = 14;
+   */
+  targetVersionId: string;
+
+  /**
+   * @generated from field: neoline.v1.CertificateRevocationReason revocation_reason = 15;
+   */
+  revocationReason: CertificateRevocationReason;
 };
 
 /**
@@ -185,6 +197,13 @@ export type CertificateVersionMetadata = Message<"neoline.v1.CertificateVersionM
    * @generated from field: google.protobuf.Timestamp revoked_at = 11;
    */
   revokedAt?: Timestamp | undefined;
+
+  /**
+   * True while a Revoke operation is pending or running for this version.
+   *
+   * @generated from field: bool revoke_pending = 12;
+   */
+  revokePending: boolean;
 };
 
 /**
@@ -410,6 +429,82 @@ export const SubmitRenewOperationResponseSchema: GenMessage<SubmitRenewOperation
   messageDesc(file_neoline_v1_managed_certificate, 11);
 
 /**
+ * @generated from message neoline.v1.SubmitRevokeVersionRequest
+ */
+export type SubmitRevokeVersionRequest = Message<"neoline.v1.SubmitRevokeVersionRequest"> & {
+  /**
+   * @generated from field: string managed_certificate_id = 1;
+   */
+  managedCertificateId: string;
+
+  /**
+   * @generated from field: string version_id = 2;
+   */
+  versionId: string;
+
+  /**
+   * Defaults to unspecified (RFC 5280 reason 0) when omitted.
+   *
+   * @generated from field: neoline.v1.CertificateRevocationReason revocation_reason = 3;
+   */
+  revocationReason: CertificateRevocationReason;
+};
+
+/**
+ * Describes the message neoline.v1.SubmitRevokeVersionRequest.
+ * Use `create(SubmitRevokeVersionRequestSchema)` to create a new message.
+ */
+export const SubmitRevokeVersionRequestSchema: GenMessage<SubmitRevokeVersionRequest> = /*@__PURE__*/
+  messageDesc(file_neoline_v1_managed_certificate, 12);
+
+/**
+ * @generated from message neoline.v1.SubmitRevokeVersionResponse
+ */
+export type SubmitRevokeVersionResponse = Message<"neoline.v1.SubmitRevokeVersionResponse"> & {
+  /**
+   * @generated from field: neoline.v1.CertificateOperation operation = 1;
+   */
+  operation?: CertificateOperation | undefined;
+};
+
+/**
+ * Describes the message neoline.v1.SubmitRevokeVersionResponse.
+ * Use `create(SubmitRevokeVersionResponseSchema)` to create a new message.
+ */
+export const SubmitRevokeVersionResponseSchema: GenMessage<SubmitRevokeVersionResponse> = /*@__PURE__*/
+  messageDesc(file_neoline_v1_managed_certificate, 13);
+
+/**
+ * @generated from message neoline.v1.DeleteManagedCertificateRequest
+ */
+export type DeleteManagedCertificateRequest = Message<"neoline.v1.DeleteManagedCertificateRequest"> & {
+  /**
+   * @generated from field: string managed_certificate_id = 1;
+   */
+  managedCertificateId: string;
+};
+
+/**
+ * Describes the message neoline.v1.DeleteManagedCertificateRequest.
+ * Use `create(DeleteManagedCertificateRequestSchema)` to create a new message.
+ */
+export const DeleteManagedCertificateRequestSchema: GenMessage<DeleteManagedCertificateRequest> = /*@__PURE__*/
+  messageDesc(file_neoline_v1_managed_certificate, 14);
+
+/**
+ * @generated from message neoline.v1.DeleteManagedCertificateResponse
+ */
+export type DeleteManagedCertificateResponse = Message<"neoline.v1.DeleteManagedCertificateResponse"> & {
+};
+
+/**
+ * Describes the message neoline.v1.DeleteManagedCertificateResponse.
+ * Use `create(DeleteManagedCertificateResponseSchema)` to create a new message.
+ */
+export const DeleteManagedCertificateResponseSchema: GenMessage<DeleteManagedCertificateResponse> = /*@__PURE__*/
+  messageDesc(file_neoline_v1_managed_certificate, 15);
+
+/**
  * ManagedCertificate holds desired config, assignments, and version container.
  * Secrets are never returned on read.
  *
@@ -532,7 +627,7 @@ export type ManagedCertificate = Message<"neoline.v1.ManagedCertificate"> & {
  * Use `create(ManagedCertificateSchema)` to create a new message.
  */
 export const ManagedCertificateSchema: GenMessage<ManagedCertificate> = /*@__PURE__*/
-  messageDesc(file_neoline_v1_managed_certificate, 12);
+  messageDesc(file_neoline_v1_managed_certificate, 16);
 
 /**
  * @generated from message neoline.v1.ListManagedCertificatesRequest
@@ -554,7 +649,7 @@ export type ListManagedCertificatesRequest = Message<"neoline.v1.ListManagedCert
  * Use `create(ListManagedCertificatesRequestSchema)` to create a new message.
  */
 export const ListManagedCertificatesRequestSchema: GenMessage<ListManagedCertificatesRequest> = /*@__PURE__*/
-  messageDesc(file_neoline_v1_managed_certificate, 13);
+  messageDesc(file_neoline_v1_managed_certificate, 17);
 
 /**
  * @generated from message neoline.v1.ListManagedCertificatesResponse
@@ -576,7 +671,7 @@ export type ListManagedCertificatesResponse = Message<"neoline.v1.ListManagedCer
  * Use `create(ListManagedCertificatesResponseSchema)` to create a new message.
  */
 export const ListManagedCertificatesResponseSchema: GenMessage<ListManagedCertificatesResponse> = /*@__PURE__*/
-  messageDesc(file_neoline_v1_managed_certificate, 14);
+  messageDesc(file_neoline_v1_managed_certificate, 18);
 
 /**
  * @generated from message neoline.v1.CreateManagedCertificateRequest
@@ -593,7 +688,7 @@ export type CreateManagedCertificateRequest = Message<"neoline.v1.CreateManagedC
  * Use `create(CreateManagedCertificateRequestSchema)` to create a new message.
  */
 export const CreateManagedCertificateRequestSchema: GenMessage<CreateManagedCertificateRequest> = /*@__PURE__*/
-  messageDesc(file_neoline_v1_managed_certificate, 15);
+  messageDesc(file_neoline_v1_managed_certificate, 19);
 
 /**
  * @generated from message neoline.v1.CreateManagedCertificateResponse
@@ -610,7 +705,7 @@ export type CreateManagedCertificateResponse = Message<"neoline.v1.CreateManaged
  * Use `create(CreateManagedCertificateResponseSchema)` to create a new message.
  */
 export const CreateManagedCertificateResponseSchema: GenMessage<CreateManagedCertificateResponse> = /*@__PURE__*/
-  messageDesc(file_neoline_v1_managed_certificate, 16);
+  messageDesc(file_neoline_v1_managed_certificate, 20);
 
 /**
  * @generated from message neoline.v1.GetManagedCertificateRequest
@@ -627,7 +722,7 @@ export type GetManagedCertificateRequest = Message<"neoline.v1.GetManagedCertifi
  * Use `create(GetManagedCertificateRequestSchema)` to create a new message.
  */
 export const GetManagedCertificateRequestSchema: GenMessage<GetManagedCertificateRequest> = /*@__PURE__*/
-  messageDesc(file_neoline_v1_managed_certificate, 17);
+  messageDesc(file_neoline_v1_managed_certificate, 21);
 
 /**
  * @generated from message neoline.v1.GetManagedCertificateResponse
@@ -644,7 +739,7 @@ export type GetManagedCertificateResponse = Message<"neoline.v1.GetManagedCertif
  * Use `create(GetManagedCertificateResponseSchema)` to create a new message.
  */
 export const GetManagedCertificateResponseSchema: GenMessage<GetManagedCertificateResponse> = /*@__PURE__*/
-  messageDesc(file_neoline_v1_managed_certificate, 18);
+  messageDesc(file_neoline_v1_managed_certificate, 22);
 
 /**
  * @generated from message neoline.v1.UpdateManagedCertificateRequest
@@ -666,7 +761,7 @@ export type UpdateManagedCertificateRequest = Message<"neoline.v1.UpdateManagedC
  * Use `create(UpdateManagedCertificateRequestSchema)` to create a new message.
  */
 export const UpdateManagedCertificateRequestSchema: GenMessage<UpdateManagedCertificateRequest> = /*@__PURE__*/
-  messageDesc(file_neoline_v1_managed_certificate, 19);
+  messageDesc(file_neoline_v1_managed_certificate, 23);
 
 /**
  * @generated from message neoline.v1.UpdateManagedCertificateResponse
@@ -683,7 +778,7 @@ export type UpdateManagedCertificateResponse = Message<"neoline.v1.UpdateManaged
  * Use `create(UpdateManagedCertificateResponseSchema)` to create a new message.
  */
 export const UpdateManagedCertificateResponseSchema: GenMessage<UpdateManagedCertificateResponse> = /*@__PURE__*/
-  messageDesc(file_neoline_v1_managed_certificate, 20);
+  messageDesc(file_neoline_v1_managed_certificate, 24);
 
 /**
  * CertificateKeyType selects the private key algorithm for issuance.
@@ -824,6 +919,64 @@ export const CertificateOperationStatusSchema: GenEnum<CertificateOperationStatu
   enumDesc(file_neoline_v1_managed_certificate, 3);
 
 /**
+ * CertificateRevocationReason maps to RFC 5280 CRLReason codes for ACME revoke.
+ *
+ * @generated from enum neoline.v1.CertificateRevocationReason
+ */
+export enum CertificateRevocationReason {
+  /**
+   * @generated from enum value: CERTIFICATE_REVOCATION_REASON_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: CERTIFICATE_REVOCATION_REASON_KEY_COMPROMISE = 1;
+   */
+  KEY_COMPROMISE = 1,
+
+  /**
+   * @generated from enum value: CERTIFICATE_REVOCATION_REASON_CA_COMPROMISE = 2;
+   */
+  CA_COMPROMISE = 2,
+
+  /**
+   * @generated from enum value: CERTIFICATE_REVOCATION_REASON_AFFILIATION_CHANGED = 3;
+   */
+  AFFILIATION_CHANGED = 3,
+
+  /**
+   * @generated from enum value: CERTIFICATE_REVOCATION_REASON_SUPERSEDED = 4;
+   */
+  SUPERSEDED = 4,
+
+  /**
+   * @generated from enum value: CERTIFICATE_REVOCATION_REASON_CESSATION_OF_OPERATION = 5;
+   */
+  CESSATION_OF_OPERATION = 5,
+
+  /**
+   * @generated from enum value: CERTIFICATE_REVOCATION_REASON_CERTIFICATE_HOLD = 6;
+   */
+  CERTIFICATE_HOLD = 6,
+
+  /**
+   * @generated from enum value: CERTIFICATE_REVOCATION_REASON_PRIVILEGE_WITHDRAWN = 9;
+   */
+  PRIVILEGE_WITHDRAWN = 9,
+
+  /**
+   * @generated from enum value: CERTIFICATE_REVOCATION_REASON_AA_COMPROMISE = 10;
+   */
+  AA_COMPROMISE = 10,
+}
+
+/**
+ * Describes the enum neoline.v1.CertificateRevocationReason.
+ */
+export const CertificateRevocationReasonSchema: GenEnum<CertificateRevocationReason> = /*@__PURE__*/
+  enumDesc(file_neoline_v1_managed_certificate, 4);
+
+/**
  * CertificateVersionSlot selects which stored version to download.
  *
  * @generated from enum neoline.v1.CertificateVersionSlot
@@ -849,7 +1002,7 @@ export enum CertificateVersionSlot {
  * Describes the enum neoline.v1.CertificateVersionSlot.
  */
 export const CertificateVersionSlotSchema: GenEnum<CertificateVersionSlot> = /*@__PURE__*/
-  enumDesc(file_neoline_v1_managed_certificate, 4);
+  enumDesc(file_neoline_v1_managed_certificate, 5);
 
 /**
  * ManagedCertificateService manages certificate desired config. All methods require admin.
@@ -906,6 +1059,14 @@ export const ManagedCertificateService: GenService<{
     output: typeof SubmitRenewOperationResponseSchema;
   },
   /**
+   * @generated from rpc neoline.v1.ManagedCertificateService.SubmitRevokeVersion
+   */
+  submitRevokeVersion: {
+    methodKind: "unary";
+    input: typeof SubmitRevokeVersionRequestSchema;
+    output: typeof SubmitRevokeVersionResponseSchema;
+  },
+  /**
    * @generated from rpc neoline.v1.ManagedCertificateService.GetCertificateBundle
    */
   getCertificateBundle: {
@@ -920,6 +1081,14 @@ export const ManagedCertificateService: GenService<{
     methodKind: "unary";
     input: typeof ActivatePreviousVersionRequestSchema;
     output: typeof ActivatePreviousVersionResponseSchema;
+  },
+  /**
+   * @generated from rpc neoline.v1.ManagedCertificateService.DeleteManagedCertificate
+   */
+  deleteManagedCertificate: {
+    methodKind: "unary";
+    input: typeof DeleteManagedCertificateRequestSchema;
+    output: typeof DeleteManagedCertificateResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_neoline_v1_managed_certificate, 0);

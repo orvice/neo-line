@@ -43,6 +43,7 @@ type PublicCertificateVersion struct {
 	StagingUntrusted bool
 	CreatedAt        int64
 	RevokedAt        int64 // unix seconds; zero when not revoked
+	RevokePending    bool
 }
 
 func (m *Manager) triggerIssueOperation(opID string) {
