@@ -1,0 +1,386 @@
+package certmanager
+
+import (
+	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/x509"
+	"encoding/pem"
+	"errors"
+	"fmt"
+	"net/url"
+	"strings"
+	"time"
+
+	"github.com/orvice/neo-line/internal/store"
+)
+
+// Preset directory URLs for built-in CAs.
+const (
+	letsEncryptProductionDirectory = "https://acme-v02.api.letsencrypt.org/directory"
+	letsEncryptStagingDirectory    = "https://acme-staging-v02.api.letsencrypt.org/directory"
+	zeroSSLDirectory               = "https://acme.zerossl.com/v2/DV90"
+	googlePublicCADirectory        = "https://dv.acme-v02.api.pki.goog/directory"
+)
+
+// DirectoryPreview describes a resolved ACME directory for UI ToS agreement.
+type DirectoryPreview struct {
+	CAType            string
+	DirectoryURL      string
+	TermsOfServiceURL string
+	StagingUntrusted  bool
+	RequiresEAB       bool
+}
+
+// IssuerInput is the mutable issuer fields supplied by API callers.
+type IssuerInput struct {
+	Name                 string
+	CAType               string
+	CustomDirectoryURL   string
+	Email                string
+	AccountKeyPEM        string
+	EABKid               string
+	EABHMAC              string
+	TermsOfServiceAgreed bool
+}
+
+// PublicIssuer is a CertificateIssuer safe for API responses.
+type PublicIssuer struct {
+	ID                     string
+	Name                   string
+	CAType                 string
+	DirectoryURL           string
+	Email                  string
+	RegistrationStatus     string
+	RegistrationError      string
+	StagingUntrusted       bool
+	TermsOfServiceURL      string
+	TermsOfServiceAgreedAt *time.Time
+	AccountKeyConfigured   bool
+	EABConfigured          bool
+	CreatedAt              time.Time
+	UpdatedAt              time.Time
+}
+
+func resolvePreset(caType, customDirectoryURL string) (directoryURL string, stagingUntrusted bool, requiresEAB bool, err error) {
+	switch caType {
+	case store.CATypeLetsEncryptProduction:
+		return letsEncryptProductionDirectory, false, false, nil
+	case store.CATypeLetsEncryptStaging:
+		return letsEncryptStagingDirectory, true, false, nil
+	case store.CATypeZeroSSL:
+		return zeroSSLDirectory, false, true, nil
+	case store.CATypeGooglePublicCA:
+		return googlePublicCADirectory, false, true, nil
+	case store.CATypeCustom:
+		customDirectoryURL = strings.TrimSpace(customDirectoryURL)
+		if customDirectoryURL == "" {
+			return "", false, false, ErrCustomDirectoryRequired
+		}
+		if err := validateCustomDirectoryURL(customDirectoryURL); err != nil {
+			return "", false, false, err
+		}
+		return customDirectoryURL, false, false, nil
+	default:
+		return "", false, false, store.ErrInvalidCertificateIssuerCAType
+	}
+}
+
+func validateCustomDirectoryURL(raw string) error {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return fmt.Errorf("%w: invalid directory URL", ErrInvalidDirectoryURL)
+	}
+	if u.Scheme != "https" {
+		return fmt.Errorf("%w: directory URL must use HTTPS", ErrInvalidDirectoryURL)
+	}
+	if u.Host == "" {
+		return fmt.Errorf("%w: directory URL must include a host", ErrInvalidDirectoryURL)
+	}
+	return nil
+}
+
+func generateAccountKeyPEM() (string, error) {
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		return "", err
+	}
+	der, err := x509.MarshalECPrivateKey(key)
+	if err != nil {
+		return "", err
+	}
+	return string(pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: der})), nil
+}
+
+func publicFromIssuer(i store.CertificateIssuer) PublicIssuer {
+	return PublicIssuer{
+		ID:                     i.ID,
+		Name:                   i.Name,
+		CAType:                 i.CAType,
+		DirectoryURL:           i.DirectoryURL,
+		Email:                  i.Email,
+		RegistrationStatus:     i.RegistrationStatus,
+		RegistrationError:      i.RegistrationError,
+		StagingUntrusted:       i.StagingUntrusted,
+		TermsOfServiceURL:      i.TermsOfServiceURL,
+		TermsOfServiceAgreedAt: i.TermsOfServiceAgreed,
+		AccountKeyConfigured:   i.AccountKeyPEM != "",
+		EABConfigured:          i.EABKid != "" && i.EABHMAC != "",
+		CreatedAt:              i.CreatedAt,
+		UpdatedAt:              i.UpdatedAt,
+	}
+}
+
+func (m *Manager) GetCertificateIssuerDirectoryPreview(ctx context.Context, caType, customDirectoryURL string) (DirectoryPreview, error) {
+	directoryURL, staging, requiresEAB, err := resolvePreset(caType, customDirectoryURL)
+	if err != nil {
+		return DirectoryPreview{}, err
+	}
+	meta, err := m.acme.FetchDirectory(ctx, directoryURL)
+	if err != nil {
+		return DirectoryPreview{}, err
+	}
+	return DirectoryPreview{
+		CAType:            caType,
+		DirectoryURL:      directoryURL,
+		TermsOfServiceURL: meta.TermsOfService,
+		StagingUntrusted:  staging,
+		RequiresEAB:       requiresEAB,
+	}, nil
+}
+
+func (m *Manager) ListCertificateIssuers(ctx context.Context, limit int64, pageToken string) ([]PublicIssuer, string, error) {
+	issuers, next, err := m.store.ListCertificateIssuers(ctx, limit, pageToken)
+	if err != nil {
+		return nil, "", err
+	}
+	out := make([]PublicIssuer, 0, len(issuers))
+	for _, i := range issuers {
+		out = append(out, publicFromIssuer(i))
+	}
+	return out, next, nil
+}
+
+func (m *Manager) GetCertificateIssuer(ctx context.Context, id string) (PublicIssuer, error) {
+	issuer, err := m.store.GetCertificateIssuer(ctx, id)
+	if err != nil {
+		return PublicIssuer{}, err
+	}
+	return publicFromIssuer(issuer), nil
+}
+
+func (m *Manager) CreateCertificateIssuer(ctx context.Context, input IssuerInput) (PublicIssuer, error) {
+	if strings.TrimSpace(input.Name) == "" {
+		return PublicIssuer{}, ErrIssuerNameRequired
+	}
+	if strings.TrimSpace(input.Email) == "" {
+		return PublicIssuer{}, ErrIssuerEmailRequired
+	}
+	if !input.TermsOfServiceAgreed {
+		return PublicIssuer{}, ErrTermsOfServiceRequired
+	}
+	directoryURL, staging, requiresEAB, err := resolvePreset(input.CAType, input.CustomDirectoryURL)
+	if err != nil {
+		return PublicIssuer{}, err
+	}
+	if requiresEAB && (strings.TrimSpace(input.EABKid) == "" || strings.TrimSpace(input.EABHMAC) == "") {
+		return PublicIssuer{}, ErrEABRequired
+	}
+	meta, err := m.acme.FetchDirectory(ctx, directoryURL)
+	if err != nil {
+		return PublicIssuer{}, err
+	}
+	if meta.TermsOfService != "" && !input.TermsOfServiceAgreed {
+		return PublicIssuer{}, ErrTermsOfServiceRequired
+	}
+	accountKey := strings.TrimSpace(input.AccountKeyPEM)
+	if accountKey == "" {
+		accountKey, err = generateAccountKeyPEM()
+		if err != nil {
+			return PublicIssuer{}, err
+		}
+	}
+	now := m.clock.Now()
+	issuer := store.CertificateIssuer{
+		Name:                 strings.TrimSpace(input.Name),
+		CAType:               input.CAType,
+		DirectoryURL:         directoryURL,
+		Email:                strings.TrimSpace(input.Email),
+		RegistrationStatus:   store.IssuerRegistrationPending,
+		StagingUntrusted:     staging,
+		TermsOfServiceURL:    meta.TermsOfService,
+		TermsOfServiceAgreed: &now,
+		AccountKeyPEM:        accountKey,
+		EABKid:               strings.TrimSpace(input.EABKid),
+		EABHMAC:              strings.TrimSpace(input.EABHMAC),
+	}
+	created, err := m.store.CreateCertificateIssuer(ctx, issuer)
+	if err != nil {
+		return PublicIssuer{}, err
+	}
+	m.startRegistration(created.ID)
+	return publicFromIssuer(created), nil
+}
+
+func (m *Manager) UpdateCertificateIssuer(ctx context.Context, id string, input IssuerInput) (PublicIssuer, error) {
+	existing, err := m.store.GetCertificateIssuer(ctx, id)
+	if err != nil {
+		return PublicIssuer{}, err
+	}
+	switch existing.RegistrationStatus {
+	case store.IssuerRegistrationReady:
+		if identityChanged(existing, input) {
+			return PublicIssuer{}, store.ErrCertificateIssuerImmutable
+		}
+		existing.Name = strings.TrimSpace(input.Name)
+	case store.IssuerRegistrationFailed:
+		updated, err := m.applyFailedIssuerUpdate(existing, input)
+		if err != nil {
+			return PublicIssuer{}, err
+		}
+		existing = updated
+	case store.IssuerRegistrationPending:
+		return PublicIssuer{}, ErrIssuerRegistrationPending
+	default:
+		return PublicIssuer{}, errors.New("unsupported issuer registration status")
+	}
+	saved, err := m.store.UpdateCertificateIssuer(ctx, id, existing)
+	if err != nil {
+		return PublicIssuer{}, err
+	}
+	if existing.RegistrationStatus == store.IssuerRegistrationPending && existing.RegistrationError == "" {
+		m.startRegistration(id)
+	}
+	return publicFromIssuer(saved), nil
+}
+
+func identityChanged(existing store.CertificateIssuer, input IssuerInput) bool {
+	if input.CAType != "" && input.CAType != existing.CAType {
+		return true
+	}
+	if input.Email != "" && strings.TrimSpace(input.Email) != existing.Email {
+		return true
+	}
+	if input.CustomDirectoryURL != "" && input.CustomDirectoryURL != existing.DirectoryURL {
+		return true
+	}
+	if input.AccountKeyPEM != "" {
+		return true
+	}
+	if input.EABKid != "" || input.EABHMAC != "" {
+		return true
+	}
+	return false
+}
+
+func (m *Manager) applyFailedIssuerUpdate(existing store.CertificateIssuer, input IssuerInput) (store.CertificateIssuer, error) {
+	if strings.TrimSpace(input.Name) != "" {
+		existing.Name = strings.TrimSpace(input.Name)
+	}
+	caType := input.CAType
+	if caType == "" {
+		caType = existing.CAType
+	}
+	customURL := input.CustomDirectoryURL
+	if customURL == "" && caType == existing.CAType {
+		customURL = existing.DirectoryURL
+	}
+	directoryURL, staging, requiresEAB, err := resolvePreset(caType, customURL)
+	if err != nil {
+		return store.CertificateIssuer{}, err
+	}
+	email := strings.TrimSpace(input.Email)
+	if email == "" {
+		email = existing.Email
+	}
+	if email == "" {
+		return store.CertificateIssuer{}, ErrIssuerEmailRequired
+	}
+	if requiresEAB {
+		kid := strings.TrimSpace(input.EABKid)
+		hmacKey := strings.TrimSpace(input.EABHMAC)
+		if kid == "" {
+			kid = existing.EABKid
+		}
+		if hmacKey == "" {
+			hmacKey = existing.EABHMAC
+		}
+		if kid == "" || hmacKey == "" {
+			return store.CertificateIssuer{}, ErrEABRequired
+		}
+		existing.EABKid = kid
+		existing.EABHMAC = hmacKey
+	}
+	if pemKey := strings.TrimSpace(input.AccountKeyPEM); pemKey != "" {
+		existing.AccountKeyPEM = pemKey
+	}
+	existing.CAType = caType
+	existing.DirectoryURL = directoryURL
+	existing.Email = email
+	existing.StagingUntrusted = staging
+	existing.RegistrationStatus = store.IssuerRegistrationPending
+	existing.RegistrationError = ""
+	return existing, nil
+}
+
+func (m *Manager) RetryCertificateIssuerRegistration(ctx context.Context, id string) (PublicIssuer, error) {
+	existing, err := m.store.GetCertificateIssuer(ctx, id)
+	if err != nil {
+		return PublicIssuer{}, err
+	}
+	if existing.RegistrationStatus != store.IssuerRegistrationFailed {
+		return PublicIssuer{}, store.ErrCertificateIssuerNotRetryable
+	}
+	existing.RegistrationStatus = store.IssuerRegistrationPending
+	existing.RegistrationError = ""
+	saved, err := m.store.UpdateCertificateIssuer(ctx, id, existing)
+	if err != nil {
+		return PublicIssuer{}, err
+	}
+	m.startRegistration(id)
+	return publicFromIssuer(saved), nil
+}
+
+func (m *Manager) DeleteCertificateIssuer(ctx context.Context, id string) error {
+	return m.store.DeleteCertificateIssuer(ctx, id)
+}
+
+func (m *Manager) startRegistration(id string) {
+	go m.runRegistration(id)
+}
+
+func (m *Manager) runRegistration(id string) {
+	ctx := context.Background()
+	issuer, err := m.store.GetCertificateIssuer(ctx, id)
+	if err != nil {
+		return
+	}
+	if issuer.RegistrationStatus != store.IssuerRegistrationPending {
+		return
+	}
+	regErr := m.acme.RegisterAccount(ctx, issuer)
+	issuer, err = m.store.GetCertificateIssuer(ctx, id)
+	if err != nil {
+		return
+	}
+	if regErr != nil {
+		issuer.RegistrationStatus = store.IssuerRegistrationFailed
+		issuer.RegistrationError = sanitizeRegistrationError(regErr)
+	} else {
+		issuer.RegistrationStatus = store.IssuerRegistrationReady
+		issuer.RegistrationError = ""
+	}
+	_, _ = m.store.UpdateCertificateIssuer(ctx, id, issuer)
+}
+
+func sanitizeRegistrationError(err error) string {
+	if err == nil {
+		return ""
+	}
+	msg := err.Error()
+	if len(msg) > 500 {
+		msg = msg[:500]
+	}
+	return msg
+}

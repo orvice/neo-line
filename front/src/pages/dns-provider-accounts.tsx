@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react"
+import { CertificateNavTabs } from "@/components/certificate-nav-tabs"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { KeyRound, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react"
 import { toast } from "sonner"
@@ -61,6 +62,7 @@ export function DNSProviderAccountsPage() {
 
   return (
     <div className="animate-enter flex flex-col gap-6">
+      <CertificateNavTabs />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold">DNS 账户</h1>

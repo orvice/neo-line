@@ -8,13 +8,19 @@ import (
 )
 
 // Store is the narrow persistence contract certmanager uses for DNS provider
-// accounts and future certificate resources.
+// accounts and certificate issuers.
 type Store interface {
 	ListDNSProviderAccounts(ctx context.Context, limit int64, pageToken string) ([]store.DNSProviderAccount, string, error)
 	CreateDNSProviderAccount(ctx context.Context, account store.DNSProviderAccount) (store.DNSProviderAccount, error)
 	GetDNSProviderAccount(ctx context.Context, id string) (store.DNSProviderAccount, error)
 	UpdateDNSProviderAccount(ctx context.Context, id string, account store.DNSProviderAccount) (store.DNSProviderAccount, error)
 	DeleteDNSProviderAccount(ctx context.Context, id string) error
+
+	ListCertificateIssuers(ctx context.Context, limit int64, pageToken string) ([]store.CertificateIssuer, string, error)
+	CreateCertificateIssuer(ctx context.Context, issuer store.CertificateIssuer) (store.CertificateIssuer, error)
+	GetCertificateIssuer(ctx context.Context, id string) (store.CertificateIssuer, error)
+	UpdateCertificateIssuer(ctx context.Context, id string, issuer store.CertificateIssuer) (store.CertificateIssuer, error)
+	DeleteCertificateIssuer(ctx context.Context, id string) error
 }
 
 // TokenVerifier validates DNS provider API tokens before persistence.
@@ -36,11 +42,16 @@ func (realClock) Now() time.Time { return time.Now().UTC() }
 type Manager struct {
 	store    Store
 	verifier TokenVerifier
+	acme     ACMEClient
 	clock    Clock
 }
 
 func NewManager(st Store, verifier TokenVerifier) *Manager {
-	return &Manager{store: st, verifier: verifier, clock: realClock{}}
+	return NewManagerWithACME(st, verifier, NewLegoACMEClient(nil))
+}
+
+func NewManagerWithACME(st Store, verifier TokenVerifier, acme ACMEClient) *Manager {
+	return &Manager{store: st, verifier: verifier, acme: acme, clock: realClock{}}
 }
 
 // DNSAccountInput is the mutable DNS provider account fields supplied by API

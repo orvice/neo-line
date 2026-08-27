@@ -1005,6 +1005,21 @@ Admin 可在 Web 控制台「证书 → DNS 账户」或通过 `DNSProviderAccou
 
 详见 [证书管理 — DNS 账户](./certificate-management-dns-accounts.md) 与根目录 [CONTEXT.md](../CONTEXT.md)。
 
+### CertificateIssuer（ACME 账户）
+
+**状态：** 已实现（#16）
+
+Admin 可在 Web 控制台「证书 → ACME Issuer」或通过 `CertificateIssuerService` 管理命名 ACME 签发账户：
+
+- 内置 preset：Let's Encrypt 生产 / Staging、ZeroSSL、Google Public CA；另支持自定义 HTTPS Directory（系统根信任，不支持私有 Root CA）。
+- 创建前必须显式同意 Directory 元数据中的 Terms of Service；持久化 ToS URL 与 agreed-at。
+- 创建后异步注册 ACME account，状态为 Pending / Ready / Failed；仅 Ready 可用于后续 ManagedCertificate 签发。
+- Failed 可修正邮箱、Directory、EAB、account key 并重试；Ready 仅允许修改显示名称。
+- account key 与 EAB 存入 MongoDB，读取接口与审计日志永不返回明文。
+- 删除仅本地级联，不调用远端 account deactivation。
+
+详见 [证书管理 — ACME Issuer](./certificate-management-issuers.md)。
+
 ## 未来增强
 
 ### 更多探测类型

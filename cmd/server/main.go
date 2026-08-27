@@ -124,6 +124,9 @@ func main() {
 				if err := mongoStore.EnsureDNSProviderAccountIndexes(ctx); err != nil {
 					return fmt.Errorf("ensure dns provider account indexes: %w", err)
 				}
+				if err := mongoStore.EnsureCertificateIssuerIndexes(ctx); err != nil {
+					return fmt.Errorf("ensure certificate issuer indexes: %w", err)
+				}
 				if err := mongoStore.EnsureMcpTokenIndexes(ctx); err != nil {
 					return fmt.Errorf("ensure mcp token indexes: %w", err)
 				}

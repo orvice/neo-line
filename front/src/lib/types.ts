@@ -186,6 +186,44 @@ export interface DNSProviderAccount {
   updated_at: string
 }
 
+export type CertificateIssuerRegistrationStatus =
+  | "Pending"
+  | "Ready"
+  | "Failed"
+  | "Unspecified"
+
+export type CertificateIssuerCAType =
+  | "lets_encrypt_production"
+  | "lets_encrypt_staging"
+  | "zerossl"
+  | "google_public_ca"
+  | "custom"
+
+export interface CertificateIssuer {
+  id: string
+  name: string
+  ca_type: CertificateIssuerCAType | string
+  directory_url: string
+  email: string
+  registration_status: CertificateIssuerRegistrationStatus
+  registration_error?: string
+  staging_untrusted: boolean
+  terms_of_service_url?: string
+  terms_of_service_agreed_at?: string
+  account_key_configured: boolean
+  eab_configured: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface CertificateIssuerDirectoryPreview {
+  ca_type: string
+  directory_url: string
+  terms_of_service_url?: string
+  staging_untrusted: boolean
+  requires_eab: boolean
+}
+
 export interface AlertPolicy {
   enabled: boolean
   notify_group_ids?: string[]
