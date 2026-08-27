@@ -5,6 +5,8 @@ package alert
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -12,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/orvice/neo-line/internal/notify"
 	"github.com/orvice/neo-line/internal/store"
 )
 
@@ -25,9 +28,9 @@ type Store interface {
 // Dispatcher fans out per-group notifications for monitor status
 // transitions. It is safe for concurrent use.
 type Dispatcher struct {
-	store   Store
-	logger  *slog.Logger
-	senders map[string]channelSender
+	store    Store
+	logger   *slog.Logger
+	notifier *notify.Notifier
 
 	// deliveries tracks in-flight background sends so tests (and a future
 	// graceful shutdown) can wait for the fan-out to drain.
@@ -45,10 +48,10 @@ func New(st Store, logger *slog.Logger) *Dispatcher {
 		logger = slog.Default().With("component", "alert")
 	}
 	return &Dispatcher{
-		store:   st,
-		logger:  logger,
-		senders: builtinSenders(&http.Client{Timeout: 5 * time.Second}),
-		last:    make(map[string]time.Time),
+		store:    st,
+		logger:   logger,
+		notifier: notify.New(&http.Client{Timeout: 5 * time.Second}, logger),
+		last:     make(map[string]time.Time),
 	}
 }
 
@@ -189,19 +192,26 @@ func (d *Dispatcher) allowThrottle(groupID, monitorID string, minIntervalSeconds
 	return true
 }
 
-// deliver routes the payload to the sender registered for the channel's type.
-// An empty type means webhook, the original channel kind.
+// deliver renders the monitor payload and hands it to the generic notifier.
 func (d *Dispatcher) deliver(channel store.AlertChannel, payload Payload) {
-	kind := channel.Type
-	if kind == "" {
-		kind = "webhook"
-	}
-	sender, ok := d.senders[kind]
-	if !ok {
-		d.logger.Warn("unsupported alert channel type", "type", channel.Type)
+	webhookJSON, err := json.Marshal(payload)
+	if err != nil {
+		d.logger.Warn("alert payload marshal failed",
+			"monitor_id", payload.MonitorID,
+			"group_id", payload.GroupID,
+			"error", err.Error(),
+		)
 		return
 	}
-	if err := sender.send(channel, payload); err != nil {
+	delivery := notify.Delivery{
+		WebhookJSON: webhookJSON,
+		HumanText:   formatMessage(payload),
+	}
+	if err := d.notifier.Deliver(channel, delivery); err != nil {
+		if errors.Is(err, notify.ErrUnsupportedChannel) {
+			d.logger.Warn("unsupported alert channel type", "type", channel.Type)
+			return
+		}
 		d.logger.Warn("alert delivery failed",
 			"type", channel.Type,
 			"target", channel.Target,
