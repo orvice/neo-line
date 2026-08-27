@@ -10,6 +10,17 @@ neo-line 是一个基于 Go 和 Butterfly 应用框架构建的服务器监控�
 
 - [功能说明](./features.md) — 当前已实现能力、规划功能和功能边界
 - [监控配置](./monitoring-configuration.md) — MongoDB 中 Server、TCP、URL、TLS Port、SNI 和证书状态的配置模型
+- [证书管理 — DNS 账户](./certificate-management-dns-accounts.md) — Cloudflare DNSProviderAccount 配置、权限与传播超时
+- [证书管理 — ACME Issuer](./certificate-management-issuers.md) — CertificateIssuer preset、EAB、ToS 与注册状态
+- [证书管理 — 托管证书](./certificate-management-managed-certificates.md) — ManagedCertificate desired config、领域区别与 Pending Issue
+- [证书管理 — 访问 Token 与 Server 分配](./certificate-management-access-tokens.md) — CertificateAccessToken 与 Server 授权
+- [证书管理 — Server 分发](./certificate-management-server-distribution.md) — ServerCertificateService、限流与调用示例
+- [证书管理 — Operation Lease 与多副本](./certificate-management-operation-lease.md) — Mongo lease、接管与 TXT 清理
+- [证书管理 — 运维与默认值](./certificate-management-operations.md) — 默认值、Secret 假设、metrics 与 CA preset
+- [证书管理 — 停用/吊销/回滚/删除](./certificate-management-destructive-operations.md) — 四类破坏性操作语义与约束
+- [证书管理 — 首版范围外](./certificate-management-out-of-scope.md) — 明确不在首版内的能力边界
+- [领域术语（CONTEXT.md）](../CONTEXT.md) — ManagedCertificate、CertificateVersion 等 glossary
+- [架构决策记录（ADR）](./adr/) — 明文 Secret、双版本模型、Server token、reconciler
 
 ## 当前应用基础
 
@@ -25,6 +36,11 @@ neo-line 是一个基于 Go 和 Butterfly 应用框架构建的服务器监控�
 - MonitorService：Monitor 管理、检查结果和 uptime 查询
 - MonitorGroupService：Monitor Group 管理（含分组级告警策略，引用通知组派发）
 - NotifyGroupService：可复用的 webhook / Telegram / Discord / Mastodon 通知组
+- DNSProviderAccountService：Cloudflare DNS-01 账户管理（admin 专用；Token 验证后保存，读取接口脱敏）
+- CertificateIssuerService：ACME Issuer 管理（admin 专用；异步注册、ToS 同意、Secret 脱敏）
+- ManagedCertificateService：托管证书 desired config CRUD（admin 专用；创建后自动 Pending Issue；读取脱敏）
+- CertificateAccessTokenService：按 Server 创建、列出、删除证书分发 token（admin 专用；明文 secret 仅创建时返回一次）
+- ServerCertificateService：Server 侧 `ListCertificates` 与 `GetCertificateBundle`（Bearer `nlct_*` token 鉴权）
 - AuditLogService：按来源、动作、资源、调用方、结果与时间范围查询操作审计日志
 - 探测调度器：随应用启动，每 `5s` 从 MongoDB 读取已启用的 monitor 并按各自间隔执行探测
 - 默认 HTTP 服务端口：`8080`，由 Butterfly 提供

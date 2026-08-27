@@ -39,6 +39,34 @@ import {
   type AlertChannel as PbAlertChannel,
 } from "@/gen/neoline/v1/notify_group_pb"
 import {
+  DNSProviderAccountService,
+  type DNSProviderAccount as PbDNSProviderAccount,
+} from "@/gen/neoline/v1/dns_provider_account_pb"
+import {
+  CertificateIssuerService,
+  CertificateIssuerRegistrationStatus as PbIssuerStatus,
+  type CertificateIssuer as PbCertificateIssuer,
+  type CertificateIssuerDirectoryPreview as PbIssuerPreview,
+} from "@/gen/neoline/v1/certificate_issuer_pb"
+import {
+  ManagedCertificateService,
+  CertificateKeyType as PbCertKeyType,
+  CertificateValidity as PbCertValidity,
+  CertificateOperationType as PbCertOpType,
+  CertificateOperationStatus as PbCertOpStatus,
+  CertificateRevocationReason as PbCertRevocationReason,
+  CertificateVersionSlot as PbCertVersionSlot,
+  type ManagedCertificate as PbManagedCertificate,
+  type CertificateVersionMetadata as PbCertificateVersionMetadata,
+  type CertificateBundle as PbCertificateBundle,
+  type CertificateOperation as PbCertificateOperation,
+  type IssueConfigSnapshot as PbIssueConfigSnapshot,
+} from "@/gen/neoline/v1/managed_certificate_pb"
+import {
+  CertificateAccessTokenService,
+  type CertificateAccessToken as PbCertificateAccessToken,
+} from "@/gen/neoline/v1/certificate_access_token_pb"
+import {
   type StatusGroup as PbStatusGroup,
   type StatusServer as PbStatusServer,
   type StatusMonitor as PbStatusMonitor,
@@ -53,6 +81,8 @@ import type {
   CertificateInfo,
   CheckResult,
   CreateMcpTokenResponse,
+  CertificateAccessToken,
+  CreateCertificateAccessTokenResponse,
   Heartbeat,
   LoginResponse,
   McpToken,
@@ -60,6 +90,20 @@ import type {
   MonitorGroup,
   MonitorUptime,
   NotifyGroup,
+  DNSProviderAccount,
+  CertificateIssuer,
+  CertificateIssuerDirectoryPreview,
+  CertificateIssuerRegistrationStatus,
+  CertificateKeyType,
+  CertificateOperation,
+  CertificateOperationStatus,
+  CertificateOperationType,
+  CertificateRevocationReason,
+  CertificateValidity,
+  CertificateVersionMetadata,
+  CertificateBundle,
+  ManagedCertificate,
+  IssueConfigSnapshot,
   Server,
   ServerEvent,
   ServerHealth,
@@ -115,6 +159,10 @@ const serverClient = createClient(ServerService, transport)
 const monitorClient = createClient(MonitorService, transport)
 const groupClient = createClient(MonitorGroupService, transport)
 const notifyClient = createClient(NotifyGroupService, transport)
+const dnsAccountClient = createClient(DNSProviderAccountService, transport)
+const issuerClient = createClient(CertificateIssuerService, transport)
+const managedCertClient = createClient(ManagedCertificateService, transport)
+const certAccessTokenClient = createClient(CertificateAccessTokenService, transport)
 const mcpClient = createClient(McpTokenService, transport)
 const sshClient = createClient(SshService, transport)
 const auditClient = createClient(AuditLogService, transport)
@@ -350,6 +398,300 @@ function notifyGroupFromProto(g: PbNotifyGroup): NotifyGroup {
   }
 }
 
+function dnsProviderAccountFromProto(a: PbDNSProviderAccount): DNSProviderAccount {
+  return {
+    id: a.id,
+    name: a.name,
+    provider: a.provider,
+    propagation_timeout_seconds: a.propagationTimeoutSeconds,
+    token_configured: a.tokenConfigured,
+    token_last_verified_at: iso(a.tokenLastVerifiedAt),
+    created_at: iso(a.createdAt) ?? "",
+    updated_at: iso(a.updatedAt) ?? "",
+  }
+}
+
+function issuerStatusFromProto(s: PbIssuerStatus): CertificateIssuerRegistrationStatus {
+  switch (s) {
+    case PbIssuerStatus.PENDING:
+      return "Pending"
+    case PbIssuerStatus.READY:
+      return "Ready"
+    case PbIssuerStatus.FAILED:
+      return "Failed"
+    default:
+      return "Unspecified"
+  }
+}
+
+function certificateIssuerFromProto(i: PbCertificateIssuer): CertificateIssuer {
+  return {
+    id: i.id,
+    name: i.name,
+    ca_type: i.caType,
+    directory_url: i.directoryUrl,
+    email: i.email,
+    registration_status: issuerStatusFromProto(i.registrationStatus),
+    registration_error: i.registrationError || undefined,
+    staging_untrusted: i.stagingUntrusted,
+    terms_of_service_url: i.termsOfServiceUrl || undefined,
+    terms_of_service_agreed_at: iso(i.termsOfServiceAgreedAt),
+    account_key_configured: i.accountKeyConfigured,
+    eab_configured: i.eabConfigured,
+    created_at: iso(i.createdAt) ?? "",
+    updated_at: iso(i.updatedAt) ?? "",
+  }
+}
+
+function issuerPreviewFromProto(p: PbIssuerPreview): CertificateIssuerDirectoryPreview {
+  return {
+    ca_type: p.caType,
+    directory_url: p.directoryUrl,
+    terms_of_service_url: p.termsOfServiceUrl || undefined,
+    staging_untrusted: p.stagingUntrusted,
+    requires_eab: p.requiresEab,
+  }
+}
+
+function keyTypeFromProto(t: PbCertKeyType): CertificateKeyType {
+  switch (t) {
+    case PbCertKeyType.EC_P256:
+      return "ec_p256"
+    case PbCertKeyType.RSA_2048:
+      return "rsa_2048"
+    default:
+      return "unspecified"
+  }
+}
+
+function keyTypeToProto(t: CertificateKeyType): PbCertKeyType {
+  switch (t) {
+    case "rsa_2048":
+      return PbCertKeyType.RSA_2048
+    case "ec_p256":
+      return PbCertKeyType.EC_P256
+    default:
+      return PbCertKeyType.UNSPECIFIED
+  }
+}
+
+function validityFromProto(v: PbCertValidity): CertificateValidity {
+  switch (v) {
+    case PbCertValidity.MISSING:
+      return "Missing"
+    case PbCertValidity.VALID:
+      return "Valid"
+    case PbCertValidity.RENEWAL_DUE:
+      return "RenewalDue"
+    case PbCertValidity.EXPIRED:
+      return "Expired"
+    case PbCertValidity.REVOKED:
+      return "Revoked"
+    default:
+      return "Unspecified"
+  }
+}
+
+function opTypeFromProto(t: PbCertOpType): CertificateOperationType {
+  switch (t) {
+    case PbCertOpType.ISSUE:
+      return "Issue"
+    case PbCertOpType.RENEW:
+      return "Renew"
+    case PbCertOpType.REVOKE:
+      return "Revoke"
+    default:
+      return "Unspecified"
+  }
+}
+
+function opStatusFromProto(s: PbCertOpStatus): CertificateOperationStatus {
+  switch (s) {
+    case PbCertOpStatus.PENDING:
+      return "Pending"
+    case PbCertOpStatus.RUNNING:
+      return "Running"
+    case PbCertOpStatus.SUCCEEDED:
+      return "Succeeded"
+    case PbCertOpStatus.FAILED:
+      return "Failed"
+    default:
+      return "Unspecified"
+  }
+}
+
+function revocationReasonFromProto(r: PbCertRevocationReason): CertificateRevocationReason {
+  switch (r) {
+    case PbCertRevocationReason.KEY_COMPROMISE:
+      return "key_compromise"
+    case PbCertRevocationReason.CA_COMPROMISE:
+      return "ca_compromise"
+    case PbCertRevocationReason.AFFILIATION_CHANGED:
+      return "affiliation_changed"
+    case PbCertRevocationReason.SUPERSEDED:
+      return "superseded"
+    case PbCertRevocationReason.CESSATION_OF_OPERATION:
+      return "cessation_of_operation"
+    case PbCertRevocationReason.CERTIFICATE_HOLD:
+      return "certificate_hold"
+    case PbCertRevocationReason.PRIVILEGE_WITHDRAWN:
+      return "privilege_withdrawn"
+    case PbCertRevocationReason.AA_COMPROMISE:
+      return "aa_compromise"
+    default:
+      return "unspecified"
+  }
+}
+
+function revocationReasonToProto(r: CertificateRevocationReason): PbCertRevocationReason {
+  switch (r) {
+    case "key_compromise":
+      return PbCertRevocationReason.KEY_COMPROMISE
+    case "ca_compromise":
+      return PbCertRevocationReason.CA_COMPROMISE
+    case "affiliation_changed":
+      return PbCertRevocationReason.AFFILIATION_CHANGED
+    case "superseded":
+      return PbCertRevocationReason.SUPERSEDED
+    case "cessation_of_operation":
+      return PbCertRevocationReason.CESSATION_OF_OPERATION
+    case "certificate_hold":
+      return PbCertRevocationReason.CERTIFICATE_HOLD
+    case "privilege_withdrawn":
+      return PbCertRevocationReason.PRIVILEGE_WITHDRAWN
+    case "aa_compromise":
+      return PbCertRevocationReason.AA_COMPROMISE
+    default:
+      return PbCertRevocationReason.UNSPECIFIED
+  }
+}
+
+function issueSnapshotFromProto(s: PbIssueConfigSnapshot): IssueConfigSnapshot {
+  return {
+    domains: [...s.domains],
+    certificate_issuer_id: s.certificateIssuerId,
+    dns_provider_account_id: s.dnsProviderAccountId,
+    key_type: keyTypeFromProto(s.keyType),
+  }
+}
+
+function certificateOperationFromProto(op: PbCertificateOperation): CertificateOperation {
+  return {
+    id: op.id,
+    managed_certificate_id: op.managedCertificateId,
+    type: opTypeFromProto(op.type),
+    status: opStatusFromProto(op.status),
+    attempt_count: op.attemptCount,
+    config_snapshot: op.configSnapshot
+      ? issueSnapshotFromProto(op.configSnapshot)
+      : undefined,
+    error_summary: op.errorSummary || undefined,
+    warning: op.warning || undefined,
+    started_at: iso(op.startedAt),
+    finished_at: iso(op.finishedAt),
+    next_attempt_at: iso(op.nextAttemptAt),
+    created_at: iso(op.createdAt) ?? "",
+    updated_at: iso(op.updatedAt) ?? "",
+    target_version_id: op.targetVersionId || undefined,
+    revocation_reason: op.revocationReason
+      ? revocationReasonFromProto(op.revocationReason)
+      : undefined,
+  }
+}
+
+function certificateVersionFromProto(v: PbCertificateVersionMetadata): CertificateVersionMetadata {
+  return {
+    id: v.id,
+    config_snapshot: v.configSnapshot
+      ? issueSnapshotFromProto(v.configSnapshot)
+      : undefined,
+    leaf_fingerprint: v.leafFingerprint,
+    serial_number: v.serialNumber,
+    issuer_common_name: v.issuerCommonName,
+    not_before: iso(v.notBefore),
+    not_after: iso(v.notAfter),
+    key_type: keyTypeFromProto(v.keyType),
+    staging_untrusted: v.stagingUntrusted,
+    created_at: iso(v.createdAt),
+    revoked_at: iso(v.revokedAt),
+    revoke_pending: v.revokePending,
+  }
+}
+
+function certificateBundleFromProto(b: PbCertificateBundle): CertificateBundle {
+  return {
+    managed_certificate_id: b.managedCertificateId,
+    version_id: b.versionId,
+    domains: [...b.domains],
+    key_type: keyTypeFromProto(b.keyType),
+    leaf_fingerprint: b.leafFingerprint,
+    not_before: iso(b.notBefore),
+    not_after: iso(b.notAfter),
+    validity: validityFromProto(b.validity),
+    staging_untrusted: b.stagingUntrusted,
+    fullchain_pem: b.fullchainPem,
+    private_key_pem: b.privateKeyPem,
+  }
+}
+
+function managedCertificateFromProto(c: PbManagedCertificate): ManagedCertificate {
+  return {
+    id: c.id,
+    name: c.name,
+    domains: [...c.domains],
+    certificate_issuer_id: c.certificateIssuerId,
+    dns_provider_account_id: c.dnsProviderAccountId,
+    key_type: keyTypeFromProto(c.keyType),
+    auto_renew_enabled: c.autoRenewEnabled ?? true,
+    renew_before_days: c.renewBeforeDays || 30,
+    effective_renewal_window_days: c.effectiveRenewalWindowDays || undefined,
+    next_renewal_at: iso(c.nextRenewalAt),
+    notify_group_ids: c.notifyGroupIds.length ? [...c.notifyGroupIds] : undefined,
+    server_ids: c.serverIds.length ? [...c.serverIds] : undefined,
+    active_validity: validityFromProto(c.activeValidity),
+    bundle_available: c.bundleAvailable,
+    has_unpublished_desired_changes: c.hasUnpublishedDesiredChanges,
+    active_version: c.activeVersion
+      ? certificateVersionFromProto(c.activeVersion)
+      : undefined,
+    previous_version: c.previousVersion
+      ? certificateVersionFromProto(c.previousVersion)
+      : undefined,
+    latest_operation: c.latestOperation
+      ? certificateOperationFromProto(c.latestOperation)
+      : undefined,
+    last_notification_warning: c.lastNotificationWarning || undefined,
+    last_notification_warning_at: iso(c.lastNotificationWarningAt),
+    created_at: iso(c.createdAt) ?? "",
+    updated_at: iso(c.updatedAt) ?? "",
+  }
+}
+
+function managedCertificateToProto(
+  body: Partial<ManagedCertificate> & {
+    name: string
+    domains: string[]
+    certificate_issuer_id: string
+    dns_provider_account_id: string
+  }
+): PbManagedCertificate {
+  return {
+    $typeName: "neoline.v1.ManagedCertificate",
+    id: body.id ?? "",
+    name: body.name,
+    domains: body.domains,
+    certificateIssuerId: body.certificate_issuer_id,
+    dnsProviderAccountId: body.dns_provider_account_id,
+    keyType: keyTypeToProto(body.key_type ?? "ec_p256"),
+    autoRenewEnabled: body.auto_renew_enabled ?? true,
+    renewBeforeDays: body.renew_before_days ?? 30,
+    notifyGroupIds: body.notify_group_ids ?? [],
+    serverIds: body.server_ids ?? [],
+    activeValidity: PbCertValidity.UNSPECIFIED,
+    bundleAvailable: false,
+  } as PbManagedCertificate
+}
+
 function settingsFromProto(s?: PbSettings): Settings {
   return {
     site_name: s?.siteName ?? "",
@@ -365,6 +707,21 @@ function mcpTokenFromProto(t: McpTokenPb): McpToken {
     prefix: t.prefix,
     created_at: iso(t.createdAt) ?? "",
     last_used_at: iso(t.lastUsedAt),
+  }
+}
+
+function certificateAccessTokenFromProto(
+  t: PbCertificateAccessToken
+): CertificateAccessToken {
+  return {
+    id: t.id,
+    server_id: t.serverId,
+    name: t.name,
+    prefix: t.prefix,
+    created_at: iso(t.createdAt) ?? "",
+    last_used_at: iso(t.lastUsedAt),
+    expires_at: iso(t.expiresAt),
+    expired: t.expired,
   }
 }
 
@@ -518,6 +875,22 @@ function notifyGroupInit(
       target: c.target,
       extra: c.extra ?? {},
     })),
+  }
+}
+
+function dnsProviderAccountInit(
+  b: Partial<DNSProviderAccount> & { api_token?: string }
+): {
+  account: MessageInitShape<DNSProviderAccountInitSchema>
+  apiToken?: string
+} {
+  return {
+    account: {
+      name: b.name,
+      provider: b.provider ?? "cloudflare",
+      propagationTimeoutSeconds: b.propagation_timeout_seconds ?? 0,
+    },
+    apiToken: b.api_token,
   }
 }
 
@@ -779,6 +1152,239 @@ export const api = {
       await notifyClient.deleteNotifyGroup({ notifyGroupId: id })
     }),
 
+  // DNS provider accounts
+  listDNSProviderAccounts: (query?: { page_token?: string; page_size?: number }) =>
+    call<ListResponse & { accounts: DNSProviderAccount[] }>(async () => {
+      const res = await dnsAccountClient.listDNSProviderAccounts({
+        pageToken: query?.page_token ?? "",
+        pageSize: query?.page_size ?? 0,
+      })
+      return {
+        accounts: res.accounts.map(dnsProviderAccountFromProto),
+        next_page_token: res.nextPageToken,
+      }
+    }),
+  getDNSProviderAccount: (id: string) =>
+    call<{ account: DNSProviderAccount }>(async () => {
+      const res = await dnsAccountClient.getDNSProviderAccount({ dnsProviderAccountId: id })
+      return { account: dnsProviderAccountFromProto(res.account!) }
+    }),
+  createDNSProviderAccount: (
+    body: Partial<DNSProviderAccount> & { api_token?: string }
+  ) =>
+    call<{ account: DNSProviderAccount }>(async () => {
+      const init = dnsProviderAccountInit(body)
+      const res = await dnsAccountClient.createDNSProviderAccount({
+        account: init.account,
+        apiToken: init.apiToken ?? "",
+      })
+      return { account: dnsProviderAccountFromProto(res.account!) }
+    }),
+  updateDNSProviderAccount: (
+    id: string,
+    body: Partial<DNSProviderAccount> & { api_token?: string }
+  ) =>
+    call<{ account: DNSProviderAccount }>(async () => {
+      const init = dnsProviderAccountInit(body)
+      const res = await dnsAccountClient.updateDNSProviderAccount({
+        dnsProviderAccountId: id,
+        account: init.account,
+        apiToken: init.apiToken ?? "",
+      })
+      return { account: dnsProviderAccountFromProto(res.account!) }
+    }),
+  deleteDNSProviderAccount: (id: string) =>
+    call<void>(async () => {
+      await dnsAccountClient.deleteDNSProviderAccount({ dnsProviderAccountId: id })
+    }),
+
+  // Certificate issuers
+  listCertificateIssuers: (query?: { page_token?: string; page_size?: number }) =>
+    call<ListResponse & { issuers: CertificateIssuer[] }>(async () => {
+      const res = await issuerClient.listCertificateIssuers({
+        pageToken: query?.page_token ?? "",
+        pageSize: query?.page_size ?? 0,
+      })
+      return {
+        issuers: res.issuers.map(certificateIssuerFromProto),
+        next_page_token: res.nextPageToken,
+      }
+    }),
+  getCertificateIssuerDirectoryPreview: (caType: string, customDirectoryUrl?: string) =>
+    call<{ preview: CertificateIssuerDirectoryPreview }>(async () => {
+      const res = await issuerClient.getCertificateIssuerDirectoryPreview({
+        caType,
+        customDirectoryUrl: customDirectoryUrl ?? "",
+      })
+      return { preview: issuerPreviewFromProto(res.preview!) }
+    }),
+  createCertificateIssuer: (body: {
+    name: string
+    ca_type: string
+    email: string
+    custom_directory_url?: string
+    account_key_pem?: string
+    eab_kid?: string
+    eab_hmac?: string
+    terms_of_service_agreed: boolean
+  }) =>
+    call<{ issuer: CertificateIssuer }>(async () => {
+      const res = await issuerClient.createCertificateIssuer({
+        issuer: { name: body.name, caType: body.ca_type, email: body.email },
+        customDirectoryUrl: body.custom_directory_url ?? "",
+        accountKeyPem: body.account_key_pem ?? "",
+        eabKid: body.eab_kid ?? "",
+        eabHmac: body.eab_hmac ?? "",
+        termsOfServiceAgreed: body.terms_of_service_agreed,
+      })
+      return { issuer: certificateIssuerFromProto(res.issuer!) }
+    }),
+  updateCertificateIssuer: (
+    id: string,
+    body: {
+      name: string
+      ca_type?: string
+      email?: string
+      custom_directory_url?: string
+      account_key_pem?: string
+      eab_kid?: string
+      eab_hmac?: string
+    }
+  ) =>
+    call<{ issuer: CertificateIssuer }>(async () => {
+      const res = await issuerClient.updateCertificateIssuer({
+        certificateIssuerId: id,
+        issuer: {
+          name: body.name,
+          caType: body.ca_type ?? "",
+          email: body.email ?? "",
+        },
+        customDirectoryUrl: body.custom_directory_url ?? "",
+        accountKeyPem: body.account_key_pem ?? "",
+        eabKid: body.eab_kid ?? "",
+        eabHmac: body.eab_hmac ?? "",
+      })
+      return { issuer: certificateIssuerFromProto(res.issuer!) }
+    }),
+  retryCertificateIssuerRegistration: (id: string) =>
+    call<{ issuer: CertificateIssuer }>(async () => {
+      const res = await issuerClient.retryCertificateIssuerRegistration({
+        certificateIssuerId: id,
+      })
+      return { issuer: certificateIssuerFromProto(res.issuer!) }
+    }),
+  deleteCertificateIssuer: (id: string) =>
+    call<void>(async () => {
+      await issuerClient.deleteCertificateIssuer({ certificateIssuerId: id })
+    }),
+
+  listManagedCertificates: (query?: { page_token?: string; page_size?: number }) =>
+    call<ListResponse & { certificates: ManagedCertificate[] }>(async () => {
+      const res = await managedCertClient.listManagedCertificates({
+        pageToken: query?.page_token ?? "",
+        pageSize: query?.page_size ?? 50,
+      })
+      return {
+        certificates: res.certificates.map(managedCertificateFromProto),
+        next_page_token: res.nextPageToken,
+      }
+    }),
+  getManagedCertificate: (id: string) =>
+    call<{ certificate: ManagedCertificate }>(async () => {
+      const res = await managedCertClient.getManagedCertificate({
+        managedCertificateId: id,
+      })
+      return { certificate: managedCertificateFromProto(res.certificate!) }
+    }),
+  createManagedCertificate: (body: {
+    name: string
+    domains: string[]
+    certificate_issuer_id: string
+    dns_provider_account_id: string
+    key_type?: CertificateKeyType
+    auto_renew_enabled?: boolean
+    renew_before_days?: number
+    notify_group_ids?: string[]
+    server_ids?: string[]
+  }) =>
+    call<{ certificate: ManagedCertificate }>(async () => {
+      const res = await managedCertClient.createManagedCertificate({
+        certificate: managedCertificateToProto(body),
+      })
+      return { certificate: managedCertificateFromProto(res.certificate!) }
+    }),
+  updateManagedCertificate: (
+    id: string,
+    body: {
+      name: string
+      domains: string[]
+      certificate_issuer_id: string
+      dns_provider_account_id: string
+      key_type?: CertificateKeyType
+      auto_renew_enabled?: boolean
+      renew_before_days?: number
+      notify_group_ids?: string[]
+      server_ids?: string[]
+    }
+  ) =>
+    call<{ certificate: ManagedCertificate }>(async () => {
+      const res = await managedCertClient.updateManagedCertificate({
+        managedCertificateId: id,
+        certificate: managedCertificateToProto(body),
+      })
+      return { certificate: managedCertificateFromProto(res.certificate!) }
+    }),
+  submitIssueOperation: (id: string) =>
+    call<{ operation: CertificateOperation }>(async () => {
+      const res = await managedCertClient.submitIssueOperation({
+        managedCertificateId: id,
+      })
+      return { operation: certificateOperationFromProto(res.operation!) }
+    }),
+  submitRenewOperation: (id: string) =>
+    call<{ operation: CertificateOperation }>(async () => {
+      const res = await managedCertClient.submitRenewOperation({
+        managedCertificateId: id,
+      })
+      return { operation: certificateOperationFromProto(res.operation!) }
+    }),
+  getCertificateBundle: (id: string, versionSlot: "active" | "previous" = "active") =>
+    call<{ bundle: CertificateBundle }>(async () => {
+      const res = await managedCertClient.getCertificateBundle({
+        managedCertificateId: id,
+        versionSlot:
+          versionSlot === "previous"
+            ? PbCertVersionSlot.PREVIOUS
+            : PbCertVersionSlot.ACTIVE,
+      })
+      return { bundle: certificateBundleFromProto(res.bundle!) }
+    }),
+  activatePreviousVersion: (id: string, versionId: string) =>
+    call<{ certificate: ManagedCertificate }>(async () => {
+      const res = await managedCertClient.activatePreviousVersion({
+        managedCertificateId: id,
+        versionId,
+      })
+      return { certificate: managedCertificateFromProto(res.certificate!) }
+    }),
+  submitRevokeVersion: (
+    id: string,
+    versionId: string,
+    reason: CertificateRevocationReason = "unspecified"
+  ) =>
+    call<{ operation: CertificateOperation }>(async () => {
+      const res = await managedCertClient.submitRevokeVersion({
+        managedCertificateId: id,
+        versionId,
+        revocationReason: revocationReasonToProto(reason),
+      })
+      return { operation: certificateOperationFromProto(res.operation!) }
+    }),
+  deleteManagedCertificate: (id: string) =>
+    call<void>(async () => {
+      await managedCertClient.deleteManagedCertificate({ managedCertificateId: id })
+    }),
+
   // MCP tokens
   listMcpTokens: () =>
     call<{ tokens: McpToken[] }>(async () => {
@@ -793,6 +1399,38 @@ export const api = {
   deleteMcpToken: (id: string) =>
     call<void>(async () => {
       await mcpClient.deleteMcpToken({ tokenId: id })
+    }),
+
+  // Certificate access tokens (per server)
+  listCertificateAccessTokens: (serverId: string) =>
+    call<{ tokens: CertificateAccessToken[] }>(async () => {
+      const res = await certAccessTokenClient.listCertificateAccessTokens({
+        serverId,
+      })
+      return { tokens: res.tokens.map(certificateAccessTokenFromProto) }
+    }),
+  createCertificateAccessToken: (
+    serverId: string,
+    name: string,
+    expiresAt?: Date
+  ) =>
+    call<CreateCertificateAccessTokenResponse>(async () => {
+      const res = await certAccessTokenClient.createCertificateAccessToken({
+        serverId,
+        name,
+        expiresAt: expiresAt ? timestampFromDate(expiresAt) : undefined,
+      })
+      return {
+        token: certificateAccessTokenFromProto(res.token!),
+        secret: res.secret,
+      }
+    }),
+  deleteCertificateAccessToken: (serverId: string, tokenId: string) =>
+    call<void>(async () => {
+      await certAccessTokenClient.deleteCertificateAccessToken({
+        serverId,
+        tokenId,
+      })
     }),
 
   // Audit logs
@@ -849,4 +1487,5 @@ type ServerInitSchema = typeof import("@/gen/neoline/v1/server_pb").ServerSchema
 type MonitorInitSchema = typeof import("@/gen/neoline/v1/monitor_pb").MonitorSchema
 type MonitorGroupInitSchema = typeof import("@/gen/neoline/v1/monitor_group_pb").MonitorGroupSchema
 type NotifyGroupInitSchema = typeof import("@/gen/neoline/v1/notify_group_pb").NotifyGroupSchema
+type DNSProviderAccountInitSchema = typeof import("@/gen/neoline/v1/dns_provider_account_pb").DNSProviderAccountSchema
 type McpTokenPb = import("@/gen/neoline/v1/mcp_token_pb").McpToken

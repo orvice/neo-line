@@ -8,6 +8,7 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/gin-gonic/gin"
+	"github.com/orvice/neo-line/internal/certmanager"
 	nlssh "github.com/orvice/neo-line/internal/ssh"
 	"github.com/orvice/neo-line/internal/store"
 	"github.com/orvice/neo-line/pkg/proto/neoline/v1/neolinev1connect"
@@ -20,17 +21,18 @@ const BasePath = "/api/grpc"
 // Service implements every neoline.v1 Connect handler against the store.
 type Service struct {
 	store        store.Store
+	certManager  *certmanager.Manager
 	ssh          *nlssh.Runner
 	loginLimiter *loginLimiter
 }
 
-func New(st store.Store, ssh *nlssh.Runner) *Service {
-	return &Service{store: st, ssh: ssh, loginLimiter: newLoginLimiter()}
+func New(st store.Store, certMgr *certmanager.Manager, ssh *nlssh.Runner) *Service {
+	return &Service{store: st, certManager: certMgr, ssh: ssh, loginLimiter: newLoginLimiter()}
 }
 
 // Register mounts the Connect handlers on the Gin engine under BasePath.
-func Register(r *gin.Engine, st store.Store, ssh *nlssh.Runner) {
-	svc := New(st, ssh)
+func Register(r *gin.Engine, st store.Store, certMgr *certmanager.Manager, ssh *nlssh.Runner) {
+	svc := New(st, certMgr, ssh)
 	// Audit must wrap auth so rejected (unauthenticated/forbidden) calls are
 	// recorded too; auth fills the session holder for actor attribution.
 	opts := connect.WithInterceptors(svc.auditInterceptor(), svc.authInterceptor())
@@ -44,8 +46,20 @@ func Register(r *gin.Engine, st store.Store, ssh *nlssh.Runner) {
 	mux.Handle(neolinev1connect.NewMonitorServiceHandler(svc, opts))
 	mux.Handle(neolinev1connect.NewMonitorGroupServiceHandler(svc, opts))
 	mux.Handle(neolinev1connect.NewNotifyGroupServiceHandler(svc, opts))
+	mux.Handle(neolinev1connect.NewDNSProviderAccountServiceHandler(svc, opts))
+	mux.Handle(neolinev1connect.NewCertificateIssuerServiceHandler(svc, opts))
+	mux.Handle(neolinev1connect.NewManagedCertificateServiceHandler(svc, opts))
+	mux.Handle(neolinev1connect.NewCertificateAccessTokenServiceHandler(svc, opts))
 	mux.Handle(neolinev1connect.NewMcpTokenServiceHandler(svc, opts))
 	mux.Handle(neolinev1connect.NewSshServiceHandler(svc, opts))
+
+	certDistSvc := &ServerCertService{parent: svc}
+	certDistOpts := connect.WithInterceptors(
+		svc.certDistributionAuditInterceptor(),
+		svc.certDistributionAuthInterceptor(),
+		svc.certDistributionRateLimitInterceptor(),
+	)
+	mux.Handle(neolinev1connect.NewServerCertificateServiceHandler(certDistSvc, certDistOpts))
 
 	handler := http.StripPrefix(BasePath, mux)
 	r.Any(BasePath+"/*any", gin.WrapH(handler))

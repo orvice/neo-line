@@ -175,6 +175,164 @@ export interface NotifyGroup {
   updated_at: string
 }
 
+export interface DNSProviderAccount {
+  id: string
+  name: string
+  provider: string
+  propagation_timeout_seconds: number
+  token_configured: boolean
+  token_last_verified_at?: string
+  created_at: string
+  updated_at: string
+}
+
+export type CertificateIssuerRegistrationStatus =
+  | "Pending"
+  | "Ready"
+  | "Failed"
+  | "Unspecified"
+
+export type CertificateIssuerCAType =
+  | "lets_encrypt_production"
+  | "lets_encrypt_staging"
+  | "zerossl"
+  | "google_public_ca"
+  | "custom"
+
+export interface CertificateIssuer {
+  id: string
+  name: string
+  ca_type: CertificateIssuerCAType | string
+  directory_url: string
+  email: string
+  registration_status: CertificateIssuerRegistrationStatus
+  registration_error?: string
+  staging_untrusted: boolean
+  terms_of_service_url?: string
+  terms_of_service_agreed_at?: string
+  account_key_configured: boolean
+  eab_configured: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface CertificateIssuerDirectoryPreview {
+  ca_type: string
+  directory_url: string
+  terms_of_service_url?: string
+  staging_untrusted: boolean
+  requires_eab: boolean
+}
+
+export type CertificateKeyType = "ec_p256" | "rsa_2048" | "unspecified"
+
+export type CertificateValidity =
+  | "Missing"
+  | "Valid"
+  | "RenewalDue"
+  | "Expired"
+  | "Revoked"
+  | "Unspecified"
+
+export type CertificateOperationType = "Issue" | "Renew" | "Revoke" | "Unspecified"
+
+export type CertificateOperationStatus =
+  | "Pending"
+  | "Running"
+  | "Succeeded"
+  | "Failed"
+  | "Unspecified"
+
+export interface IssueConfigSnapshot {
+  domains: string[]
+  certificate_issuer_id: string
+  dns_provider_account_id: string
+  key_type: CertificateKeyType
+}
+
+export interface CertificateOperation {
+  id: string
+  managed_certificate_id: string
+  type: CertificateOperationType
+  status: CertificateOperationStatus
+  attempt_count: number
+  config_snapshot?: IssueConfigSnapshot
+  error_summary?: string
+  warning?: string
+  started_at?: string
+  finished_at?: string
+  next_attempt_at?: string
+  created_at: string
+  updated_at: string
+  target_version_id?: string
+  revocation_reason?: CertificateRevocationReason
+}
+
+export type CertificateRevocationReason =
+  | "unspecified"
+  | "key_compromise"
+  | "ca_compromise"
+  | "affiliation_changed"
+  | "superseded"
+  | "cessation_of_operation"
+  | "certificate_hold"
+  | "privilege_withdrawn"
+  | "aa_compromise"
+
+export interface CertificateVersionMetadata {
+  id: string
+  config_snapshot?: IssueConfigSnapshot
+  leaf_fingerprint: string
+  serial_number: string
+  issuer_common_name: string
+  not_before?: string
+  not_after?: string
+  key_type: CertificateKeyType
+  staging_untrusted: boolean
+  created_at?: string
+  revoked_at?: string
+  revoke_pending?: boolean
+}
+
+export interface CertificateBundle {
+  managed_certificate_id: string
+  version_id: string
+  domains: string[]
+  key_type: CertificateKeyType
+  leaf_fingerprint: string
+  not_before?: string
+  not_after?: string
+  validity: CertificateValidity
+  staging_untrusted: boolean
+  fullchain_pem: Uint8Array
+  private_key_pem: Uint8Array
+}
+
+export interface ManagedCertificate {
+  id: string
+  name: string
+  domains: string[]
+  certificate_issuer_id: string
+  dns_provider_account_id: string
+  key_type: CertificateKeyType
+  auto_renew_enabled: boolean
+  renew_before_days: number
+  effective_renewal_window_days?: number
+  next_renewal_at?: string
+  notify_group_ids?: string[]
+  server_ids?: string[]
+  active_validity: CertificateValidity
+  bundle_available: boolean
+  has_unpublished_desired_changes?: boolean
+  active_version?: CertificateVersionMetadata
+  previous_version?: CertificateVersionMetadata
+  latest_operation?: CertificateOperation
+  last_notification_warning?: string
+  last_notification_warning_at?: string
+  created_at: string
+  updated_at: string
+}
+
 export interface AlertPolicy {
   enabled: boolean
   notify_group_ids?: string[]
@@ -211,6 +369,22 @@ export interface McpToken {
 
 export interface CreateMcpTokenResponse {
   token: McpToken
+  secret: string
+}
+
+export interface CertificateAccessToken {
+  id: string
+  server_id: string
+  name: string
+  prefix: string
+  created_at: string
+  last_used_at?: string
+  expires_at?: string
+  expired: boolean
+}
+
+export interface CreateCertificateAccessTokenResponse {
+  token: CertificateAccessToken
   secret: string
 }
 

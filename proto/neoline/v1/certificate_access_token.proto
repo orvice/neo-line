@@ -1,0 +1,55 @@
+syntax = "proto3";
+
+package neoline.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/orvice/neo-line/pkg/proto/neoline/v1;neolinev1";
+
+// CertificateAccessToken authorizes a Server to call ServerCertificateService.
+// The plaintext secret is returned only once on creation and is never stored.
+message CertificateAccessToken {
+  string id = 1;
+  string server_id = 2;
+  string name = 3;
+  string prefix = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp last_used_at = 6;
+  google.protobuf.Timestamp expires_at = 7;
+  // True when expires_at is in the past; expired tokens remain listed until deleted.
+  bool expired = 8;
+}
+
+message ListCertificateAccessTokensRequest {
+  string server_id = 1;
+}
+
+message ListCertificateAccessTokensResponse {
+  repeated CertificateAccessToken tokens = 1;
+}
+
+message CreateCertificateAccessTokenRequest {
+  string server_id = 1;
+  string name = 2;
+  google.protobuf.Timestamp expires_at = 3;
+}
+
+message CreateCertificateAccessTokenResponse {
+  CertificateAccessToken token = 1;
+  string secret = 2;
+}
+
+message DeleteCertificateAccessTokenRequest {
+  string server_id = 1;
+  string token_id = 2;
+}
+
+message DeleteCertificateAccessTokenResponse {}
+
+// CertificateAccessTokenService manages per-Server certificate distribution tokens.
+// All methods require admin role.
+service CertificateAccessTokenService {
+  rpc ListCertificateAccessTokens(ListCertificateAccessTokensRequest) returns (ListCertificateAccessTokensResponse) {}
+  rpc CreateCertificateAccessToken(CreateCertificateAccessTokenRequest) returns (CreateCertificateAccessTokenResponse) {}
+  rpc DeleteCertificateAccessToken(DeleteCertificateAccessTokenRequest) returns (DeleteCertificateAccessTokenResponse) {}
+}

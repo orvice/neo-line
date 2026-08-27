@@ -410,6 +410,13 @@ neo-line 在 Butterfly 框架自动暴露的 Prometheus registry 上注册自身
 - `neoline_certificate_days_remaining{monitor_id,server_id}`：观测到 TLS 证书时，距离过期的剩余天数。
 - `neoline_enabled_monitors`：当前已启用的 monitor 数量。
 - `neoline_scheduler_reconcile_total`：调度器 reconcile tick 总数。
+- `neoline_managed_cert_validity{validity}`：ManagedCertificate 按 active validity 状态的数量（Missing / Valid / RenewalDue / Expired / Revoked）。
+- `neoline_cert_operation_total{op_type,result}`：证书 operation 计数（issue/renew/revoke × succeeded/failed/retry_scheduled）。
+- `neoline_cert_renew_failures_total`：Renew operation 失败尝试累计。
+- `neoline_server_cert_list_total`：Server `ListCertificates` 成功次数。
+- `neoline_server_cert_bundle_download_total`：Server `GetCertificateBundle` 成功次数。
+
+证书指标 **不使用** certificate ID 作为 label，避免高基数。Monitor 探测指标 `neoline_certificate_days_remaining` 仍按 monitor/server 标注，与 ManagedCertificate 生命周期独立。
 
 指标定义集中在 `internal/metric`，由该包 `init()` 注册到 `otel.PrometheusRegistry()`。
 
@@ -822,7 +829,7 @@ AlertPolicy 字段：
 
 - 通知组存储在 MongoDB `notify_groups` collection 中，`name` 字段全局唯一。
 - 创建或更新 monitor 分组时，会校验 `alert_policy.notify_group_ids` 中的每个 ID 是否存在；不存在时返回 `400`，错误信息包含 `ErrInvalidNotifyGroupIDs`。
-- 删除通知组会从所有 monitor 分组的 `alert_policy.notify_group_ids` 中 `$pull` 掉该 ID，分组自身不会被删除。
+- 删除通知组会从所有 monitor 分组的 `alert_policy.notify_group_ids` 中 `$pull` 掉该 ID，并从所有 ManagedCertificate 的 `notify_group_ids` 中移除该 ID；分组与证书本身不会被删除。
 - 派发时，调度器解析分组引用的每个通知组，汇总它们的 `channels` 后逐个发送；无法解析的通知组仅记日志并跳过。
 
 NotifyGroup 字段：
@@ -844,6 +851,20 @@ NotifyGroup 字段：
 | `mastodon` | 实例地址 | `access_token`（必填）；`visibility`（可选，默认 `unlisted`） |
 
 `webhook` 通道发送完整 JSON payload；`telegram`、`discord`、`mastodon` 发送一条人类可读的文本消息。
+
+### Monitor 告警与证书事件的区别
+
+Monitor 告警与证书生命周期通知**复用同一组 NotifyGroup 通道 adapter**（webhook / Telegram / Discord / Mastodon），但**领域语义与 payload 完全独立**：
+
+| 维度 | Monitor 告警 | 证书事件 |
+| --- | --- | --- |
+| 触发来源 | MonitorGroup `AlertPolicy` + 探测状态变化 | ManagedCertificate `notify_group_ids` + Issue/Renew/有效性 |
+| Webhook JSON | `monitor_id`、`previous_status`、`current_status`、`group_id` 等 | `event_type`、`managed_certificate_id`、`certificate_name`、`active_validity` 等 |
+| 健康语义 | `Healthy` / `Warning` / `Critical` / `Down` | `Missing` / `Valid` / `RenewalDue` / `Expired` / `Revoked` |
+| 节流 | `(group_id, monitor_id)` + `min_interval_seconds` | 失败首次立即；持续失败每 24 小时；7 天/过期各一次；恢复不受失败节流影响 |
+| 持久化 | 进程内节流（monitor 路径） | MongoDB `managed_certificates.notification_state` |
+
+证书事件类型包括：首次 Issue/Renew 失败、持续失败 24 小时提醒、失败后恢复、active 剩余 7 天提醒、进入 Expired。通道发送失败仅写入 `last_notification_warning`，**不改变** ACME operation 状态或 active/previous 版本。
 
 通知组 API：
 
@@ -988,6 +1009,114 @@ archive:
 - 独立 `DashboardService` 聚合接口，减少前端多请求。
 - 延迟趋势图。
 - 告警历史。
+
+## 证书管理（ACME，已实现）
+
+### DNSProviderAccount（Cloudflare）
+
+**状态：** 已实现（#14 纵向路径）
+
+Admin 可在 Web 控制台「证书 → DNS 账户」或通过 `DNSProviderAccountService` 管理可复用的 Cloudflare DNS-01 凭据：
+
+- 首版仅支持 `provider: cloudflare`。
+- 创建或轮换 Token 前调用 Cloudflare verify API；失败时不保存新 Token，轮换失败时保留旧 Token。
+- 读取接口与审计日志不返回 Token 明文；更新时空 `api_token` 保留现有 Secret。
+- `propagation_timeout_seconds` 默认 **120** 秒，范围 **30–900** 秒。
+- Cloudflare Token 需具备目标 Zone 的 **Zone:Read** 与 **DNS:Edit** 权限。
+
+详见 [证书管理 — DNS 账户](./certificate-management-dns-accounts.md) 与根目录 [CONTEXT.md](../CONTEXT.md)。
+
+### CertificateIssuer（ACME 账户）
+
+**状态：** 已实现（#16）
+
+Admin 可在 Web 控制台「证书 → ACME Issuer」或通过 `CertificateIssuerService` 管理命名 ACME 签发账户：
+
+- 内置 preset：Let's Encrypt 生产 / Staging、ZeroSSL、Google Public CA；另支持自定义 HTTPS Directory（系统根信任，不支持私有 Root CA）。
+- 创建前必须显式同意 Directory 元数据中的 Terms of Service；持久化 ToS URL 与 agreed-at。
+- 创建后异步注册 ACME account，状态为 Pending / Ready / Failed；仅 Ready 可用于后续 ManagedCertificate 签发。
+- 注册任务继承证书 manager 生命周期并纳入优雅关闭等待；关闭中断时写入脱敏 Failed 状态，允许 Admin 后续重试。
+- Failed 可修正邮箱、Directory、EAB、account key 并重试；Ready 仅允许修改显示名称。
+- account key 与 EAB 存入 MongoDB，读取接口与审计日志永不返回明文。
+- 删除仅本地级联，不调用远端 account deactivation。
+
+详见 [证书管理 — ACME Issuer](./certificate-management-issuers.md)。
+
+### ManagedCertificate（desired config）
+
+**状态：** 已实现（#17）
+
+Admin 可在 Web 控制台「证书 → 托管证书」或通过 `ManagedCertificateService` 管理证书 desired config：
+
+- 名称全局唯一；`id` 自动生成（`mcert_` 前缀）。
+- 有序 `domains`（≤100）：trim、小写、IDNA、去尾点、泛域名校验、去重；**第一个为主域名**。
+- 引用 **Ready** CertificateIssuer 与存在的 DNSProviderAccount；可选 NotifyGroup 与 Server（**允许零 Server**）。
+- 密钥类型 **EC P-256**（默认）或 **RSA-2048**；`renew_before_days` 默认 **30**；`auto_renew_enabled` 默认 **true**。
+- **自动续期（#22）：** 独立 certificate reconciler 每小时扫描 RenewalDue 证书并提交 Renew（使用 active 快照）；有效续期窗口 `min(renew_before_days, 有效期/3)`；手动「续期 active」与「签发新版本」语义分离。
+- 创建成功后自动提交 **Pending Issue** operation；重复提交运行中 Issue 返回现有 operation。
+- 尚无 active version 时 `active_validity` 为 **Missing**，bundle 不可用。
+- Operation 进行中禁止修改签发字段；名称、Server 分配与 NotifyGroup 仍可更新。
+- desired 更新使用字段级原子写入，不覆盖并发激活的 active/previous 版本或通知节流状态。
+- DNS-01 每次 `Present` 成功后立即把该 TXT 写入 operation 的 `pending_txt_records`；写入失败时中止 attempt 并尽力清理刚创建的 TXT。
+- 读取响应不含 DNS/EAB/account key/私钥 secret。
+
+领域区别：**ManagedCertificate**（期望配置与版本容器）、**CertificateVersion**（一次成功签发的不可变 bundle）、**CertificateInfo**（Monitor TLS 探测快照，与托管生命周期独立）。
+
+详见 [证书管理 — 托管证书](./certificate-management-managed-certificates.md)。
+
+### Server 分配与 CertificateAccessToken
+
+**状态：** 已实现（#19）
+
+- Admin 在托管证书详情页分配/取消分配多台 Server；变更立即写入 MongoDB，**不触发**额外签发。
+- `CertificateAccessTokenService` 按 Server 创建、列出、删除 token；全部方法要求 admin。
+- Secret 前缀 `nlct_` + 高熵随机值；MongoDB 仅存 SHA-256 hash、短 prefix 与元数据；明文仅创建时返回一次。
+- 名称在同一 Server 内唯一；可选 `expires_at`；过期 token 保留列表直至删除；多台 Server 可同时持有多个 token 以支持轮换。
+- 删除 Server 级联删除其 token 并从所有证书的 `server_ids` 移除该 Server；ManagedCertificate 保留。
+- Server 详情「证书授权」Tab：已分配证书列表 + token 管理与一次性 secret / 吊销确认。
+
+详见 [证书管理 — 访问 Token 与 Server 分配](./certificate-management-access-tokens.md)。
+
+### ServerCertificateService（Server 分发）
+
+**状态：** 已实现（#20）
+
+- 独立 Connect 服务 `ServerCertificateService`：`ListCertificates` + `GetCertificateBundle`。
+- 仅 `Authorization: Bearer nlct_*`；Admin session 与 MCP token 拒绝。
+- Hash 查 token → Server ID；List 只返回获授权证书；Get 原子返回 active fullchain + PKCS#8 private key + metadata。
+- 不存在/未授权统一 `not_found`；已授权但无可分发 active 为 `failed_precondition`。
+- 过期未吊销 active 可下载（`Expired`）；`revoke_pending` / 已吊销阻止下载。
+- Bundle 响应 `Cache-Control: no-store`；Connect JSON bytes 为 Base64。
+- Redis 按 token **120 次/分钟**，Redis 故障 fail-open；Mongo 鉴权 fail-closed。
+- 成功 bundle 下载与全部鉴权失败写 audit；成功 List 仅 metrics/日志。
+
+详见 [证书管理 — Server 分发](./certificate-management-server-distribution.md)。
+
+### 证书生命周期通知（#24）
+
+ManagedCertificate 通过 `notify_group_ids` 引用 NotifyGroup；创建/更新校验 ID；删除 NotifyGroup 仅从证书引用中移除。事件包括首次失败、24 小时持续失败提醒、恢复、7 天临期与 Expired；节流状态持久化于 `notification_state`。详见 [托管证书 — 通知](./certificate-management-managed-certificates.md#证书生命周期通知)。
+
+### 吊销与安全破坏性操作
+
+**状态：** 已实现（#25）
+
+- `SubmitRevokeVersion`：对 active/previous 异步 ACME 吊销；接受后立即 `revoke_pending` 停分发；Mongo lease + 退避重试；CA 失败保持阻止。
+- RFC 5280 reason 可选，默认 unspecified；吊销 active 不自动回滚/issue。
+- `DeleteManagedCertificate`：零 Server 分配且无运行 operation；级联本地 desired/versions/ops；不隐式 CA 吊销；保留 audit_logs。
+- Issuer/DNS 删除：被 desired/active/previous 引用时 `failed_precondition`。
+- `auto_renew_enabled=false` 仅停止 reconciler；active 仍可下载，手动 Issue/Renew 可用。
+- UI：Revoke / 激活过期 previous / 本地 Delete 使用独立确认文案。
+
+详见 [证书管理 — 停用/吊销/回滚/删除](./certificate-management-destructive-operations.md)。
+
+### 证书运维、指标与范围
+
+**状态：** 已实现（#27）
+
+- 中文运维文档：[默认值、Mongo Secret 假设、CA/EAB、metrics](./certificate-management-operations.md)。
+- 明确 [首版 out-of-scope 边界](./certificate-management-out-of-scope.md)（无 REST 文件端点、无 Server agent/CLI、无 MCP 证书 tools、无公开状态页证书字段、无 TLS Monitor 自动关联等）。
+- 领域 glossary：[CONTEXT.md](../CONTEXT.md)；架构决策：[docs/adr/](./adr/)。
+- 跨模块 lifecycle smoke 测试与 Connect 五服务契约测试覆盖完整签发、续期、分发、吊销与删除路径（fake ACME/DNS/notifier/clock）。
 
 ## 未来增强
 

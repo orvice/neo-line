@@ -1,0 +1,137 @@
+syntax = "proto3";
+
+package neoline.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/orvice/neo-line/pkg/proto/neoline/v1;neolinev1";
+
+// CertificateIssuerRegistrationStatus tracks async ACME account registration.
+enum CertificateIssuerRegistrationStatus {
+  CERTIFICATE_ISSUER_REGISTRATION_STATUS_UNSPECIFIED = 0;
+  CERTIFICATE_ISSUER_REGISTRATION_STATUS_PENDING = 1;
+  CERTIFICATE_ISSUER_REGISTRATION_STATUS_READY = 2;
+  CERTIFICATE_ISSUER_REGISTRATION_STATUS_FAILED = 3;
+}
+
+// CertificateIssuer holds a named ACME account configuration. Secrets are never
+// returned on read; use the *_configured booleans instead.
+message CertificateIssuer {
+  string id = 1;
+  string name = 2;
+  // Preset or custom CA type, e.g. lets_encrypt_production, lets_encrypt_staging,
+  // zerossl, google_public_ca, custom.
+  string ca_type = 3;
+  // Resolved ACME directory URL used for registration and future issuance.
+  string directory_url = 4;
+  string email = 5;
+  CertificateIssuerRegistrationStatus registration_status = 6;
+  // Sanitized registration failure summary; empty when not failed.
+  string registration_error = 7;
+  // True for Let's Encrypt staging and other explicitly untrusted environments.
+  bool staging_untrusted = 8;
+  // Terms of Service URL from the ACME directory metadata at agreement time.
+  string terms_of_service_url = 9;
+  google.protobuf.Timestamp terms_of_service_agreed_at = 10;
+  // True when an ACME account private key is stored.
+  bool account_key_configured = 11;
+  // True when EAB credentials are stored (required for ZeroSSL / Google Public CA).
+  bool eab_configured = 12;
+  google.protobuf.Timestamp created_at = 13;
+  google.protobuf.Timestamp updated_at = 14;
+}
+
+// Directory preview for ToS agreement before create.
+message CertificateIssuerDirectoryPreview {
+  string ca_type = 1;
+  string directory_url = 2;
+  string terms_of_service_url = 3;
+  bool staging_untrusted = 4;
+  // True when the preset requires External Account Binding credentials.
+  bool requires_eab = 5;
+}
+
+message ListCertificateIssuersRequest {
+  uint32 page_size = 1;
+  string page_token = 2;
+}
+
+message ListCertificateIssuersResponse {
+  repeated CertificateIssuer issuers = 1;
+  string next_page_token = 2;
+}
+
+message GetCertificateIssuerDirectoryPreviewRequest {
+  string ca_type = 1;
+  // Required when ca_type is custom.
+  string custom_directory_url = 2;
+}
+
+message GetCertificateIssuerDirectoryPreviewResponse {
+  CertificateIssuerDirectoryPreview preview = 1;
+}
+
+message CreateCertificateIssuerRequest {
+  CertificateIssuer issuer = 1;
+  // ACME account private key in PEM form. Empty generates a new EC P-256 key.
+  string account_key_pem = 2;
+  // External Account Binding KID. Required for ZeroSSL and Google Public CA presets.
+  string eab_kid = 3;
+  // External Account Binding HMAC key (base64url). Required with eab_kid for EAB presets.
+  string eab_hmac = 4;
+  // Must be true to persist ToS agreement and start registration.
+  bool terms_of_service_agreed = 5;
+  // Required when ca_type is custom.
+  string custom_directory_url = 6;
+}
+
+message CreateCertificateIssuerResponse {
+  CertificateIssuer issuer = 1;
+}
+
+message GetCertificateIssuerRequest {
+  string certificate_issuer_id = 1;
+}
+
+message GetCertificateIssuerResponse {
+  CertificateIssuer issuer = 1;
+}
+
+message UpdateCertificateIssuerRequest {
+  string certificate_issuer_id = 1;
+  CertificateIssuer issuer = 2;
+  // Identity fields below apply only when registration_status is Failed.
+  string account_key_pem = 3;
+  string eab_kid = 4;
+  string eab_hmac = 5;
+  string custom_directory_url = 6;
+}
+
+message UpdateCertificateIssuerResponse {
+  CertificateIssuer issuer = 1;
+}
+
+message DeleteCertificateIssuerRequest {
+  string certificate_issuer_id = 1;
+}
+
+message DeleteCertificateIssuerResponse {}
+
+message RetryCertificateIssuerRegistrationRequest {
+  string certificate_issuer_id = 1;
+}
+
+message RetryCertificateIssuerRegistrationResponse {
+  CertificateIssuer issuer = 1;
+}
+
+// CertificateIssuerService manages ACME issuer accounts. All methods require admin.
+service CertificateIssuerService {
+  rpc ListCertificateIssuers(ListCertificateIssuersRequest) returns (ListCertificateIssuersResponse) {}
+  rpc GetCertificateIssuerDirectoryPreview(GetCertificateIssuerDirectoryPreviewRequest) returns (GetCertificateIssuerDirectoryPreviewResponse) {}
+  rpc CreateCertificateIssuer(CreateCertificateIssuerRequest) returns (CreateCertificateIssuerResponse) {}
+  rpc GetCertificateIssuer(GetCertificateIssuerRequest) returns (GetCertificateIssuerResponse) {}
+  rpc UpdateCertificateIssuer(UpdateCertificateIssuerRequest) returns (UpdateCertificateIssuerResponse) {}
+  rpc DeleteCertificateIssuer(DeleteCertificateIssuerRequest) returns (DeleteCertificateIssuerResponse) {}
+  rpc RetryCertificateIssuerRegistration(RetryCertificateIssuerRegistrationRequest) returns (RetryCertificateIssuerRegistrationResponse) {}
+}

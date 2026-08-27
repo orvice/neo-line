@@ -1,0 +1,80 @@
+syntax = "proto3";
+
+package neoline.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/orvice/neo-line/pkg/proto/neoline/v1;neolinev1";
+
+// DNSProviderAccount holds reusable DNS-01 provider credentials. Secrets are
+// never returned on read; use token_configured instead.
+message DNSProviderAccount {
+  string id = 1;
+  string name = 2;
+  // Provider type. First version only accepts "cloudflare".
+  string provider = 3;
+  // Seconds to wait for DNS propagation during ACME challenges. Default 120,
+  // valid range 30–900.
+  uint32 propagation_timeout_seconds = 4;
+  // True when an API token is stored; the token itself is never returned.
+  bool token_configured = 5;
+  google.protobuf.Timestamp token_last_verified_at = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+}
+
+message ListDNSProviderAccountsRequest {
+  uint32 page_size = 1;
+  string page_token = 2;
+}
+
+message ListDNSProviderAccountsResponse {
+  repeated DNSProviderAccount accounts = 1;
+  string next_page_token = 2;
+}
+
+message CreateDNSProviderAccountRequest {
+  DNSProviderAccount account = 1;
+  // Cloudflare API token. Required on create; verified before persistence.
+  string api_token = 2;
+}
+
+message CreateDNSProviderAccountResponse {
+  DNSProviderAccount account = 1;
+}
+
+message GetDNSProviderAccountRequest {
+  string dns_provider_account_id = 1;
+}
+
+message GetDNSProviderAccountResponse {
+  DNSProviderAccount account = 1;
+}
+
+message UpdateDNSProviderAccountRequest {
+  string dns_provider_account_id = 1;
+  DNSProviderAccount account = 2;
+  // New Cloudflare API token. Empty means keep the existing token. When non-empty
+  // the token is verified before replacing the stored secret.
+  string api_token = 3;
+}
+
+message UpdateDNSProviderAccountResponse {
+  DNSProviderAccount account = 1;
+}
+
+message DeleteDNSProviderAccountRequest {
+  string dns_provider_account_id = 1;
+}
+
+message DeleteDNSProviderAccountResponse {}
+
+// DNSProviderAccountService manages reusable DNS-01 provider credentials.
+// All methods require the admin role.
+service DNSProviderAccountService {
+  rpc ListDNSProviderAccounts(ListDNSProviderAccountsRequest) returns (ListDNSProviderAccountsResponse) {}
+  rpc CreateDNSProviderAccount(CreateDNSProviderAccountRequest) returns (CreateDNSProviderAccountResponse) {}
+  rpc GetDNSProviderAccount(GetDNSProviderAccountRequest) returns (GetDNSProviderAccountResponse) {}
+  rpc UpdateDNSProviderAccount(UpdateDNSProviderAccountRequest) returns (UpdateDNSProviderAccountResponse) {}
+  rpc DeleteDNSProviderAccount(DeleteDNSProviderAccountRequest) returns (DeleteDNSProviderAccountResponse) {}
+}

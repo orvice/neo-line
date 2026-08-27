@@ -1,0 +1,1030 @@
+package certmanager
+
+import (
+	"context"
+	"errors"
+	"sync"
+	"testing"
+	"time"
+
+	"go.mongodb.org/mongo-driver/v2/mongo"
+
+	"github.com/orvice/neo-line/internal/store"
+)
+
+type managedCertFakeStore struct {
+	noopIssueStore
+	mu      sync.Mutex
+	certs   map[string]store.ManagedCertificate
+	certOrd []string
+	ops     map[string]store.CertificateOperation
+	opOrd   []string
+
+	beforeManagedCertificateUpdate func(id string)
+	recordPendingTXTErr            error
+	listAutoRenewErr               error
+
+	issuers map[string]store.CertificateIssuer
+	dns     map[string]store.DNSProviderAccount
+	notify  map[string]store.NotifyGroup
+	servers map[string]store.Server
+}
+
+func newManagedCertFakeStore() *managedCertFakeStore {
+	return &managedCertFakeStore{
+		certs:   make(map[string]store.ManagedCertificate),
+		ops:     make(map[string]store.CertificateOperation),
+		issuers: make(map[string]store.CertificateIssuer),
+		dns:     make(map[string]store.DNSProviderAccount),
+		notify:  make(map[string]store.NotifyGroup),
+		servers: make(map[string]store.Server),
+	}
+}
+
+func (f *managedCertFakeStore) seedReadyIssuer(id string) {
+	f.issuers[id] = store.CertificateIssuer{ID: id, RegistrationStatus: store.IssuerRegistrationReady}
+}
+
+func (f *managedCertFakeStore) seedDNS(id string) {
+	f.dns[id] = store.DNSProviderAccount{ID: id}
+}
+
+func (f *managedCertFakeStore) ListDNSProviderAccounts(context.Context, int64, string) ([]store.DNSProviderAccount, string, error) {
+	return nil, "", nil
+}
+func (f *managedCertFakeStore) CreateDNSProviderAccount(context.Context, store.DNSProviderAccount) (store.DNSProviderAccount, error) {
+	return store.DNSProviderAccount{}, errors.New("not implemented")
+}
+func (f *managedCertFakeStore) GetDNSProviderAccount(_ context.Context, id string) (store.DNSProviderAccount, error) {
+	a, ok := f.dns[id]
+	if !ok {
+		return store.DNSProviderAccount{}, mongo.ErrNoDocuments
+	}
+	return a, nil
+}
+func (f *managedCertFakeStore) UpdateDNSProviderAccount(context.Context, string, store.DNSProviderAccount) (store.DNSProviderAccount, error) {
+	return store.DNSProviderAccount{}, errors.New("not implemented")
+}
+func (f *managedCertFakeStore) DeleteDNSProviderAccount(context.Context, string) error {
+	return errors.New("not implemented")
+}
+
+func (f *managedCertFakeStore) ListCertificateIssuers(context.Context, int64, string) ([]store.CertificateIssuer, string, error) {
+	return nil, "", nil
+}
+func (f *managedCertFakeStore) CreateCertificateIssuer(context.Context, store.CertificateIssuer) (store.CertificateIssuer, error) {
+	return store.CertificateIssuer{}, errors.New("not implemented")
+}
+func (f *managedCertFakeStore) GetCertificateIssuer(_ context.Context, id string) (store.CertificateIssuer, error) {
+	i, ok := f.issuers[id]
+	if !ok {
+		return store.CertificateIssuer{}, mongo.ErrNoDocuments
+	}
+	return i, nil
+}
+func (f *managedCertFakeStore) UpdateCertificateIssuer(context.Context, string, store.CertificateIssuer) (store.CertificateIssuer, error) {
+	return store.CertificateIssuer{}, errors.New("not implemented")
+}
+func (f *managedCertFakeStore) DeleteCertificateIssuer(context.Context, string) error {
+	return errors.New("not implemented")
+}
+
+func (f *managedCertFakeStore) ListManagedCertificates(_ context.Context, _ int64, _ string) ([]store.ManagedCertificate, string, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	out := make([]store.ManagedCertificate, 0, len(f.certOrd))
+	for _, id := range f.certOrd {
+		out = append(out, f.certs[id])
+	}
+	return out, "", nil
+}
+
+func (f *managedCertFakeStore) ListManagedCertificatesByServer(_ context.Context, serverID string) ([]store.ManagedCertificate, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	out := make([]store.ManagedCertificate, 0)
+	for _, id := range f.certOrd {
+		c := f.certs[id]
+		for _, sid := range c.ServerIDs {
+			if sid == serverID {
+				out = append(out, c)
+				break
+			}
+		}
+	}
+	return out, nil
+}
+
+func (f *managedCertFakeStore) CreateManagedCertificate(_ context.Context, cert store.ManagedCertificate) (store.ManagedCertificate, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	for _, c := range f.certs {
+		if c.Name == cert.Name {
+			return store.ManagedCertificate{}, store.ErrManagedCertificateNameTaken
+		}
+	}
+	if cert.ID == "" {
+		cert.ID = "mcert_test"
+	}
+	now := time.Now().UTC()
+	cert.CreatedAt = now
+	cert.UpdatedAt = now
+	f.certs[cert.ID] = cert
+	f.certOrd = append(f.certOrd, cert.ID)
+	return cert, nil
+}
+
+func (f *managedCertFakeStore) GetManagedCertificate(_ context.Context, id string) (store.ManagedCertificate, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	c, ok := f.certs[id]
+	if !ok {
+		return store.ManagedCertificate{}, mongo.ErrNoDocuments
+	}
+	return c, nil
+}
+
+func (f *managedCertFakeStore) UpdateManagedCertificate(_ context.Context, id string, update store.ManagedCertificateUpdate) (store.ManagedCertificate, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if _, ok := f.certs[id]; !ok {
+		return store.ManagedCertificate{}, mongo.ErrNoDocuments
+	}
+	if f.beforeManagedCertificateUpdate != nil {
+		f.beforeManagedCertificateUpdate(id)
+	}
+	for otherID, c := range f.certs {
+		if otherID != id && c.Name == update.Name {
+			return store.ManagedCertificate{}, store.ErrManagedCertificateNameTaken
+		}
+	}
+	cert := f.certs[id]
+	cert.Name = update.Name
+	cert.Domains = append([]string(nil), update.Domains...)
+	cert.CertificateIssuerID = update.CertificateIssuerID
+	cert.DNSProviderAccountID = update.DNSProviderAccountID
+	cert.KeyType = update.KeyType
+	cert.AutoRenewEnabled = update.AutoRenewEnabled
+	cert.RenewBeforeDays = update.RenewBeforeDays
+	cert.NotifyGroupIDs = append([]string(nil), update.NotifyGroupIDs...)
+	cert.ServerIDs = append([]string(nil), update.ServerIDs...)
+	cert.UpdatedAt = time.Now().UTC()
+	f.certs[id] = cert
+	return cert, nil
+}
+
+func (f *managedCertFakeStore) CreateCertificateOperation(_ context.Context, op store.CertificateOperation) (store.CertificateOperation, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if op.ID == "" {
+		op.ID = "cop_test"
+	}
+	now := time.Now().UTC()
+	op.CreatedAt = now
+	op.UpdatedAt = now
+	if op.DeadlineAt == nil {
+		deadline := now.Add(store.DefaultOperationTotalTimeout)
+		op.DeadlineAt = &deadline
+	}
+	f.ops[op.ID] = op
+	f.opOrd = append(f.opOrd, op.ID)
+	return op, nil
+}
+
+func (f *managedCertFakeStore) GetCertificateOperation(_ context.Context, id string) (store.CertificateOperation, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	op, ok := f.ops[id]
+	if !ok {
+		return store.CertificateOperation{}, mongo.ErrNoDocuments
+	}
+	return op, nil
+}
+
+func (f *managedCertFakeStore) FindRunningCertificateOperation(_ context.Context, managedCertificateID, opType string) (store.CertificateOperation, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	for _, id := range f.opOrd {
+		op := f.ops[id]
+		if op.ManagedCertificateID != managedCertificateID || op.Type != opType {
+			continue
+		}
+		if op.Status == store.CertOpStatusPending || op.Status == store.CertOpStatusRunning {
+			return op, nil
+		}
+	}
+	return store.CertificateOperation{}, mongo.ErrNoDocuments
+}
+
+func (f *managedCertFakeStore) ListCertificateOperationsByCertificate(_ context.Context, managedCertificateID string, _ int64) ([]store.CertificateOperation, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	var out []store.CertificateOperation
+	for i := len(f.opOrd) - 1; i >= 0; i-- {
+		op := f.ops[f.opOrd[i]]
+		if op.ManagedCertificateID == managedCertificateID {
+			out = append(out, op)
+		}
+	}
+	return out, nil
+}
+
+func (f *managedCertFakeStore) LatestCertificateOperation(_ context.Context, managedCertificateID string) (store.CertificateOperation, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	for i := len(f.opOrd) - 1; i >= 0; i-- {
+		op := f.ops[f.opOrd[i]]
+		if op.ManagedCertificateID == managedCertificateID {
+			return op, nil
+		}
+	}
+	return store.CertificateOperation{}, mongo.ErrNoDocuments
+}
+
+func (f *managedCertFakeStore) ValidateNotifyGroupIDs(_ context.Context, ids []string) error {
+	for _, id := range ids {
+		if id == "" {
+			return store.ErrInvalidNotifyGroupIDs
+		}
+		if _, ok := f.notify[id]; !ok {
+			return store.ErrInvalidNotifyGroupIDs
+		}
+	}
+	return nil
+}
+
+func (f *managedCertFakeStore) ValidateServerIDs(_ context.Context, ids []string) error {
+	for _, id := range ids {
+		if id == "" {
+			return store.ErrInvalidServerIDs
+		}
+		if _, ok := f.servers[id]; !ok {
+			return store.ErrInvalidServerIDs
+		}
+	}
+	return nil
+}
+
+func (f *managedCertFakeStore) GetNotifyGroup(_ context.Context, id string) (store.NotifyGroup, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	ng, ok := f.notify[id]
+	if !ok {
+		return store.NotifyGroup{}, mongo.ErrNoDocuments
+	}
+	return ng, nil
+}
+
+func (f *managedCertFakeStore) ListManagedCertificatesForNotifications(_ context.Context) ([]store.ManagedCertificate, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	out := make([]store.ManagedCertificate, 0)
+	for _, id := range f.certOrd {
+		c := f.certs[id]
+		if len(c.NotifyGroupIDs) > 0 && c.ActiveVersion != nil {
+			out = append(out, c)
+		}
+	}
+	return out, nil
+}
+
+func (f *managedCertFakeStore) ensureNotificationState(cert *store.ManagedCertificate) {
+	if cert.NotificationState == nil {
+		cert.NotificationState = &store.CertificateNotificationState{}
+	}
+}
+
+func (f *managedCertFakeStore) TryRecordOperationFailureNotification(_ context.Context, certID string, now time.Time) (bool, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	cert, ok := f.certs[certID]
+	if !ok {
+		return false, mongo.ErrNoDocuments
+	}
+	f.ensureNotificationState(&cert)
+	if cert.NotificationState.HadOperationFailure {
+		return false, nil
+	}
+	cert.NotificationState.HadOperationFailure = true
+	cert.NotificationState.LastFailNotifiedAt = &now
+	f.certs[certID] = cert
+	return true, nil
+}
+
+func (f *managedCertFakeStore) TryRecordOperationFailureReminder(_ context.Context, certID string, now time.Time) (bool, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	cert, ok := f.certs[certID]
+	if !ok {
+		return false, mongo.ErrNoDocuments
+	}
+	f.ensureNotificationState(&cert)
+	if !cert.NotificationState.HadOperationFailure || cert.NotificationState.LastFailNotifiedAt == nil {
+		return false, nil
+	}
+	if now.Sub(*cert.NotificationState.LastFailNotifiedAt) < store.CertNotificationFailReminderInterval {
+		return false, nil
+	}
+	cert.NotificationState.LastFailNotifiedAt = &now
+	f.certs[certID] = cert
+	return true, nil
+}
+
+func (f *managedCertFakeStore) TryRecordOperationRecovery(_ context.Context, certID string, now time.Time) (bool, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	cert, ok := f.certs[certID]
+	if !ok {
+		return false, mongo.ErrNoDocuments
+	}
+	if cert.NotificationState == nil || !cert.NotificationState.HadOperationFailure {
+		return false, nil
+	}
+	cert.NotificationState.HadOperationFailure = false
+	cert.NotificationState.LastFailNotifiedAt = nil
+	cert.UpdatedAt = now
+	f.certs[certID] = cert
+	return true, nil
+}
+
+func (f *managedCertFakeStore) TryRecordSevenDayReminder(_ context.Context, certID, versionID string, now time.Time) (bool, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	cert, ok := f.certs[certID]
+	if !ok {
+		return false, mongo.ErrNoDocuments
+	}
+	if cert.ActiveVersion == nil || cert.ActiveVersion.ID != versionID {
+		return false, nil
+	}
+	f.ensureNotificationState(&cert)
+	if cert.NotificationState.SevenDayReminderVersionID == versionID {
+		return false, nil
+	}
+	cert.NotificationState.SevenDayReminderVersionID = versionID
+	cert.UpdatedAt = now
+	f.certs[certID] = cert
+	return true, nil
+}
+
+func (f *managedCertFakeStore) TryRecordExpiredNotification(_ context.Context, certID, versionID string, now time.Time) (bool, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	cert, ok := f.certs[certID]
+	if !ok {
+		return false, mongo.ErrNoDocuments
+	}
+	if cert.ActiveVersion == nil || cert.ActiveVersion.ID != versionID {
+		return false, nil
+	}
+	f.ensureNotificationState(&cert)
+	if cert.NotificationState.ExpiredNotifiedVersionID == versionID {
+		return false, nil
+	}
+	cert.NotificationState.ExpiredNotifiedVersionID = versionID
+	cert.UpdatedAt = now
+	f.certs[certID] = cert
+	return true, nil
+}
+
+func (f *managedCertFakeStore) SetCertificateNotificationWarning(_ context.Context, certID, warning string, at time.Time) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	cert, ok := f.certs[certID]
+	if !ok {
+		return mongo.ErrNoDocuments
+	}
+	f.ensureNotificationState(&cert)
+	cert.NotificationState.LastNotificationWarning = warning
+	cert.NotificationState.LastNotificationWarningAt = &at
+	f.certs[certID] = cert
+	return nil
+}
+
+func (f *managedCertFakeStore) ListAutoRenewManagedCertificates(_ context.Context) ([]store.ManagedCertificate, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.listAutoRenewErr != nil {
+		return nil, f.listAutoRenewErr
+	}
+	out := make([]store.ManagedCertificate, 0)
+	for _, id := range f.certOrd {
+		c := f.certs[id]
+		if c.AutoRenewEnabled && c.ActiveVersion != nil {
+			out = append(out, c)
+		}
+	}
+	return out, nil
+}
+
+func (f *managedCertFakeStore) ActivateFirstIssueVersion(_ context.Context, managedCertID string, version store.CertificateVersion, opID, leaseOwner, warning string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	op, ok := f.ops[opID]
+	if !ok || op.Status != store.CertOpStatusRunning || op.LeaseOwner != leaseOwner {
+		return store.ErrCertificateOperationConflict
+	}
+	cert, ok := f.certs[managedCertID]
+	if !ok || cert.ActiveVersion != nil {
+		return store.ErrActiveVersionConflict
+	}
+	cert.ActiveVersion = &version
+	cert.UpdatedAt = time.Now().UTC()
+	f.certs[managedCertID] = cert
+	now := time.Now().UTC()
+	op.Status = store.CertOpStatusSucceeded
+	op.FinishedAt = &now
+	op.Warning = warning
+	op.ErrorSummary = ""
+	op.NextAttemptAt = nil
+	op.ConsecutiveFailures = 0
+	op.LeaseOwner = ""
+	op.LeaseExpiresAt = nil
+	op.PendingTXTRecords = nil
+	op.UpdatedAt = now
+	f.ops[opID] = op
+	return nil
+}
+
+func (f *managedCertFakeStore) ActivateSubsequentIssueVersion(_ context.Context, managedCertID string, version store.CertificateVersion, expectedActiveID, opID, leaseOwner, warning string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	op, ok := f.ops[opID]
+	if !ok || op.Status != store.CertOpStatusRunning || op.LeaseOwner != leaseOwner {
+		return store.ErrCertificateOperationConflict
+	}
+	cert, ok := f.certs[managedCertID]
+	if !ok || cert.ActiveVersion == nil || cert.ActiveVersion.ID != expectedActiveID {
+		return store.ErrActiveVersionConflict
+	}
+	previous := *cert.ActiveVersion
+	cert.PreviousVersion = &previous
+	cert.ActiveVersion = &version
+	cert.UpdatedAt = time.Now().UTC()
+	f.certs[managedCertID] = cert
+	now := time.Now().UTC()
+	op.Status = store.CertOpStatusSucceeded
+	op.FinishedAt = &now
+	op.Warning = warning
+	op.ErrorSummary = ""
+	op.NextAttemptAt = nil
+	op.ConsecutiveFailures = 0
+	op.LeaseOwner = ""
+	op.LeaseExpiresAt = nil
+	op.PendingTXTRecords = nil
+	op.UpdatedAt = now
+	f.ops[opID] = op
+	return nil
+}
+
+func (f *managedCertFakeStore) ActivatePreviousVersion(_ context.Context, managedCertID, versionID string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	cert, ok := f.certs[managedCertID]
+	if !ok || cert.PreviousVersion == nil || cert.PreviousVersion.ID != versionID {
+		return store.ErrVersionNotFound
+	}
+	if cert.PreviousVersion.RevokedAt != nil {
+		return store.ErrVersionRevoked
+	}
+	newActive := *cert.PreviousVersion
+	if cert.ActiveVersion != nil {
+		prev := *cert.ActiveVersion
+		cert.PreviousVersion = &prev
+	} else {
+		cert.PreviousVersion = nil
+	}
+	cert.ActiveVersion = &newActive
+	cert.UpdatedAt = time.Now().UTC()
+	f.certs[managedCertID] = cert
+	return nil
+}
+
+func (f *managedCertFakeStore) DeleteManagedCertificate(_ context.Context, id string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	cert, ok := f.certs[id]
+	if !ok {
+		return mongo.ErrNoDocuments
+	}
+	if len(cert.ServerIDs) > 0 {
+		return store.ErrManagedCertificateHasServerAssignments
+	}
+	for _, opID := range f.opOrd {
+		op := f.ops[opID]
+		if op.ManagedCertificateID != id {
+			continue
+		}
+		for _, st := range store.CertOpInFlightStatuses {
+			if op.Status == st {
+				return store.ErrManagedCertificateOperationInFlight
+			}
+		}
+	}
+	delete(f.certs, id)
+	for i, cid := range f.certOrd {
+		if cid == id {
+			f.certOrd = append(f.certOrd[:i], f.certOrd[i+1:]...)
+			break
+		}
+	}
+	for opID, op := range f.ops {
+		if op.ManagedCertificateID == id {
+			delete(f.ops, opID)
+		}
+	}
+	var kept []string
+	for _, opID := range f.opOrd {
+		if _, ok := f.ops[opID]; ok {
+			kept = append(kept, opID)
+		}
+	}
+	f.opOrd = kept
+	return nil
+}
+
+func (f *managedCertFakeStore) MarkVersionRevokePending(_ context.Context, managedCertID, versionID string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	cert, ok := f.certs[managedCertID]
+	if !ok {
+		return mongo.ErrNoDocuments
+	}
+	slot := ""
+	if cert.ActiveVersion != nil && cert.ActiveVersion.ID == versionID {
+		slot = "active"
+	} else if cert.PreviousVersion != nil && cert.PreviousVersion.ID == versionID {
+		slot = "previous"
+	} else {
+		return store.ErrVersionNotFound
+	}
+	var v *store.CertificateVersion
+	if slot == "active" {
+		v = cert.ActiveVersion
+	} else {
+		v = cert.PreviousVersion
+	}
+	if v.RevokedAt != nil {
+		return store.ErrVersionRevoked
+	}
+	if v.RevokePending {
+		return store.ErrVersionRevokePending
+	}
+	v.RevokePending = true
+	cert.UpdatedAt = time.Now().UTC()
+	f.certs[managedCertID] = cert
+	return nil
+}
+
+func (f *managedCertFakeStore) ClearVersionRevokePending(_ context.Context, managedCertID, versionID string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	cert, ok := f.certs[managedCertID]
+	if !ok {
+		return mongo.ErrNoDocuments
+	}
+	if cert.ActiveVersion != nil && cert.ActiveVersion.ID == versionID {
+		cert.ActiveVersion.RevokePending = false
+	} else if cert.PreviousVersion != nil && cert.PreviousVersion.ID == versionID {
+		cert.PreviousVersion.RevokePending = false
+	} else {
+		return store.ErrVersionNotFound
+	}
+	f.certs[managedCertID] = cert
+	return nil
+}
+
+func (f *managedCertFakeStore) CompleteRevokeVersion(_ context.Context, managedCertID, versionID, opID, leaseOwner string, revokedAt time.Time) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	op, ok := f.ops[opID]
+	if !ok || op.Status != store.CertOpStatusRunning || op.LeaseOwner != leaseOwner {
+		return store.ErrCertificateOperationConflict
+	}
+	cert, ok := f.certs[managedCertID]
+	if !ok {
+		return mongo.ErrNoDocuments
+	}
+	var v *store.CertificateVersion
+	if cert.ActiveVersion != nil && cert.ActiveVersion.ID == versionID {
+		v = cert.ActiveVersion
+	} else if cert.PreviousVersion != nil && cert.PreviousVersion.ID == versionID {
+		v = cert.PreviousVersion
+	} else {
+		return store.ErrVersionNotFound
+	}
+	v.RevokedAt = &revokedAt
+	v.RevokePending = false
+	cert.UpdatedAt = time.Now().UTC()
+	f.certs[managedCertID] = cert
+	now := time.Now().UTC()
+	op.Status = store.CertOpStatusSucceeded
+	op.FinishedAt = &now
+	op.UpdatedAt = now
+	op.LeaseOwner = ""
+	op.LeaseExpiresAt = nil
+	f.ops[opID] = op
+	return nil
+}
+
+func (f *managedCertFakeStore) CountManagedCertificatesReferencingIssuer(_ context.Context, issuerID string) (int64, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	var count int64
+	for _, cert := range f.certs {
+		if certReferencesIssuer(cert, issuerID) {
+			count++
+		}
+	}
+	return count, nil
+}
+
+func (f *managedCertFakeStore) CountManagedCertificatesReferencingDNSAccount(_ context.Context, dnsID string) (int64, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	var count int64
+	for _, cert := range f.certs {
+		if certReferencesDNS(cert, dnsID) {
+			count++
+		}
+	}
+	return count, nil
+}
+
+func certReferencesIssuer(cert store.ManagedCertificate, issuerID string) bool {
+	if cert.CertificateIssuerID == issuerID {
+		return true
+	}
+	if cert.ActiveVersion != nil {
+		if cert.ActiveVersion.CertificateIssuerID == issuerID || cert.ActiveVersion.ConfigSnapshot.CertificateIssuerID == issuerID {
+			return true
+		}
+	}
+	if cert.PreviousVersion != nil {
+		if cert.PreviousVersion.CertificateIssuerID == issuerID || cert.PreviousVersion.ConfigSnapshot.CertificateIssuerID == issuerID {
+			return true
+		}
+	}
+	return false
+}
+
+func certReferencesDNS(cert store.ManagedCertificate, dnsID string) bool {
+	if cert.DNSProviderAccountID == dnsID {
+		return true
+	}
+	if cert.ActiveVersion != nil && cert.ActiveVersion.ConfigSnapshot.DNSProviderAccountID == dnsID {
+		return true
+	}
+	if cert.PreviousVersion != nil && cert.PreviousVersion.ConfigSnapshot.DNSProviderAccountID == dnsID {
+		return true
+	}
+	return false
+}
+
+func boolPtr(v bool) *bool { return &v }
+
+func TestNormalizeDomains(t *testing.T) {
+	got, err := NormalizeDomains([]string{" Example.COM.", "example.com", "  EXAMPLE.com  ", "München.de"})
+	if err != nil {
+		t.Fatalf("normalize: %v", err)
+	}
+	want := []string{"example.com", "xn--mnchen-3ya.de"}
+	if len(got) != len(want) {
+		t.Fatalf("domains = %v, want %v", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("domains[%d] = %q, want %q (full %v)", i, got[i], want[i], got)
+		}
+	}
+
+	if _, err := NormalizeDomains([]string{"*.example.com", "api.example.com"}); err != nil {
+		t.Fatalf("wildcard ok: %v", err)
+	}
+	if _, err := NormalizeDomains([]string{"*.*.example.com"}); err == nil {
+		t.Fatal("expected wildcard error")
+	}
+}
+
+func TestCreateManagedCertificatePendingIssueAndMissingValidity(t *testing.T) {
+	st := newManagedCertFakeStore()
+	st.seedReadyIssuer("iss_1")
+	st.seedDNS("dns_1")
+	m := NewManager(st, nil)
+
+	got, err := m.CreateManagedCertificate(context.Background(), ManagedCertificateInput{
+		Name:                 "prod",
+		Domains:              []string{"example.com"},
+		CertificateIssuerID:  "iss_1",
+		DNSProviderAccountID: "dns_1",
+	})
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	if got.ActiveValidity != store.CertValidityMissing {
+		t.Fatalf("validity = %q, want Missing", got.ActiveValidity)
+	}
+	if got.BundleAvailable {
+		t.Fatal("expected bundle unavailable")
+	}
+	if got.LatestOperation == nil {
+		t.Fatal("expected pending operation")
+	}
+	if got.LatestOperation.Status != store.CertOpStatusPending {
+		t.Fatalf("op status = %q, want Pending", got.LatestOperation.Status)
+	}
+	if got.LatestOperation.Type != store.CertOpTypeIssue {
+		t.Fatalf("op type = %q, want Issue", got.LatestOperation.Type)
+	}
+	if got.KeyType != store.CertKeyTypeECP256 {
+		t.Fatalf("key type = %q, want ec_p256", got.KeyType)
+	}
+	if got.RenewBeforeDays != store.DefaultRenewBeforeDays {
+		t.Fatalf("renew_before = %d, want %d", got.RenewBeforeDays, store.DefaultRenewBeforeDays)
+	}
+}
+
+func TestCreateRejectsNotReadyIssuer(t *testing.T) {
+	st := newManagedCertFakeStore()
+	st.issuers["iss_1"] = store.CertificateIssuer{ID: "iss_1", RegistrationStatus: store.IssuerRegistrationPending}
+	st.seedDNS("dns_1")
+	m := NewManager(st, nil)
+
+	_, err := m.CreateManagedCertificate(context.Background(), ManagedCertificateInput{
+		Name:                 "prod",
+		Domains:              []string{"example.com"},
+		CertificateIssuerID:  "iss_1",
+		DNSProviderAccountID: "dns_1",
+	})
+	if !errors.Is(err, ErrIssuerNotReady) {
+		t.Fatalf("expected ErrIssuerNotReady, got %v", err)
+	}
+}
+
+func TestCreateUniqueName(t *testing.T) {
+	st := newManagedCertFakeStore()
+	st.seedReadyIssuer("iss_1")
+	st.seedDNS("dns_1")
+	m := NewManager(st, nil)
+	input := ManagedCertificateInput{
+		Name:                 "prod",
+		Domains:              []string{"a.example.com"},
+		CertificateIssuerID:  "iss_1",
+		DNSProviderAccountID: "dns_1",
+	}
+	if _, err := m.CreateManagedCertificate(context.Background(), input); err != nil {
+		t.Fatalf("first create: %v", err)
+	}
+	_, err := m.CreateManagedCertificate(context.Background(), input)
+	if !errors.Is(err, store.ErrManagedCertificateNameTaken) {
+		t.Fatalf("expected name taken, got %v", err)
+	}
+}
+
+func TestSubmitIssueOperationIdempotentWhenPending(t *testing.T) {
+	st := newManagedCertFakeStore()
+	st.seedReadyIssuer("iss_1")
+	st.seedDNS("dns_1")
+	m := NewManager(st, nil)
+
+	created, err := m.CreateManagedCertificate(context.Background(), ManagedCertificateInput{
+		Name:                 "prod",
+		Domains:              []string{"example.com"},
+		CertificateIssuerID:  "iss_1",
+		DNSProviderAccountID: "dns_1",
+	})
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+
+	first, err := m.SubmitIssueOperation(context.Background(), created.ID)
+	if err != nil {
+		t.Fatalf("submit first: %v", err)
+	}
+	second, err := m.SubmitIssueOperation(context.Background(), created.ID)
+	if err != nil {
+		t.Fatalf("submit second: %v", err)
+	}
+	if first.ID != second.ID {
+		t.Fatalf("expected same pending op, got %q and %q", first.ID, second.ID)
+	}
+	if len(st.ops) != 1 {
+		t.Fatalf("expected 1 op, got %d", len(st.ops))
+	}
+}
+
+func TestUpdateBlocksIssueFieldsWhilePending(t *testing.T) {
+	st := newManagedCertFakeStore()
+	st.seedReadyIssuer("iss_1")
+	st.seedDNS("dns_1")
+	m := NewManager(st, nil)
+
+	created, err := m.CreateManagedCertificate(context.Background(), ManagedCertificateInput{
+		Name:                 "prod",
+		Domains:              []string{"example.com"},
+		CertificateIssuerID:  "iss_1",
+		DNSProviderAccountID: "dns_1",
+	})
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+
+	_, err = m.UpdateManagedCertificate(context.Background(), created.ID, ManagedCertificateInput{
+		Name:                 "prod",
+		Domains:              []string{"other.example.com"},
+		CertificateIssuerID:  "iss_1",
+		DNSProviderAccountID: "dns_1",
+	})
+	if !errors.Is(err, ErrIssueFieldsLocked) {
+		t.Fatalf("expected ErrIssueFieldsLocked during pending, got %v", err)
+	}
+}
+
+func TestSubmitIssueOperationIdempotentWhenRunning(t *testing.T) {
+	st := newManagedCertFakeStore()
+	st.seedReadyIssuer("iss_1")
+	st.seedDNS("dns_1")
+	m := NewManager(st, nil)
+
+	created, err := m.CreateManagedCertificate(context.Background(), ManagedCertificateInput{
+		Name:                 "prod",
+		Domains:              []string{"example.com"},
+		CertificateIssuerID:  "iss_1",
+		DNSProviderAccountID: "dns_1",
+	})
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+
+	st.mu.Lock()
+	for id, op := range st.ops {
+		op.Status = store.CertOpStatusRunning
+		st.ops[id] = op
+	}
+	st.mu.Unlock()
+
+	first, err := m.SubmitIssueOperation(context.Background(), created.ID)
+	if err != nil {
+		t.Fatalf("submit first: %v", err)
+	}
+	second, err := m.SubmitIssueOperation(context.Background(), created.ID)
+	if err != nil {
+		t.Fatalf("submit second: %v", err)
+	}
+	if first.ID != second.ID {
+		t.Fatalf("expected same running op, got %q and %q", first.ID, second.ID)
+	}
+	if len(st.ops) != 1 {
+		t.Fatalf("expected 1 op, got %d", len(st.ops))
+	}
+}
+
+func TestUpdateBlocksIssueFieldsWhileRunning(t *testing.T) {
+	st := newManagedCertFakeStore()
+	st.seedReadyIssuer("iss_1")
+	st.seedDNS("dns_1")
+	m := NewManager(st, nil)
+
+	created, err := m.CreateManagedCertificate(context.Background(), ManagedCertificateInput{
+		Name:                 "prod",
+		Domains:              []string{"example.com"},
+		CertificateIssuerID:  "iss_1",
+		DNSProviderAccountID: "dns_1",
+	})
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+
+	st.mu.Lock()
+	for id, op := range st.ops {
+		op.Status = store.CertOpStatusRunning
+		st.ops[id] = op
+	}
+	st.mu.Unlock()
+
+	_, err = m.UpdateManagedCertificate(context.Background(), created.ID, ManagedCertificateInput{
+		Name:                 "prod",
+		Domains:              []string{"other.example.com"},
+		CertificateIssuerID:  "iss_1",
+		DNSProviderAccountID: "dns_1",
+	})
+	if !errors.Is(err, ErrIssueFieldsLocked) {
+		t.Fatalf("expected ErrIssueFieldsLocked, got %v", err)
+	}
+
+	updated, err := m.UpdateManagedCertificate(context.Background(), created.ID, ManagedCertificateInput{
+		Name:                 "prod-renamed",
+		Domains:              []string{"example.com"},
+		CertificateIssuerID:  "iss_1",
+		DNSProviderAccountID: "dns_1",
+		ServerIDs:            []string{},
+	})
+	if err != nil {
+		t.Fatalf("update allowed fields: %v", err)
+	}
+	if updated.Name != "prod-renamed" {
+		t.Fatalf("name = %q", updated.Name)
+	}
+}
+
+func TestValidateRefs(t *testing.T) {
+	st := newManagedCertFakeStore()
+	st.seedReadyIssuer("iss_1")
+	st.seedDNS("dns_1")
+	st.notify["ntf_1"] = store.NotifyGroup{ID: "ntf_1"}
+	st.servers["srv_1"] = store.Server{ID: "srv_1"}
+	m := NewManager(st, nil)
+
+	_, err := m.CreateManagedCertificate(context.Background(), ManagedCertificateInput{
+		Name:                 "with-refs",
+		Domains:              []string{"example.com"},
+		CertificateIssuerID:  "iss_1",
+		DNSProviderAccountID: "dns_1",
+		NotifyGroupIDs:       []string{"ntf_1"},
+		ServerIDs:            []string{"srv_1"},
+	})
+	if err != nil {
+		t.Fatalf("create with refs: %v", err)
+	}
+
+	_, err = m.CreateManagedCertificate(context.Background(), ManagedCertificateInput{
+		Name:                 "bad-notify",
+		Domains:              []string{"b.example.com"},
+		CertificateIssuerID:  "iss_1",
+		DNSProviderAccountID: "dns_1",
+		NotifyGroupIDs:       []string{"missing"},
+	})
+	if !errors.Is(err, store.ErrInvalidNotifyGroupIDs) {
+		t.Fatalf("expected invalid notify, got %v", err)
+	}
+
+	_, err = m.CreateManagedCertificate(context.Background(), ManagedCertificateInput{
+		Name:                 "bad-server",
+		Domains:              []string{"c.example.com"},
+		CertificateIssuerID:  "iss_1",
+		DNSProviderAccountID: "dns_1",
+		ServerIDs:            []string{"missing"},
+	})
+	if !errors.Is(err, store.ErrInvalidServerIDs) {
+		t.Fatalf("expected invalid server, got %v", err)
+	}
+}
+
+func TestCreateAllowsZeroServers(t *testing.T) {
+	st := newManagedCertFakeStore()
+	st.seedReadyIssuer("iss_1")
+	st.seedDNS("dns_1")
+	m := NewManager(st, nil)
+
+	_, err := m.CreateManagedCertificate(context.Background(), ManagedCertificateInput{
+		Name:                 "no-servers",
+		Domains:              []string{"example.com"},
+		CertificateIssuerID:  "iss_1",
+		DNSProviderAccountID: "dns_1",
+		ServerIDs:            nil,
+	})
+	if err != nil {
+		t.Fatalf("create zero servers: %v", err)
+	}
+}
+
+func TestAutoRenewDefaultTrue(t *testing.T) {
+	st := newManagedCertFakeStore()
+	st.seedReadyIssuer("iss_1")
+	st.seedDNS("dns_1")
+	m := NewManager(st, nil)
+
+	got, err := m.CreateManagedCertificate(context.Background(), ManagedCertificateInput{
+		Name:                 "auto",
+		Domains:              []string{"example.com"},
+		CertificateIssuerID:  "iss_1",
+		DNSProviderAccountID: "dns_1",
+	})
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	if !got.AutoRenewEnabled {
+		t.Fatal("expected auto_renew default true")
+	}
+}
+
+func TestAutoRenewExplicitFalse(t *testing.T) {
+	st := newManagedCertFakeStore()
+	st.seedReadyIssuer("iss_1")
+	st.seedDNS("dns_1")
+	m := NewManager(st, nil)
+
+	got, err := m.CreateManagedCertificate(context.Background(), ManagedCertificateInput{
+		Name:                 "manual",
+		Domains:              []string{"example.com"},
+		CertificateIssuerID:  "iss_1",
+		DNSProviderAccountID: "dns_1",
+		AutoRenewEnabled:     boolPtr(false),
+	})
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	if got.AutoRenewEnabled {
+		t.Fatal("expected auto_renew false")
+	}
+}

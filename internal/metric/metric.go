@@ -84,6 +84,49 @@ var (
 			Help: "Total number of scheduler reconcile ticks.",
 		},
 	)
+
+	// ServerCertListTotal counts successful ServerCertificateService list calls.
+	ServerCertListTotal = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "neoline_server_cert_list_total",
+			Help: "Total number of successful Server ListCertificates calls.",
+		},
+	)
+
+	// ServerCertBundleDownloadTotal counts successful GetCertificateBundle calls.
+	ServerCertBundleDownloadTotal = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "neoline_server_cert_bundle_download_total",
+			Help: "Total number of successful Server GetCertificateBundle calls.",
+		},
+	)
+
+	// ManagedCertValidity reports how many ManagedCertificates are in each active
+	// validity state. Labels are bounded to the fixed validity vocabulary.
+	ManagedCertValidity = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "neoline_managed_cert_validity",
+			Help: "Count of ManagedCertificates by active validity state.",
+		},
+		[]string{"validity"},
+	)
+
+	// CertOperationTotal counts certificate operation outcomes by type and result.
+	CertOperationTotal = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "neoline_cert_operation_total",
+			Help: "Total certificate operations by type and result.",
+		},
+		[]string{"op_type", "result"},
+	)
+
+	// CertRenewFailuresTotal counts renew operation failures (retry or terminal).
+	CertRenewFailuresTotal = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "neoline_cert_renew_failures_total",
+			Help: "Total failed certificate renew operation attempts.",
+		},
+	)
 )
 
 func init() {
@@ -96,7 +139,25 @@ func init() {
 		CertificateDaysRemaining,
 		EnabledMonitors,
 		ReconcileTotal,
+		ServerCertListTotal,
+		ServerCertBundleDownloadTotal,
+		ManagedCertValidity,
+		CertOperationTotal,
+		CertRenewFailuresTotal,
 	)
+}
+
+// RecordCertOperation increments the operation counter for the given type and result.
+func RecordCertOperation(opType, result string) {
+	CertOperationTotal.WithLabelValues(opType, result).Inc()
+}
+
+// RefreshManagedCertValidity sets gauge values for each validity label. Unknown
+// validity strings are ignored; labels with zero count are reset to 0.
+func RefreshManagedCertValidity(counts map[string]int) {
+	for _, v := range []string{"Missing", "Valid", "RenewalDue", "Expired", "Revoked"} {
+		ManagedCertValidity.WithLabelValues(v).Set(float64(counts[v]))
+	}
 }
 
 // StatusCode maps a health status string to the numeric code exported by the

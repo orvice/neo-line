@@ -3,6 +3,7 @@ package connectapi
 import (
 	"time"
 
+	"github.com/orvice/neo-line/internal/certmanager"
 	"github.com/orvice/neo-line/internal/store"
 	pb "github.com/orvice/neo-line/pkg/proto/neoline/v1"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -346,6 +347,277 @@ func notifyGroupFromProto(p *pb.NotifyGroup) store.NotifyGroup {
 	return out
 }
 
+// --- DNS provider account ---
+
+func dnsProviderAccountToProto(a certmanager.PublicAccount) *pb.DNSProviderAccount {
+	return &pb.DNSProviderAccount{
+		Id:                        a.ID,
+		Name:                      a.Name,
+		Provider:                  a.Provider,
+		PropagationTimeoutSeconds: a.PropagationTimeoutSeconds,
+		TokenConfigured:           a.TokenConfigured,
+		TokenLastVerifiedAt:       timeToTSPtr(a.TokenLastVerifiedAt),
+		CreatedAt:                 timeToTS(a.CreatedAt),
+		UpdatedAt:                 timeToTS(a.UpdatedAt),
+	}
+}
+
+func certificateIssuerRegistrationStatusToProto(status string) pb.CertificateIssuerRegistrationStatus {
+	switch status {
+	case store.IssuerRegistrationPending:
+		return pb.CertificateIssuerRegistrationStatus_CERTIFICATE_ISSUER_REGISTRATION_STATUS_PENDING
+	case store.IssuerRegistrationReady:
+		return pb.CertificateIssuerRegistrationStatus_CERTIFICATE_ISSUER_REGISTRATION_STATUS_READY
+	case store.IssuerRegistrationFailed:
+		return pb.CertificateIssuerRegistrationStatus_CERTIFICATE_ISSUER_REGISTRATION_STATUS_FAILED
+	default:
+		return pb.CertificateIssuerRegistrationStatus_CERTIFICATE_ISSUER_REGISTRATION_STATUS_UNSPECIFIED
+	}
+}
+
+func certificateIssuerToProto(i certmanager.PublicIssuer) *pb.CertificateIssuer {
+	return &pb.CertificateIssuer{
+		Id:                     i.ID,
+		Name:                   i.Name,
+		CaType:                 i.CAType,
+		DirectoryUrl:           i.DirectoryURL,
+		Email:                  i.Email,
+		RegistrationStatus:     certificateIssuerRegistrationStatusToProto(i.RegistrationStatus),
+		RegistrationError:      i.RegistrationError,
+		StagingUntrusted:       i.StagingUntrusted,
+		TermsOfServiceUrl:      i.TermsOfServiceURL,
+		TermsOfServiceAgreedAt: timeToTSPtr(i.TermsOfServiceAgreedAt),
+		AccountKeyConfigured:   i.AccountKeyConfigured,
+		EabConfigured:          i.EABConfigured,
+		CreatedAt:              timeToTS(i.CreatedAt),
+		UpdatedAt:              timeToTS(i.UpdatedAt),
+	}
+}
+
+func certificateIssuerDirectoryPreviewToProto(p certmanager.DirectoryPreview) *pb.CertificateIssuerDirectoryPreview {
+	return &pb.CertificateIssuerDirectoryPreview{
+		CaType:            p.CAType,
+		DirectoryUrl:      p.DirectoryURL,
+		TermsOfServiceUrl: p.TermsOfServiceURL,
+		StagingUntrusted:  p.StagingUntrusted,
+		RequiresEab:       p.RequiresEAB,
+	}
+}
+
+func certificateKeyTypeToProto(keyType string) pb.CertificateKeyType {
+	switch keyType {
+	case store.CertKeyTypeRSA2048:
+		return pb.CertificateKeyType_CERTIFICATE_KEY_TYPE_RSA_2048
+	case store.CertKeyTypeECP256:
+		return pb.CertificateKeyType_CERTIFICATE_KEY_TYPE_EC_P256
+	default:
+		return pb.CertificateKeyType_CERTIFICATE_KEY_TYPE_UNSPECIFIED
+	}
+}
+
+func certificateValidityToProto(validity string) pb.CertificateValidity {
+	switch validity {
+	case store.CertValidityMissing:
+		return pb.CertificateValidity_CERTIFICATE_VALIDITY_MISSING
+	case store.CertValidityValid:
+		return pb.CertificateValidity_CERTIFICATE_VALIDITY_VALID
+	case store.CertValidityRenewalDue:
+		return pb.CertificateValidity_CERTIFICATE_VALIDITY_RENEWAL_DUE
+	case store.CertValidityExpired:
+		return pb.CertificateValidity_CERTIFICATE_VALIDITY_EXPIRED
+	case store.CertValidityRevoked:
+		return pb.CertificateValidity_CERTIFICATE_VALIDITY_REVOKED
+	default:
+		return pb.CertificateValidity_CERTIFICATE_VALIDITY_UNSPECIFIED
+	}
+}
+
+func certificateOperationTypeToProto(opType string) pb.CertificateOperationType {
+	switch opType {
+	case store.CertOpTypeIssue:
+		return pb.CertificateOperationType_CERTIFICATE_OPERATION_TYPE_ISSUE
+	case store.CertOpTypeRenew:
+		return pb.CertificateOperationType_CERTIFICATE_OPERATION_TYPE_RENEW
+	case store.CertOpTypeRevoke:
+		return pb.CertificateOperationType_CERTIFICATE_OPERATION_TYPE_REVOKE
+	default:
+		return pb.CertificateOperationType_CERTIFICATE_OPERATION_TYPE_UNSPECIFIED
+	}
+}
+
+func certificateOperationStatusToProto(status string) pb.CertificateOperationStatus {
+	switch status {
+	case store.CertOpStatusPending:
+		return pb.CertificateOperationStatus_CERTIFICATE_OPERATION_STATUS_PENDING
+	case store.CertOpStatusRunning:
+		return pb.CertificateOperationStatus_CERTIFICATE_OPERATION_STATUS_RUNNING
+	case store.CertOpStatusSucceeded:
+		return pb.CertificateOperationStatus_CERTIFICATE_OPERATION_STATUS_SUCCEEDED
+	case store.CertOpStatusFailed:
+		return pb.CertificateOperationStatus_CERTIFICATE_OPERATION_STATUS_FAILED
+	default:
+		return pb.CertificateOperationStatus_CERTIFICATE_OPERATION_STATUS_UNSPECIFIED
+	}
+}
+
+func issueConfigSnapshotToProto(s store.IssueConfigSnapshot) *pb.IssueConfigSnapshot {
+	return &pb.IssueConfigSnapshot{
+		Domains:              append([]string(nil), s.Domains...),
+		CertificateIssuerId:  s.CertificateIssuerID,
+		DnsProviderAccountId: s.DNSProviderAccountID,
+		KeyType:              certificateKeyTypeToProto(s.KeyType),
+	}
+}
+
+func certificateOperationToProto(op certmanager.PublicOperation) *pb.CertificateOperation {
+	return &pb.CertificateOperation{
+		Id:                   op.ID,
+		ManagedCertificateId: op.ManagedCertificateID,
+		Type:                 certificateOperationTypeToProto(op.Type),
+		Status:               certificateOperationStatusToProto(op.Status),
+		AttemptCount:         op.AttemptCount,
+		ConfigSnapshot:       issueConfigSnapshotToProto(op.ConfigSnapshot),
+		ErrorSummary:         op.ErrorSummary,
+		Warning:              op.Warning,
+		StartedAt:            timeToTSPtr(op.StartedAt),
+		FinishedAt:           timeToTSPtr(op.FinishedAt),
+		NextAttemptAt:        timeToTSPtr(op.NextAttemptAt),
+		CreatedAt:            timeToTS(op.CreatedAt),
+		UpdatedAt:            timeToTS(op.UpdatedAt),
+		TargetVersionId:      op.TargetVersionID,
+		RevocationReason:     revocationReasonToProto(op.RevokeReason),
+	}
+}
+
+func revocationReasonToProto(reason uint32) pb.CertificateRevocationReason {
+	switch reason {
+	case 1:
+		return pb.CertificateRevocationReason_CERTIFICATE_REVOCATION_REASON_KEY_COMPROMISE
+	case 2:
+		return pb.CertificateRevocationReason_CERTIFICATE_REVOCATION_REASON_CA_COMPROMISE
+	case 3:
+		return pb.CertificateRevocationReason_CERTIFICATE_REVOCATION_REASON_AFFILIATION_CHANGED
+	case 4:
+		return pb.CertificateRevocationReason_CERTIFICATE_REVOCATION_REASON_SUPERSEDED
+	case 5:
+		return pb.CertificateRevocationReason_CERTIFICATE_REVOCATION_REASON_CESSATION_OF_OPERATION
+	case 6:
+		return pb.CertificateRevocationReason_CERTIFICATE_REVOCATION_REASON_CERTIFICATE_HOLD
+	case 9:
+		return pb.CertificateRevocationReason_CERTIFICATE_REVOCATION_REASON_PRIVILEGE_WITHDRAWN
+	case 10:
+		return pb.CertificateRevocationReason_CERTIFICATE_REVOCATION_REASON_AA_COMPROMISE
+	default:
+		return pb.CertificateRevocationReason_CERTIFICATE_REVOCATION_REASON_UNSPECIFIED
+	}
+}
+
+func certificateVersionToProto(v *certmanager.PublicCertificateVersion) *pb.CertificateVersionMetadata {
+	if v == nil {
+		return nil
+	}
+	out := &pb.CertificateVersionMetadata{
+		Id:               v.ID,
+		ConfigSnapshot:   issueConfigSnapshotToProto(v.ConfigSnapshot),
+		LeafFingerprint:  v.LeafFingerprint,
+		SerialNumber:     v.SerialNumber,
+		IssuerCommonName: v.IssuerCommonName,
+		NotBefore:        unixToTS(v.NotBefore),
+		NotAfter:         unixToTS(v.NotAfter),
+		KeyType:          certificateKeyTypeToProto(v.KeyType),
+		StagingUntrusted: v.StagingUntrusted,
+		CreatedAt:        unixToTS(v.CreatedAt),
+		RevokePending:    v.RevokePending,
+	}
+	if v.RevokedAt != 0 {
+		out.RevokedAt = unixToTS(v.RevokedAt)
+	}
+	return out
+}
+
+func certificateBundleToProto(b certmanager.CertificateBundle) *pb.CertificateBundle {
+	return &pb.CertificateBundle{
+		ManagedCertificateId: b.ManagedCertificateID,
+		VersionId:            b.VersionID,
+		Domains:              append([]string(nil), b.Domains...),
+		KeyType:              certificateKeyTypeToProto(b.KeyType),
+		LeafFingerprint:      b.LeafFingerprint,
+		NotBefore:            unixToTS(b.NotBefore),
+		NotAfter:             unixToTS(b.NotAfter),
+		Validity:             certificateValidityToProto(b.Validity),
+		StagingUntrusted:     b.StagingUntrusted,
+		FullchainPem:         b.FullchainPEM,
+		PrivateKeyPem:        b.PrivateKeyPEM,
+	}
+}
+
+func unixToTS(sec int64) *timestamppb.Timestamp {
+	if sec == 0 {
+		return nil
+	}
+	return timestamppb.New(time.Unix(sec, 0).UTC())
+}
+
+func serverCertificateToProto(c certmanager.ServerCertificate) *pb.ServerCertificate {
+	out := &pb.ServerCertificate{
+		ManagedCertificateId: c.ManagedCertificateID,
+		Name:                 c.Name,
+		Domains:              append([]string(nil), c.Domains...),
+		ActiveVersionId:      c.ActiveVersionID,
+		Available:            c.Available,
+		Validity:             certificateValidityToProto(c.Validity),
+		KeyType:              certificateKeyTypeToProto(c.KeyType),
+		LeafFingerprint:      c.LeafFingerprint,
+		NotBefore:            unixToTS(c.NotBefore),
+		NotAfter:             unixToTS(c.NotAfter),
+		StagingUntrusted:     c.StagingUntrusted,
+		ErrorSummary:         c.ErrorSummary,
+	}
+	return out
+}
+
+func managedCertificateToProto(c certmanager.PublicManagedCertificate) *pb.ManagedCertificate {
+	out := &pb.ManagedCertificate{
+		Id:                   c.ID,
+		Name:                 c.Name,
+		Domains:              append([]string(nil), c.Domains...),
+		CertificateIssuerId:  c.CertificateIssuerID,
+		DnsProviderAccountId: c.DNSProviderAccountID,
+		KeyType:              certificateKeyTypeToProto(c.KeyType),
+		RenewBeforeDays:      c.RenewBeforeDays,
+		NotifyGroupIds:       append([]string(nil), c.NotifyGroupIDs...),
+		ServerIds:            append([]string(nil), c.ServerIDs...),
+		ActiveValidity:       certificateValidityToProto(c.ActiveValidity),
+		BundleAvailable:      c.BundleAvailable,
+		CreatedAt:            timeToTS(c.CreatedAt),
+		UpdatedAt:            timeToTS(c.UpdatedAt),
+	}
+	auto := c.AutoRenewEnabled
+	out.AutoRenewEnabled = &auto
+	if c.LatestOperation != nil {
+		out.LatestOperation = certificateOperationToProto(*c.LatestOperation)
+	}
+	if c.ActiveVersion != nil {
+		out.ActiveVersion = certificateVersionToProto(c.ActiveVersion)
+	}
+	if c.PreviousVersion != nil {
+		out.PreviousVersion = certificateVersionToProto(c.PreviousVersion)
+	}
+	out.HasUnpublishedDesiredChanges = c.HasUnpublishedDesiredChanges
+	out.EffectiveRenewalWindowDays = c.EffectiveRenewalWindowDays
+	out.NextRenewalAt = timeToTSPtr(c.NextRenewalAt)
+	out.LastNotificationWarning = c.LastNotificationWarning
+	out.LastNotificationWarningAt = timeToTSPtr(c.LastNotificationWarningAt)
+	return out
+}
+
+func timeToTSPtr(t *time.Time) *timestamppb.Timestamp {
+	if t == nil || t.IsZero() {
+		return nil
+	}
+	return timestamppb.New(*t)
+}
+
 // --- Settings / MCP / User ---
 
 func settingsToProto(s store.Settings) *pb.Settings {
@@ -374,6 +646,32 @@ func mcpTokenToProto(t store.McpToken) *pb.McpToken {
 		CreatedAt:  timeToTS(t.CreatedAt),
 		LastUsedAt: timeToTS(t.LastUsedAt),
 	}
+}
+
+func certificateAccessTokenToProto(t store.CertificateAccessToken) *pb.CertificateAccessToken {
+	now := time.Now().UTC()
+	out := &pb.CertificateAccessToken{
+		Id:        t.ID,
+		ServerId:  t.ServerID,
+		Name:      t.Name,
+		Prefix:    t.Prefix,
+		CreatedAt: timeToTS(t.CreatedAt),
+		Expired:   storeCertificateAccessTokenExpired(t, now),
+	}
+	if t.LastUsedAt != nil && !t.LastUsedAt.IsZero() {
+		out.LastUsedAt = timeToTS(*t.LastUsedAt)
+	}
+	if t.ExpiresAt != nil && !t.ExpiresAt.IsZero() {
+		out.ExpiresAt = timeToTS(*t.ExpiresAt)
+	}
+	return out
+}
+
+func storeCertificateAccessTokenExpired(t store.CertificateAccessToken, now time.Time) bool {
+	if t.ExpiresAt == nil || t.ExpiresAt.IsZero() {
+		return false
+	}
+	return !t.ExpiresAt.After(now)
 }
 
 func userToProto(id, email, role string) *pb.User {

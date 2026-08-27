@@ -14,6 +14,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/orvice/neo-line/internal/alert"
 	"github.com/orvice/neo-line/internal/archive"
+	"github.com/orvice/neo-line/internal/bootstrap"
+	"github.com/orvice/neo-line/internal/certmanager"
 	"github.com/orvice/neo-line/internal/connectapi"
 	"github.com/orvice/neo-line/internal/mcpserver"
 	"github.com/orvice/neo-line/internal/scheduler"
@@ -75,6 +77,8 @@ func main() {
 	defer cancel()
 
 	var mongoStore *store.MongoStore
+	var certRuntime *bootstrap.CertificateRuntime
+	var certRunnerCancel context.CancelFunc
 	var sshRunner *nlssh.Runner
 	var archiver archive.Archiver = archive.Noop{}
 	archiveEnabled := false
@@ -83,6 +87,7 @@ func main() {
 	schedCtx, cancelSched := context.WithCancel(context.Background())
 	archiveDone := make(chan struct{})
 	schedDone := make(chan struct{})
+	certReconcilerDone := make(chan struct{})
 
 	config := &app.Config{
 		Service: "neo-line",
@@ -91,7 +96,7 @@ func main() {
 			r.GET("/ping", func(c *gin.Context) {
 				c.JSON(http.StatusOK, gin.H{"message": "pong"})
 			})
-			connectapi.Register(r, mongoStore, sshRunner)
+			connectapi.Register(r, mongoStore, certRuntime.Manager, sshRunner)
 			mcpserver.Register(r, mongoStore, sshRunner)
 		},
 		InitFunc: []func() error{
@@ -116,8 +121,8 @@ func main() {
 				if err := mongoStore.EnsureGroupIndexes(ctx); err != nil {
 					return fmt.Errorf("ensure group indexes: %w", err)
 				}
-				if err := mongoStore.EnsureNotifyGroupIndexes(ctx); err != nil {
-					return fmt.Errorf("ensure notify group indexes: %w", err)
+				if err := bootstrap.EnsureCertificateIndexes(ctx, mongoStore); err != nil {
+					return err
 				}
 				if err := mongoStore.EnsureMcpTokenIndexes(ctx); err != nil {
 					return fmt.Errorf("ensure mcp token indexes: %w", err)
@@ -150,9 +155,13 @@ func main() {
 				if sshRunner != nil {
 					log.Println("SSH remote execution enabled")
 				}
+				certRuntime = bootstrap.InitCertificates(mongoStore, slog.Default())
 				return nil
 			},
 			func() error {
+				certCtx, cancel := context.WithCancel(schedCtx)
+				certRunnerCancel = cancel
+				certRuntime.StartBackground(certCtx, certReconcilerDone)
 				go func() {
 					archiver.Run(schedCtx)
 					close(archiveDone)
@@ -169,6 +178,21 @@ func main() {
 		TeardownFunc: []func() error{
 			func() error {
 				cancelSched()
+				if certRunnerCancel != nil {
+					certRunnerCancel()
+				}
+				if certRuntime != nil && certRuntime.Manager != nil {
+					certRuntime.Manager.SetClaimingLeases(false)
+					opGrace := certmanager.OperationAttemptGracePeriod + 30*time.Second
+					opWaitCtx, opWaitCancel := context.WithTimeout(context.Background(), opGrace)
+					certRuntime.Manager.WaitForInflightOperations(opWaitCtx)
+					opWaitCancel()
+				}
+				select {
+				case <-certReconcilerDone:
+				case <-time.After(certmanager.OperationAttemptGracePeriod + 30*time.Second):
+					log.Println("certificate background shutdown timed out")
+				}
 				// Wait for in-flight probes to finish before closing the store
 				// so no probe writes to a closed MongoDB client.
 				select {
