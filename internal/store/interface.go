@@ -75,6 +75,7 @@ type Store interface {
 	UpdateCertificateOperationPendingTXT(ctx context.Context, opID, owner string, records []DNSChallengeRecord) error
 	ScheduleCertificateOperationRetry(ctx context.Context, opID, owner string, nextAttemptAt time.Time, errorSummary string, consecutiveFailures uint32) error
 	MarkCertificateOperationFailed(ctx context.Context, opID, owner, errorSummary string) error
+	FailExpiredCertificateOperations(ctx context.Context, now time.Time) (int64, error)
 	ClearCertificateOperationPendingTXT(ctx context.Context, opID string) error
 	ClaimPendingIssueOperation(ctx context.Context, opID string) (CertificateOperation, error)
 	FailIssueOperation(ctx context.Context, opID, errorSummary string) error

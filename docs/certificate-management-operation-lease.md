@@ -24,6 +24,7 @@
 | `attempt_count` | 已执行的 attempt 总数（含接管后的新 attempt） |
 | `consecutive_failures` | 连续失败次数，用于退避；成功后清零 |
 | `next_attempt_at` | 自动重试最早执行时间（Pending 且等待退避时） |
+| `deadline_at` | operation 总超时截止时间；过期后终态 Failed，不再自动重试 |
 | `pending_txt_records` | 本次 attempt 已创建的 DNS-01 TXT，供接管副本清理 |
 | `started_at` / `finished_at` | operation 首次开始与终态/成功结束时间 |
 | `config_snapshot` | 创建时冻结的签发参数 |
@@ -42,6 +43,7 @@
 - 首次失败后 **15 分钟** 起算，指数翻倍，封顶 **12 小时**，并加入最多约 **10%** 的 jitter。
 - 失败后 operation 回到 `Pending`，保留 `error_summary`，设置 `next_attempt_at`。
 - 永久性错误（如 Issuer 非 Ready）直接标为终态 `Failed`，不自动退避。
+- **总超时**：自创建起 **72 小时**（`deadline_at`）；到期后终态 `Failed`，不再调度自动重试；Admin 可手动创建新 operation。
 - 成功后清空 `error_summary`、`next_attempt_at`、`consecutive_failures` 与 lease 字段。
 
 ## 优雅关闭
@@ -65,6 +67,7 @@
 | operation 轮询 | 5 秒 |
 | 退避起始 | 15 分钟 |
 | 退避封顶 | 12 小时 |
+| operation 总超时 | 72 小时 |
 | 关闭宽限期 | 2 分钟 |
 
 ## 相关文档

@@ -137,6 +137,30 @@ func TestManualRetryAfterTerminalCreatesNewOperation(t *testing.T) {
 	}
 }
 
+func TestOperationTotalTimeoutTerminalFail(t *testing.T) {
+	st := newManagedCertFakeStore()
+	dns := NewFakeDNSProvider(&fakeDNSZone{name: "example.com"})
+	_, opID := seedIssueTestStore(st, []string{"example.com"}, store.CertKeyTypeECP256, false)
+	m := newIssueTestManager(t, st, failIssueACME("acme order rejected"), dns)
+	m.SetJitter(func(time.Duration) time.Duration { return 0 })
+	past := time.Date(2026, 3, 1, 12, 0, 0, 0, time.UTC)
+	st.mu.Lock()
+	op := st.ops[opID]
+	op.DeadlineAt = &past
+	st.ops[opID] = op
+	st.mu.Unlock()
+	m.clock = fixedClock{t: past.Add(time.Hour)}
+
+	m.runOperation(context.Background(), opID)
+	got := st.ops[opID]
+	if got.Status != store.CertOpStatusFailed {
+		t.Fatalf("status = %q, want Failed", got.Status)
+	}
+	if got.ErrorSummary != store.OperationTotalTimeoutSummary {
+		t.Fatalf("error_summary = %q", got.ErrorSummary)
+	}
+}
+
 func TestPollRespectsClaimingLeasesFlag(t *testing.T) {
 	st := newManagedCertFakeStore()
 	seedIssueTestStore(st, []string{"example.com"}, store.CertKeyTypeECP256, false)

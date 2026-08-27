@@ -39,6 +39,8 @@ neo-line 是一个基于 Go 和 Butterfly 应用框架构建的服务器监控�
 - DNSProviderAccountService：Cloudflare DNS-01 账户管理（admin 专用；Token 验证后保存，读取接口脱敏）
 - CertificateIssuerService：ACME Issuer 管理（admin 专用；异步注册、ToS 同意、Secret 脱敏）
 - ManagedCertificateService：托管证书 desired config CRUD（admin 专用；创建后自动 Pending Issue；读取脱敏）
+- CertificateAccessTokenService：按 Server 创建、列出、删除证书分发 token（admin 专用；明文 secret 仅创建时返回一次）
+- ServerCertificateService：Server 侧 `ListCertificates` 与 `GetCertificateBundle`（Bearer `nlct_*` token 鉴权）
 - AuditLogService：按来源、动作、资源、调用方、结果与时间范围查询操作审计日志
 - 探测调度器：随应用启动，每 `5s` 从 MongoDB 读取已启用的 monitor 并按各自间隔执行探测
 - 默认 HTTP 服务端口：`8080`，由 Butterfly 提供

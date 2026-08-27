@@ -22,6 +22,7 @@ type Store interface {
 	GetManagedCertificate(ctx context.Context, id string) (store.ManagedCertificate, error)
 	GetNotifyGroup(ctx context.Context, id string) (store.NotifyGroup, error)
 	ListManagedCertificatesForNotifications(ctx context.Context) ([]store.ManagedCertificate, error)
+	FindRunningCertificateOperation(ctx context.Context, managedCertificateID, opType string) (store.CertificateOperation, error)
 	TryRecordOperationFailureNotification(ctx context.Context, certID string, now time.Time) (bool, error)
 	TryRecordOperationFailureReminder(ctx context.Context, certID string, now time.Time) (bool, error)
 	TryRecordOperationRecovery(ctx context.Context, certID string, now time.Time) (bool, error)
@@ -191,6 +192,9 @@ func (d *Dispatcher) ScanValidityNotifications(ctx context.Context) {
 			continue
 		}
 		if remaining <= store.CertNotificationSevenDayThreshold && remaining > 0 {
+			if d.sevenDayReminderBlockedByInFlightOperation(ctx, cert) {
+				continue
+			}
 			recorded, err := d.store.TryRecordSevenDayReminder(ctx, cert.ID, v.ID, now)
 			if err != nil {
 				d.logger.Warn("record cert seven-day reminder", "certificate_id", cert.ID, "error", err.Error())
@@ -211,6 +215,18 @@ func (d *Dispatcher) ScanValidityNotifications(ctx context.Context) {
 			d.deliver(ctx, cert, p)
 		}
 	}
+}
+
+func (d *Dispatcher) sevenDayReminderBlockedByInFlightOperation(ctx context.Context, cert store.ManagedCertificate) bool {
+	if _, err := d.store.FindRunningCertificateOperation(ctx, cert.ID, store.CertOpTypeRenew); err == nil {
+		return true
+	}
+	if cert.ActiveVersion != nil {
+		if _, err := d.store.FindRunningCertificateOperation(ctx, cert.ID, store.CertOpTypeIssue); err == nil {
+			return true
+		}
+	}
+	return false
 }
 
 func (d *Dispatcher) deliver(ctx context.Context, cert store.ManagedCertificate, p Payload) {

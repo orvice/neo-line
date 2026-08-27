@@ -166,6 +166,10 @@ func (f *managedCertFakeStore) CreateCertificateOperation(_ context.Context, op 
 	now := time.Now().UTC()
 	op.CreatedAt = now
 	op.UpdatedAt = now
+	if op.DeadlineAt == nil {
+		deadline := now.Add(store.DefaultOperationTotalTimeout)
+		op.DeadlineAt = &deadline
+	}
 	f.ops[op.ID] = op
 	f.opOrd = append(f.opOrd, op.ID)
 	return op, nil

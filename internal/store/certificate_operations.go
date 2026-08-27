@@ -23,6 +23,14 @@ const (
 	// DefaultOperationLeaseDuration is how long a replica holds an operation lease
 	// before another replica may take over.
 	DefaultOperationLeaseDuration = 90 * time.Second
+
+	// DefaultOperationTotalTimeout is the maximum wall-clock lifetime of one
+	// CertificateOperation from creation until terminal success or failure.
+	DefaultOperationTotalTimeout = 72 * time.Hour
+
+	// OperationTotalTimeoutSummary is the sanitized error stored when the deadline
+	// is exceeded.
+	OperationTotalTimeoutSummary = "operation total timeout exceeded"
 )
 
 // DNSChallengeRecord tracks a DNS-01 TXT record created during an attempt so a
@@ -90,6 +98,7 @@ type CertificateOperation struct {
 	StartedAt            *time.Time           `bson:"started_at,omitempty" json:"started_at,omitempty"`
 	FinishedAt           *time.Time           `bson:"finished_at,omitempty" json:"finished_at,omitempty"`
 	NextAttemptAt        *time.Time           `bson:"next_attempt_at,omitempty" json:"next_attempt_at,omitempty"`
+	DeadlineAt           *time.Time           `bson:"deadline_at,omitempty" json:"deadline_at,omitempty"`
 	CreatedAt            time.Time            `bson:"created_at" json:"created_at"`
 	UpdatedAt            time.Time            `bson:"updated_at" json:"updated_at"`
 }
@@ -153,6 +162,10 @@ func (s *MongoStore) CreateCertificateOperation(ctx context.Context, op Certific
 	}
 	op.CreatedAt = now
 	op.UpdatedAt = now
+	if op.DeadlineAt == nil {
+		deadline := now.Add(DefaultOperationTotalTimeout)
+		op.DeadlineAt = &deadline
+	}
 	if _, err := s.certificateOperations().InsertOne(ctx, op); err != nil {
 		return CertificateOperation{}, err
 	}

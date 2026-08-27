@@ -17,12 +17,14 @@ type fakeCertNotifyStore struct {
 	mu     sync.Mutex
 	certs  map[string]store.ManagedCertificate
 	notify map[string]store.NotifyGroup
+	ops    map[string]store.CertificateOperation
 }
 
 func newFakeCertNotifyStore() *fakeCertNotifyStore {
 	return &fakeCertNotifyStore{
 		certs:  make(map[string]store.ManagedCertificate),
 		notify: make(map[string]store.NotifyGroup),
+		ops:    make(map[string]store.CertificateOperation),
 	}
 }
 
@@ -56,6 +58,20 @@ func (f *fakeCertNotifyStore) ListManagedCertificatesForNotifications(_ context.
 		}
 	}
 	return out, nil
+}
+
+func (f *fakeCertNotifyStore) FindRunningCertificateOperation(_ context.Context, managedCertificateID, opType string) (store.CertificateOperation, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	for _, op := range f.ops {
+		if op.ManagedCertificateID != managedCertificateID || op.Type != opType {
+			continue
+		}
+		if op.Status == store.CertOpStatusPending || op.Status == store.CertOpStatusRunning {
+			return op, nil
+		}
+	}
+	return store.CertificateOperation{}, errors.New("not found")
 }
 
 func (f *fakeCertNotifyStore) ensureState(cert *store.ManagedCertificate) {
@@ -351,6 +367,62 @@ func TestSevenDayReminderOnce(t *testing.T) {
 	}
 	if decodePayload(t, rec.Sent[0]).EventType != EventExpiringSoon {
 		t.Fatalf("event = %q", decodePayload(t, rec.Sent[0]).EventType)
+	}
+}
+
+func TestSevenDayReminderSkippedWhenRenewInFlight(t *testing.T) {
+	st := newFakeCertNotifyStore()
+	seedNotify(st, "ntf_1")
+	cert := seedCert(st, "ntf_1")
+	notAfter := time.Date(2026, 6, 8, 0, 0, 0, 0, time.UTC)
+	cert.ActiveVersion = &store.CertificateVersion{
+		ID:        "cver_1",
+		NotBefore: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
+		NotAfter:  notAfter,
+	}
+	st.certs[cert.ID] = cert
+	st.ops["cop_renew"] = store.CertificateOperation{
+		ID:                   "cop_renew",
+		ManagedCertificateID: cert.ID,
+		Type:                 store.CertOpTypeRenew,
+		Status:               store.CertOpStatusRunning,
+	}
+	d, rec, clk := newTestDispatcher(st)
+	clk.t = notAfter.Add(-6 * 24 * time.Hour)
+
+	d.ScanValidityNotifications(context.Background())
+	d.Wait()
+
+	if len(rec.Sent) != 0 {
+		t.Fatalf("sent = %d, want 0 while renew in flight", len(rec.Sent))
+	}
+}
+
+func TestSevenDayReminderSkippedWhenReplacingIssueInFlight(t *testing.T) {
+	st := newFakeCertNotifyStore()
+	seedNotify(st, "ntf_1")
+	cert := seedCert(st, "ntf_1")
+	notAfter := time.Date(2026, 6, 8, 0, 0, 0, 0, time.UTC)
+	cert.ActiveVersion = &store.CertificateVersion{
+		ID:        "cver_1",
+		NotBefore: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
+		NotAfter:  notAfter,
+	}
+	st.certs[cert.ID] = cert
+	st.ops["cop_issue"] = store.CertificateOperation{
+		ID:                   "cop_issue",
+		ManagedCertificateID: cert.ID,
+		Type:                 store.CertOpTypeIssue,
+		Status:               store.CertOpStatusPending,
+	}
+	d, rec, clk := newTestDispatcher(st)
+	clk.t = notAfter.Add(-6 * 24 * time.Hour)
+
+	d.ScanValidityNotifications(context.Background())
+	d.Wait()
+
+	if len(rec.Sent) != 0 {
+		t.Fatalf("sent = %d, want 0 while replacing issue in flight", len(rec.Sent))
 	}
 }
 

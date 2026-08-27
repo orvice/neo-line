@@ -1010,7 +1010,7 @@ archive:
 - 延迟趋势图。
 - 告警历史。
 
-## 证书管理（ACME，进行中）
+## 证书管理（ACME，已实现）
 
 ### DNSProviderAccount（Cloudflare）
 
