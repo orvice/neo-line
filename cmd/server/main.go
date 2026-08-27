@@ -127,6 +127,12 @@ func main() {
 				if err := mongoStore.EnsureCertificateIssuerIndexes(ctx); err != nil {
 					return fmt.Errorf("ensure certificate issuer indexes: %w", err)
 				}
+				if err := mongoStore.EnsureManagedCertificateIndexes(ctx); err != nil {
+					return fmt.Errorf("ensure managed certificate indexes: %w", err)
+				}
+				if err := mongoStore.EnsureCertificateOperationIndexes(ctx); err != nil {
+					return fmt.Errorf("ensure certificate operation indexes: %w", err)
+				}
 				if err := mongoStore.EnsureMcpTokenIndexes(ctx); err != nil {
 					return fmt.Errorf("ensure mcp token indexes: %w", err)
 				}

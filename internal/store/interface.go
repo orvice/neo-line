@@ -51,6 +51,19 @@ type Store interface {
 	UpdateCertificateIssuer(ctx context.Context, id string, issuer CertificateIssuer) (CertificateIssuer, error)
 	DeleteCertificateIssuer(ctx context.Context, id string) error
 
+	ListManagedCertificates(ctx context.Context, limit int64, pageToken string) ([]ManagedCertificate, string, error)
+	CreateManagedCertificate(ctx context.Context, cert ManagedCertificate) (ManagedCertificate, error)
+	GetManagedCertificate(ctx context.Context, id string) (ManagedCertificate, error)
+	UpdateManagedCertificate(ctx context.Context, id string, cert ManagedCertificate) (ManagedCertificate, error)
+
+	CreateCertificateOperation(ctx context.Context, op CertificateOperation) (CertificateOperation, error)
+	GetCertificateOperation(ctx context.Context, id string) (CertificateOperation, error)
+	FindRunningCertificateOperation(ctx context.Context, managedCertificateID, opType string) (CertificateOperation, error)
+	ListCertificateOperationsByCertificate(ctx context.Context, managedCertificateID string, limit int64) ([]CertificateOperation, error)
+	LatestCertificateOperation(ctx context.Context, managedCertificateID string) (CertificateOperation, error)
+	ValidateNotifyGroupIDs(ctx context.Context, ids []string) error
+	ValidateServerIDs(ctx context.Context, ids []string) error
+
 	ListCheckResults(ctx context.Context, serverID, monitorID string, limit int64, pageToken string, start, end *time.Time) ([]CheckResult, string, error)
 	// SaveCheckResult persists a probe result and returns the monitor's prior
 	// status (empty when no prior status existed).
@@ -70,6 +83,8 @@ type Store interface {
 	EnsureNotifyGroupIndexes(ctx context.Context) error
 	EnsureDNSProviderAccountIndexes(ctx context.Context) error
 	EnsureCertificateIssuerIndexes(ctx context.Context) error
+	EnsureManagedCertificateIndexes(ctx context.Context) error
+	EnsureCertificateOperationIndexes(ctx context.Context) error
 	EnsureMcpTokenIndexes(ctx context.Context) error
 	EnsureResultIndexes(ctx context.Context) error
 

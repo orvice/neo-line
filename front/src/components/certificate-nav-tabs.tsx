@@ -12,6 +12,9 @@ const tabClass = ({ isActive }: { isActive: boolean }) =>
 export function CertificateNavTabs() {
   return (
     <nav className="flex flex-wrap gap-2">
+      <NavLink to="/certificates/managed" className={tabClass}>
+        托管证书
+      </NavLink>
       <NavLink to="/certificates/issuers" className={tabClass}>
         ACME Issuer
       </NavLink>

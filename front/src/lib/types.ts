@@ -224,6 +224,66 @@ export interface CertificateIssuerDirectoryPreview {
   requires_eab: boolean
 }
 
+export type CertificateKeyType = "ec_p256" | "rsa_2048" | "unspecified"
+
+export type CertificateValidity =
+  | "Missing"
+  | "Valid"
+  | "RenewalDue"
+  | "Expired"
+  | "Revoked"
+  | "Unspecified"
+
+export type CertificateOperationType = "Issue" | "Renew" | "Revoke" | "Unspecified"
+
+export type CertificateOperationStatus =
+  | "Pending"
+  | "Running"
+  | "Succeeded"
+  | "Failed"
+  | "Unspecified"
+
+export interface IssueConfigSnapshot {
+  domains: string[]
+  certificate_issuer_id: string
+  dns_provider_account_id: string
+  key_type: CertificateKeyType
+}
+
+export interface CertificateOperation {
+  id: string
+  managed_certificate_id: string
+  type: CertificateOperationType
+  status: CertificateOperationStatus
+  attempt_count: number
+  config_snapshot?: IssueConfigSnapshot
+  error_summary?: string
+  warning?: string
+  started_at?: string
+  finished_at?: string
+  next_attempt_at?: string
+  created_at: string
+  updated_at: string
+}
+
+export interface ManagedCertificate {
+  id: string
+  name: string
+  domains: string[]
+  certificate_issuer_id: string
+  dns_provider_account_id: string
+  key_type: CertificateKeyType
+  auto_renew_enabled: boolean
+  renew_before_days: number
+  notify_group_ids?: string[]
+  server_ids?: string[]
+  active_validity: CertificateValidity
+  bundle_available: boolean
+  latest_operation?: CertificateOperation
+  created_at: string
+  updated_at: string
+}
+
 export interface AlertPolicy {
   enabled: boolean
   notify_group_ids?: string[]

@@ -84,6 +84,40 @@ func (f *fakeStore) DeleteCertificateIssuer(context.Context, string) error {
 	return errors.New("not implemented")
 }
 
+func (f *fakeStore) ListManagedCertificates(context.Context, int64, string) ([]store.ManagedCertificate, string, error) {
+	return nil, "", nil
+}
+func (f *fakeStore) CreateManagedCertificate(context.Context, store.ManagedCertificate) (store.ManagedCertificate, error) {
+	return store.ManagedCertificate{}, errors.New("not implemented")
+}
+func (f *fakeStore) GetManagedCertificate(context.Context, string) (store.ManagedCertificate, error) {
+	return store.ManagedCertificate{}, errors.New("not implemented")
+}
+func (f *fakeStore) UpdateManagedCertificate(context.Context, string, store.ManagedCertificate) (store.ManagedCertificate, error) {
+	return store.ManagedCertificate{}, errors.New("not implemented")
+}
+func (f *fakeStore) CreateCertificateOperation(context.Context, store.CertificateOperation) (store.CertificateOperation, error) {
+	return store.CertificateOperation{}, errors.New("not implemented")
+}
+func (f *fakeStore) GetCertificateOperation(context.Context, string) (store.CertificateOperation, error) {
+	return store.CertificateOperation{}, errors.New("not implemented")
+}
+func (f *fakeStore) FindRunningCertificateOperation(context.Context, string, string) (store.CertificateOperation, error) {
+	return store.CertificateOperation{}, errors.New("not implemented")
+}
+func (f *fakeStore) ListCertificateOperationsByCertificate(context.Context, string, int64) ([]store.CertificateOperation, error) {
+	return nil, errors.New("not implemented")
+}
+func (f *fakeStore) LatestCertificateOperation(context.Context, string) (store.CertificateOperation, error) {
+	return store.CertificateOperation{}, errors.New("not implemented")
+}
+func (f *fakeStore) ValidateNotifyGroupIDs(context.Context, []string) error {
+	return nil
+}
+func (f *fakeStore) ValidateServerIDs(context.Context, []string) error {
+	return nil
+}
+
 type fixedClock struct{ t time.Time }
 
 func (c fixedClock) Now() time.Time { return c.t }
