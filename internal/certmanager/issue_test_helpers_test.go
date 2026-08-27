@@ -144,6 +144,7 @@ func newIssueTestManager(t *testing.T, st Store, acme ACMEClient, dns *FakeDNSPr
 		return dns, nil
 	}))
 	m.clock = fixedClock{t: time.Date(2026, 3, 1, 12, 0, 0, 0, time.UTC)}
+	m.SetReplicaID("test-replica")
 	return m
 }
 

@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/go-acme/lego/v4/challenge"
@@ -46,35 +45,15 @@ type PublicCertificateVersion struct {
 	RevokedAt        int64 // unix seconds; zero when not revoked
 }
 
-var issueInflight sync.Map // opID -> struct{}
-
 func (m *Manager) triggerIssueOperation(opID string) {
-	go m.runIssueOperation(context.Background(), opID)
+	m.triggerOperation(opID)
 }
 
 func (m *Manager) runIssueOperation(ctx context.Context, opID string) {
-	if _, loaded := issueInflight.LoadOrStore(opID, struct{}{}); loaded {
-		return
-	}
-	defer issueInflight.Delete(opID)
-
-	op, err := m.store.ClaimPendingIssueOperation(ctx, opID)
-	if err != nil {
-		if store.IsNotFound(err) {
-			return
-		}
-		return
-	}
-
-	warning, runErr := m.executeCertificateIssuance(ctx, op)
-	if runErr == nil {
-		return
-	}
-	_ = warning
-	_ = m.store.FailIssueOperation(ctx, opID, sanitizeIssueError(runErr))
+	m.runOperation(ctx, opID)
 }
 
-func (m *Manager) executeCertificateIssuance(ctx context.Context, op store.CertificateOperation) (warning string, err error) {
+func (m *Manager) executeCertificateIssuance(ctx context.Context, op store.CertificateOperation, leaseOwner string) (warning string, err error) {
 	snap := op.ConfigSnapshot
 	issuer, err := m.store.GetCertificateIssuer(ctx, snap.CertificateIssuerID)
 	if err != nil {
@@ -102,6 +81,7 @@ func (m *Manager) executeCertificateIssuance(ctx context.Context, op store.Certi
 		KeyType: snap.KeyType,
 		DNS:     trackedDNS,
 	})
+	m.persistPendingTXT(ctx, op.ID, leaseOwner, trackedDNS.presented)
 	if issueErr != nil {
 		return "", issueErr
 	}
@@ -135,14 +115,15 @@ func (m *Manager) executeCertificateIssuance(ctx context.Context, op store.Certi
 		return "", err
 	}
 	if cert.ActiveVersion == nil {
-		if err := m.store.ActivateFirstIssueVersion(ctx, op.ManagedCertificateID, version, op.ID, warning); err != nil {
+		if err := m.store.ActivateFirstIssueVersion(ctx, op.ManagedCertificateID, version, op.ID, leaseOwner, warning); err != nil {
 			return "", err
 		}
 	} else {
-		if err := m.store.ActivateSubsequentIssueVersion(ctx, op.ManagedCertificateID, version, cert.ActiveVersion.ID, op.ID, warning); err != nil {
+		if err := m.store.ActivateSubsequentIssueVersion(ctx, op.ManagedCertificateID, version, cert.ActiveVersion.ID, op.ID, leaseOwner, warning); err != nil {
 			return "", err
 		}
 	}
+	_ = m.store.ClearCertificateOperationPendingTXT(ctx, op.ID)
 	return warning, nil
 }
 
@@ -152,7 +133,7 @@ func sanitizeIssueError(err error) string {
 	}
 	msg := err.Error()
 	lower := strings.ToLower(msg)
-	secretMarkers := []string{"token", "pem", "eab", "hmac", "api key", "private key", "account key", "authorization:"}
+	secretMarkers := []string{"token", "pem", "eab", "hmac", "api key", "private key", "account key", "authorization:", "order url", "acme-staging", "directory"}
 	for _, marker := range secretMarkers {
 		if strings.Contains(lower, marker) {
 			return "certificate issuance failed"
@@ -205,6 +186,19 @@ func snapDomains(v *store.CertificateVersion) []string {
 type cleanupTrackingProvider struct {
 	challenge.Provider
 	cleanupWarning string
+	presented      []store.DNSChallengeRecord
+}
+
+func (p *cleanupTrackingProvider) Present(domain, token, keyAuth string) error {
+	err := p.Provider.Present(domain, token, keyAuth)
+	if err == nil {
+		p.presented = append(p.presented, store.DNSChallengeRecord{
+			Domain:  domain,
+			Token:   token,
+			KeyAuth: keyAuth,
+		})
+	}
+	return err
 }
 
 func (p *cleanupTrackingProvider) CleanUp(domain, token, keyAuth string) error {

@@ -348,6 +348,11 @@ func (m *Manager) createPendingIssueOperation(ctx context.Context, cert store.Ma
 	} else if !store.IsNotFound(err) {
 		return store.CertificateOperation{}, err
 	}
+	if running, err := m.store.HasRunningCertificateOperation(ctx, cert.ID); err != nil {
+		return store.CertificateOperation{}, err
+	} else if running {
+		return store.CertificateOperation{}, ErrIssuanceOperationInFlight
+	}
 	snapshot := store.IssueConfigSnapshot{
 		Domains:              append([]string(nil), cert.Domains...),
 		CertificateIssuerID:  cert.CertificateIssuerID,

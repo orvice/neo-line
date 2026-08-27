@@ -245,20 +245,14 @@ func (f *managedCertFakeStore) ValidateServerIDs(_ context.Context, ids []string
 	return nil
 }
 
-func (f *managedCertFakeStore) ClaimPendingIssueOperation(_ context.Context, opID string) (store.CertificateOperation, error) {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	op, ok := f.ops[opID]
-	if !ok || op.Status != store.CertOpStatusPending || op.Type != store.CertOpTypeIssue {
-		return store.CertificateOperation{}, errors.New("not claimable")
-	}
+func (f *managedCertFakeStore) ClaimPendingIssueOperation(ctx context.Context, opID string) (store.CertificateOperation, error) {
 	now := time.Now().UTC()
-	op.Status = store.CertOpStatusRunning
-	op.AttemptCount++
-	op.StartedAt = &now
-	op.UpdatedAt = now
-	f.ops[opID] = op
-	return op, nil
+	return f.TryClaimCertificateOperation(ctx, store.CertificateOperationClaimParams{
+		OpID:         opID,
+		Owner:        "test-replica",
+		Now:          now,
+		LeaseExpires: now.Add(store.DefaultOperationLeaseDuration),
+	})
 }
 
 func (f *managedCertFakeStore) FailIssueOperation(_ context.Context, opID, summary string) error {
@@ -290,20 +284,14 @@ func (f *managedCertFakeStore) FindPendingIssueOperations(_ context.Context, _ i
 	return out, nil
 }
 
-func (f *managedCertFakeStore) ClaimPendingRenewOperation(_ context.Context, opID string) (store.CertificateOperation, error) {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	op, ok := f.ops[opID]
-	if !ok || op.Status != store.CertOpStatusPending || op.Type != store.CertOpTypeRenew {
-		return store.CertificateOperation{}, errors.New("not claimable")
-	}
+func (f *managedCertFakeStore) ClaimPendingRenewOperation(ctx context.Context, opID string) (store.CertificateOperation, error) {
 	now := time.Now().UTC()
-	op.Status = store.CertOpStatusRunning
-	op.AttemptCount++
-	op.StartedAt = &now
-	op.UpdatedAt = now
-	f.ops[opID] = op
-	return op, nil
+	return f.TryClaimCertificateOperation(ctx, store.CertificateOperationClaimParams{
+		OpID:         opID,
+		Owner:        "test-replica",
+		Now:          now,
+		LeaseExpires: now.Add(store.DefaultOperationLeaseDuration),
+	})
 }
 
 func (f *managedCertFakeStore) FailRenewOperation(_ context.Context, opID, summary string) error {
@@ -360,9 +348,13 @@ func (f *managedCertFakeStore) UpdateCertificateOperation(_ context.Context, id 
 	return op, nil
 }
 
-func (f *managedCertFakeStore) ActivateFirstIssueVersion(_ context.Context, managedCertID string, version store.CertificateVersion, opID, warning string) error {
+func (f *managedCertFakeStore) ActivateFirstIssueVersion(_ context.Context, managedCertID string, version store.CertificateVersion, opID, leaseOwner, warning string) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
+	op, ok := f.ops[opID]
+	if !ok || op.Status != store.CertOpStatusRunning || op.LeaseOwner != leaseOwner {
+		return store.ErrCertificateOperationConflict
+	}
 	cert, ok := f.certs[managedCertID]
 	if !ok || cert.ActiveVersion != nil {
 		return store.ErrActiveVersionConflict
@@ -370,22 +362,28 @@ func (f *managedCertFakeStore) ActivateFirstIssueVersion(_ context.Context, mana
 	cert.ActiveVersion = &version
 	cert.UpdatedAt = time.Now().UTC()
 	f.certs[managedCertID] = cert
-	op, ok := f.ops[opID]
-	if !ok || op.Status != store.CertOpStatusRunning {
-		return store.ErrCertificateOperationConflict
-	}
 	now := time.Now().UTC()
 	op.Status = store.CertOpStatusSucceeded
 	op.FinishedAt = &now
 	op.Warning = warning
+	op.ErrorSummary = ""
+	op.NextAttemptAt = nil
+	op.ConsecutiveFailures = 0
+	op.LeaseOwner = ""
+	op.LeaseExpiresAt = nil
+	op.PendingTXTRecords = nil
 	op.UpdatedAt = now
 	f.ops[opID] = op
 	return nil
 }
 
-func (f *managedCertFakeStore) ActivateSubsequentIssueVersion(_ context.Context, managedCertID string, version store.CertificateVersion, expectedActiveID, opID, warning string) error {
+func (f *managedCertFakeStore) ActivateSubsequentIssueVersion(_ context.Context, managedCertID string, version store.CertificateVersion, expectedActiveID, opID, leaseOwner, warning string) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
+	op, ok := f.ops[opID]
+	if !ok || op.Status != store.CertOpStatusRunning || op.LeaseOwner != leaseOwner {
+		return store.ErrCertificateOperationConflict
+	}
 	cert, ok := f.certs[managedCertID]
 	if !ok || cert.ActiveVersion == nil || cert.ActiveVersion.ID != expectedActiveID {
 		return store.ErrActiveVersionConflict
@@ -395,14 +393,16 @@ func (f *managedCertFakeStore) ActivateSubsequentIssueVersion(_ context.Context,
 	cert.ActiveVersion = &version
 	cert.UpdatedAt = time.Now().UTC()
 	f.certs[managedCertID] = cert
-	op, ok := f.ops[opID]
-	if !ok || op.Status != store.CertOpStatusRunning {
-		return store.ErrCertificateOperationConflict
-	}
 	now := time.Now().UTC()
 	op.Status = store.CertOpStatusSucceeded
 	op.FinishedAt = &now
 	op.Warning = warning
+	op.ErrorSummary = ""
+	op.NextAttemptAt = nil
+	op.ConsecutiveFailures = 0
+	op.LeaseOwner = ""
+	op.LeaseExpiresAt = nil
+	op.PendingTXTRecords = nil
 	op.UpdatedAt = now
 	f.ops[opID] = op
 	return nil

@@ -55,7 +55,10 @@
 | `managed_certificate_id` | 所属证书 |
 | `type` | `Issue` / `Renew` / `Revoke` |
 | `status` | `Pending` / `Running` / `Succeeded` / `Failed` |
-| `attempt_count` | 尝试次数（#18 reconciler 递增） |
+| `attempt_count` | 尝试次数（含多副本接管后的 attempt） |
+| `consecutive_failures` | 连续失败次数（退避计算；成功后清零） |
+| `lease_owner` / `lease_expires_at` | 多副本 lease（#23；Admin API 不返回） |
+| `pending_txt_records` | 已创建 TXT 记录（接管清理用；Admin API 不返回） |
 | `config_snapshot` | 创建时冻结的 domains、issuer、dns、key_type |
 | `error_summary` / `warning` | 脱敏错误与告警摘要 |
 | `started_at` / `finished_at` / `next_attempt_at` | 时间戳 |
@@ -83,7 +86,15 @@
 - `renew_before_days` 默认 **30**；**有效续期窗口** = `min(renew_before_days, 证书总有效期 / 3)`。
 - 每次 Renew 生成 **新私钥**，成功经双版本原子切换写入 active；失败时 active/previous 不变。
 - 相同 **Renew** 正在 Pending/Running 时，reconcile 或重复手动请求 **复用同一条** operation。
+- 自动 attempt 失败后 operation 回到 **Pending** 并按 15 分钟起、12 小时封顶的指数退避调度 `next_attempt_at`；终态 **Failed** 后 Admin 手动重试创建 **新** operation（#23）。
 - Admin 可在自动续期关闭时手动 **续期 active** 或 **签发 desired**；详情展示配置/有效窗口、下次自动续期与手动 Renew。
+
+### 多副本 lease 与恢复（#23）
+
+- 详见 [Operation Lease 与恢复](./certificate-management-operation-lease.md)。
+- MongoDB partial unique index 保证每张证书最多一条 Pending/Running operation。
+- 进程中断后 lease 过期，其他副本接管同一 operation：清理已知 TXT → 新 ACME order attempt。
+- 首版 **不提供 Cancel**；graceful shutdown 停止新 lease，当前 attempt 有界完成。
 
 ### 创建
 

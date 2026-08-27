@@ -2,6 +2,7 @@ package certmanager
 
 import (
 	"context"
+	"sync/atomic"
 	"time"
 
 	"github.com/orvice/neo-line/internal/store"
@@ -36,6 +37,15 @@ type Store interface {
 	ValidateNotifyGroupIDs(ctx context.Context, ids []string) error
 	ValidateServerIDs(ctx context.Context, ids []string) error
 
+	FindClaimableCertificateOperations(ctx context.Context, now time.Time, limit int64) ([]store.CertificateOperation, error)
+	TryClaimCertificateOperation(ctx context.Context, p store.CertificateOperationClaimParams) (store.CertificateOperation, error)
+	RenewCertificateOperationLease(ctx context.Context, opID, owner string, leaseExpires, now time.Time) error
+	UpdateCertificateOperationPendingTXT(ctx context.Context, opID, owner string, records []store.DNSChallengeRecord) error
+	ScheduleCertificateOperationRetry(ctx context.Context, opID, owner string, nextAttemptAt time.Time, errorSummary string, consecutiveFailures uint32) error
+	MarkCertificateOperationFailed(ctx context.Context, opID, owner, errorSummary string) error
+	ClearCertificateOperationPendingTXT(ctx context.Context, opID string) error
+	HasRunningCertificateOperation(ctx context.Context, managedCertificateID string) (bool, error)
+
 	ClaimPendingIssueOperation(ctx context.Context, opID string) (store.CertificateOperation, error)
 	FailIssueOperation(ctx context.Context, opID, errorSummary string) error
 	FindPendingIssueOperations(ctx context.Context, limit int64) ([]store.CertificateOperation, error)
@@ -44,8 +54,8 @@ type Store interface {
 	FindPendingRenewOperations(ctx context.Context, limit int64) ([]store.CertificateOperation, error)
 	ListAutoRenewManagedCertificates(ctx context.Context) ([]store.ManagedCertificate, error)
 	UpdateCertificateOperation(ctx context.Context, id string, op store.CertificateOperation) (store.CertificateOperation, error)
-	ActivateFirstIssueVersion(ctx context.Context, managedCertID string, version store.CertificateVersion, opID, warning string) error
-	ActivateSubsequentIssueVersion(ctx context.Context, managedCertID string, version store.CertificateVersion, expectedActiveID, opID, warning string) error
+	ActivateFirstIssueVersion(ctx context.Context, managedCertID string, version store.CertificateVersion, opID, leaseOwner, warning string) error
+	ActivateSubsequentIssueVersion(ctx context.Context, managedCertID string, version store.CertificateVersion, expectedActiveID, opID, leaseOwner, warning string) error
 	ActivatePreviousVersion(ctx context.Context, managedCertID, versionID string) error
 }
 
@@ -66,11 +76,14 @@ func (realClock) Now() time.Time { return time.Now().UTC() }
 // Manager owns certificate-management business rules. Connect handlers stay
 // thin and delegate here.
 type Manager struct {
-	store      Store
-	verifier   TokenVerifier
-	acme       ACMEClient
-	dnsFactory DNSProviderFactory
-	clock      Clock
+	store          Store
+	verifier       TokenVerifier
+	acme           ACMEClient
+	dnsFactory     DNSProviderFactory
+	clock          Clock
+	replicaID      string
+	jitter         JitterFunc
+	claimingLeases atomic.Bool
 }
 
 func NewManager(st Store, verifier TokenVerifier) *Manager {

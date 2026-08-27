@@ -91,8 +91,11 @@ func TestIssueCAFailureKeepsMissing(t *testing.T) {
 		t.Fatal("expected no active version")
 	}
 	op := st.ops[opID]
-	if op.Status != store.CertOpStatusFailed {
-		t.Fatalf("op status = %q", op.Status)
+	if op.Status != store.CertOpStatusPending {
+		t.Fatalf("op status = %q, want Pending for auto retry", op.Status)
+	}
+	if op.NextAttemptAt == nil {
+		t.Fatal("expected next_attempt_at scheduled")
 	}
 	if op.ErrorSummary == "" {
 		t.Fatal("expected error summary")
@@ -111,7 +114,7 @@ func TestIssueDNSFailure(t *testing.T) {
 	}}
 	m := newIssueTestManager(t, st, acme, dns)
 	m.runIssueOperation(context.Background(), opID)
-	if st.ops[opID].Status != store.CertOpStatusFailed {
+	if st.ops[opID].Status != store.CertOpStatusPending {
 		t.Fatalf("status = %q", st.ops[opID].Status)
 	}
 }
@@ -138,7 +141,7 @@ func TestIssueCertificateKeyMismatchFails(t *testing.T) {
 	_, opID := seedIssueTestStore(st, []string{"example.com"}, store.CertKeyTypeECP256, false)
 	m := newIssueTestManager(t, st, mismatchIssueACME(t, []string{"example.com"}), dns)
 	m.runIssueOperation(context.Background(), opID)
-	if st.ops[opID].Status != store.CertOpStatusFailed {
+	if st.ops[opID].Status != store.CertOpStatusPending {
 		t.Fatalf("status = %q", st.ops[opID].Status)
 	}
 }

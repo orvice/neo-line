@@ -2,6 +2,7 @@ package certmanager
 
 import (
 	"context"
+	"time"
 
 	"github.com/orvice/neo-line/internal/store"
 )
@@ -88,6 +89,10 @@ func (s *mongoStore) FindRunningCertificateOperation(ctx context.Context, manage
 	return s.st.FindRunningCertificateOperation(ctx, managedCertificateID, opType)
 }
 
+func (s *mongoStore) HasRunningCertificateOperation(ctx context.Context, managedCertificateID string) (bool, error) {
+	return s.st.HasRunningCertificateOperation(ctx, managedCertificateID)
+}
+
 func (s *mongoStore) ListCertificateOperationsByCertificate(ctx context.Context, managedCertificateID string, limit int64) ([]store.CertificateOperation, error) {
 	return s.st.ListCertificateOperationsByCertificate(ctx, managedCertificateID, limit)
 }
@@ -102,6 +107,34 @@ func (s *mongoStore) ValidateNotifyGroupIDs(ctx context.Context, ids []string) e
 
 func (s *mongoStore) ValidateServerIDs(ctx context.Context, ids []string) error {
 	return s.st.ValidateServerIDs(ctx, ids)
+}
+
+func (s *mongoStore) FindClaimableCertificateOperations(ctx context.Context, now time.Time, limit int64) ([]store.CertificateOperation, error) {
+	return s.st.FindClaimableCertificateOperations(ctx, now, limit)
+}
+
+func (s *mongoStore) TryClaimCertificateOperation(ctx context.Context, p store.CertificateOperationClaimParams) (store.CertificateOperation, error) {
+	return s.st.TryClaimCertificateOperation(ctx, p)
+}
+
+func (s *mongoStore) RenewCertificateOperationLease(ctx context.Context, opID, owner string, leaseExpires, now time.Time) error {
+	return s.st.RenewCertificateOperationLease(ctx, opID, owner, leaseExpires, now)
+}
+
+func (s *mongoStore) UpdateCertificateOperationPendingTXT(ctx context.Context, opID, owner string, records []store.DNSChallengeRecord) error {
+	return s.st.UpdateCertificateOperationPendingTXT(ctx, opID, owner, records)
+}
+
+func (s *mongoStore) ScheduleCertificateOperationRetry(ctx context.Context, opID, owner string, nextAttemptAt time.Time, errorSummary string, consecutiveFailures uint32) error {
+	return s.st.ScheduleCertificateOperationRetry(ctx, opID, owner, nextAttemptAt, errorSummary, consecutiveFailures)
+}
+
+func (s *mongoStore) MarkCertificateOperationFailed(ctx context.Context, opID, owner, errorSummary string) error {
+	return s.st.MarkCertificateOperationFailed(ctx, opID, owner, errorSummary)
+}
+
+func (s *mongoStore) ClearCertificateOperationPendingTXT(ctx context.Context, opID string) error {
+	return s.st.ClearCertificateOperationPendingTXT(ctx, opID)
 }
 
 func (s *mongoStore) ClaimPendingIssueOperation(ctx context.Context, opID string) (store.CertificateOperation, error) {
@@ -136,12 +169,12 @@ func (s *mongoStore) UpdateCertificateOperation(ctx context.Context, id string, 
 	return s.st.UpdateCertificateOperation(ctx, id, op)
 }
 
-func (s *mongoStore) ActivateFirstIssueVersion(ctx context.Context, managedCertID string, version store.CertificateVersion, opID, warning string) error {
-	return s.st.ActivateFirstIssueVersion(ctx, managedCertID, version, opID, warning)
+func (s *mongoStore) ActivateFirstIssueVersion(ctx context.Context, managedCertID string, version store.CertificateVersion, opID, leaseOwner, warning string) error {
+	return s.st.ActivateFirstIssueVersion(ctx, managedCertID, version, opID, leaseOwner, warning)
 }
 
-func (s *mongoStore) ActivateSubsequentIssueVersion(ctx context.Context, managedCertID string, version store.CertificateVersion, expectedActiveID, opID, warning string) error {
-	return s.st.ActivateSubsequentIssueVersion(ctx, managedCertID, version, expectedActiveID, opID, warning)
+func (s *mongoStore) ActivateSubsequentIssueVersion(ctx context.Context, managedCertID string, version store.CertificateVersion, expectedActiveID, opID, leaseOwner, warning string) error {
+	return s.st.ActivateSubsequentIssueVersion(ctx, managedCertID, version, expectedActiveID, opID, leaseOwner, warning)
 }
 
 func (s *mongoStore) ActivatePreviousVersion(ctx context.Context, managedCertID, versionID string) error {
