@@ -80,8 +80,11 @@ func computeValidity(cert store.ManagedCertificate, now time.Time) (validity str
 	if cert.ActiveVersion == nil {
 		return store.CertValidityMissing, false
 	}
-	bundleAvailable = true
 	v := cert.ActiveVersion
+	if !versionDistributable(v) {
+		return store.CertValidityRevoked, false
+	}
+	bundleAvailable = true
 	if now.After(v.NotAfter) {
 		return store.CertValidityExpired, bundleAvailable
 	}

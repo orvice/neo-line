@@ -52,6 +52,7 @@ type Store interface {
 	DeleteCertificateIssuer(ctx context.Context, id string) error
 
 	ListManagedCertificates(ctx context.Context, limit int64, pageToken string) ([]ManagedCertificate, string, error)
+	ListManagedCertificatesByServer(ctx context.Context, serverID string) ([]ManagedCertificate, error)
 	CreateManagedCertificate(ctx context.Context, cert ManagedCertificate) (ManagedCertificate, error)
 	GetManagedCertificate(ctx context.Context, id string) (ManagedCertificate, error)
 	UpdateManagedCertificate(ctx context.Context, id string, cert ManagedCertificate) (ManagedCertificate, error)
@@ -106,7 +107,10 @@ type Store interface {
 	ListCertificateAccessTokensByServer(ctx context.Context, serverID string) ([]CertificateAccessToken, error)
 	CreateCertificateAccessToken(ctx context.Context, serverID, name string, expiresAt *time.Time) (CertificateAccessToken, string, error)
 	DeleteCertificateAccessToken(ctx context.Context, serverID, tokenID string) error
+	LookupCertificateAccessToken(ctx context.Context, plaintext string) (CertificateAccessToken, error)
 	ValidateCertificateAccessToken(ctx context.Context, serverID, plaintext string) (bool, error)
+
+	RateLimitAllow(ctx context.Context, key string, limit int, window time.Duration) (allowed bool, err error)
 
 	EnsureAdminUser(ctx context.Context, email, password string) error
 	Authenticate(ctx context.Context, email, password string) (User, error)

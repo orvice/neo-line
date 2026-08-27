@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -140,6 +141,35 @@ func (s *MongoStore) RemoveServerFromManagedCertificates(ctx context.Context, se
 		"$pull": bson.M{"server_ids": serverID},
 	})
 	return err
+}
+
+// LookupCertificateAccessToken resolves a plaintext nlct_ secret to its stored
+// token record. Invalid, expired, or deleted tokens return not found. On match
+// last_used_at is updated on a best-effort basis. No caching is applied.
+func (s *MongoStore) LookupCertificateAccessToken(ctx context.Context, plaintext string) (CertificateAccessToken, error) {
+	if plaintext == "" || !strings.HasPrefix(plaintext, certAccessTokenSecretPrefix) {
+		return CertificateAccessToken{}, mongo.ErrNoDocuments
+	}
+	now := time.Now().UTC()
+	filter := bson.M{
+		"token_hash": hashCertificateAccessToken(plaintext),
+		"$or": []bson.M{
+			{"expires_at": bson.M{"$exists": false}},
+			{"expires_at": nil},
+			{"expires_at": bson.M{"$gt": now}},
+		},
+	}
+	var token CertificateAccessToken
+	res := s.certificateAccessTokens().FindOneAndUpdate(
+		ctx,
+		filter,
+		bson.M{"$set": bson.M{"last_used_at": now}},
+		options.FindOneAndUpdate().SetReturnDocument(options.After),
+	)
+	if err := res.Decode(&token); err != nil {
+		return CertificateAccessToken{}, err
+	}
+	return token, nil
 }
 
 // ValidateCertificateAccessToken reports whether the plaintext matches a stored,

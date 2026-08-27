@@ -84,6 +84,14 @@ var (
 			Help: "Total number of scheduler reconcile ticks.",
 		},
 	)
+
+	// ServerCertListTotal counts successful ServerCertificateService list calls.
+	ServerCertListTotal = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "neoline_server_cert_list_total",
+			Help: "Total number of successful Server ListCertificates calls.",
+		},
+	)
 )
 
 func init() {
@@ -96,6 +104,7 @@ func init() {
 		CertificateDaysRemaining,
 		EnabledMonitors,
 		ReconcileTotal,
+		ServerCertListTotal,
 	)
 }
 

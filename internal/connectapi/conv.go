@@ -528,6 +528,24 @@ func unixToTS(sec int64) *timestamppb.Timestamp {
 	return timestamppb.New(time.Unix(sec, 0).UTC())
 }
 
+func serverCertificateToProto(c certmanager.ServerCertificate) *pb.ServerCertificate {
+	out := &pb.ServerCertificate{
+		ManagedCertificateId: c.ManagedCertificateID,
+		Name:                 c.Name,
+		Domains:              append([]string(nil), c.Domains...),
+		ActiveVersionId:      c.ActiveVersionID,
+		Available:            c.Available,
+		Validity:             certificateValidityToProto(c.Validity),
+		KeyType:              certificateKeyTypeToProto(c.KeyType),
+		LeafFingerprint:      c.LeafFingerprint,
+		NotBefore:            unixToTS(c.NotBefore),
+		NotAfter:             unixToTS(c.NotAfter),
+		StagingUntrusted:     c.StagingUntrusted,
+		ErrorSummary:         c.ErrorSummary,
+	}
+	return out
+}
+
 func managedCertificateToProto(c certmanager.PublicManagedCertificate) *pb.ManagedCertificate {
 	out := &pb.ManagedCertificate{
 		Id:                   c.ID,
