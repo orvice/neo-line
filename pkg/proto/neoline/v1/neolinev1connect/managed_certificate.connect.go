@@ -52,12 +52,18 @@ const (
 	// ManagedCertificateServiceSubmitRenewOperationProcedure is the fully-qualified name of the
 	// ManagedCertificateService's SubmitRenewOperation RPC.
 	ManagedCertificateServiceSubmitRenewOperationProcedure = "/neoline.v1.ManagedCertificateService/SubmitRenewOperation"
+	// ManagedCertificateServiceSubmitRevokeVersionProcedure is the fully-qualified name of the
+	// ManagedCertificateService's SubmitRevokeVersion RPC.
+	ManagedCertificateServiceSubmitRevokeVersionProcedure = "/neoline.v1.ManagedCertificateService/SubmitRevokeVersion"
 	// ManagedCertificateServiceGetCertificateBundleProcedure is the fully-qualified name of the
 	// ManagedCertificateService's GetCertificateBundle RPC.
 	ManagedCertificateServiceGetCertificateBundleProcedure = "/neoline.v1.ManagedCertificateService/GetCertificateBundle"
 	// ManagedCertificateServiceActivatePreviousVersionProcedure is the fully-qualified name of the
 	// ManagedCertificateService's ActivatePreviousVersion RPC.
 	ManagedCertificateServiceActivatePreviousVersionProcedure = "/neoline.v1.ManagedCertificateService/ActivatePreviousVersion"
+	// ManagedCertificateServiceDeleteManagedCertificateProcedure is the fully-qualified name of the
+	// ManagedCertificateService's DeleteManagedCertificate RPC.
+	ManagedCertificateServiceDeleteManagedCertificateProcedure = "/neoline.v1.ManagedCertificateService/DeleteManagedCertificate"
 )
 
 // ManagedCertificateServiceClient is a client for the neoline.v1.ManagedCertificateService service.
@@ -68,8 +74,10 @@ type ManagedCertificateServiceClient interface {
 	UpdateManagedCertificate(context.Context, *connect.Request[v1.UpdateManagedCertificateRequest]) (*connect.Response[v1.UpdateManagedCertificateResponse], error)
 	SubmitIssueOperation(context.Context, *connect.Request[v1.SubmitIssueOperationRequest]) (*connect.Response[v1.SubmitIssueOperationResponse], error)
 	SubmitRenewOperation(context.Context, *connect.Request[v1.SubmitRenewOperationRequest]) (*connect.Response[v1.SubmitRenewOperationResponse], error)
+	SubmitRevokeVersion(context.Context, *connect.Request[v1.SubmitRevokeVersionRequest]) (*connect.Response[v1.SubmitRevokeVersionResponse], error)
 	GetCertificateBundle(context.Context, *connect.Request[v1.GetCertificateBundleRequest]) (*connect.Response[v1.GetCertificateBundleResponse], error)
 	ActivatePreviousVersion(context.Context, *connect.Request[v1.ActivatePreviousVersionRequest]) (*connect.Response[v1.ActivatePreviousVersionResponse], error)
+	DeleteManagedCertificate(context.Context, *connect.Request[v1.DeleteManagedCertificateRequest]) (*connect.Response[v1.DeleteManagedCertificateResponse], error)
 }
 
 // NewManagedCertificateServiceClient constructs a client for the
@@ -119,6 +127,12 @@ func NewManagedCertificateServiceClient(httpClient connect.HTTPClient, baseURL s
 			connect.WithSchema(managedCertificateServiceMethods.ByName("SubmitRenewOperation")),
 			connect.WithClientOptions(opts...),
 		),
+		submitRevokeVersion: connect.NewClient[v1.SubmitRevokeVersionRequest, v1.SubmitRevokeVersionResponse](
+			httpClient,
+			baseURL+ManagedCertificateServiceSubmitRevokeVersionProcedure,
+			connect.WithSchema(managedCertificateServiceMethods.ByName("SubmitRevokeVersion")),
+			connect.WithClientOptions(opts...),
+		),
 		getCertificateBundle: connect.NewClient[v1.GetCertificateBundleRequest, v1.GetCertificateBundleResponse](
 			httpClient,
 			baseURL+ManagedCertificateServiceGetCertificateBundleProcedure,
@@ -129,6 +143,12 @@ func NewManagedCertificateServiceClient(httpClient connect.HTTPClient, baseURL s
 			httpClient,
 			baseURL+ManagedCertificateServiceActivatePreviousVersionProcedure,
 			connect.WithSchema(managedCertificateServiceMethods.ByName("ActivatePreviousVersion")),
+			connect.WithClientOptions(opts...),
+		),
+		deleteManagedCertificate: connect.NewClient[v1.DeleteManagedCertificateRequest, v1.DeleteManagedCertificateResponse](
+			httpClient,
+			baseURL+ManagedCertificateServiceDeleteManagedCertificateProcedure,
+			connect.WithSchema(managedCertificateServiceMethods.ByName("DeleteManagedCertificate")),
 			connect.WithClientOptions(opts...),
 		),
 	}
@@ -142,8 +162,10 @@ type managedCertificateServiceClient struct {
 	updateManagedCertificate *connect.Client[v1.UpdateManagedCertificateRequest, v1.UpdateManagedCertificateResponse]
 	submitIssueOperation     *connect.Client[v1.SubmitIssueOperationRequest, v1.SubmitIssueOperationResponse]
 	submitRenewOperation     *connect.Client[v1.SubmitRenewOperationRequest, v1.SubmitRenewOperationResponse]
+	submitRevokeVersion      *connect.Client[v1.SubmitRevokeVersionRequest, v1.SubmitRevokeVersionResponse]
 	getCertificateBundle     *connect.Client[v1.GetCertificateBundleRequest, v1.GetCertificateBundleResponse]
 	activatePreviousVersion  *connect.Client[v1.ActivatePreviousVersionRequest, v1.ActivatePreviousVersionResponse]
+	deleteManagedCertificate *connect.Client[v1.DeleteManagedCertificateRequest, v1.DeleteManagedCertificateResponse]
 }
 
 // ListManagedCertificates calls neoline.v1.ManagedCertificateService.ListManagedCertificates.
@@ -176,6 +198,11 @@ func (c *managedCertificateServiceClient) SubmitRenewOperation(ctx context.Conte
 	return c.submitRenewOperation.CallUnary(ctx, req)
 }
 
+// SubmitRevokeVersion calls neoline.v1.ManagedCertificateService.SubmitRevokeVersion.
+func (c *managedCertificateServiceClient) SubmitRevokeVersion(ctx context.Context, req *connect.Request[v1.SubmitRevokeVersionRequest]) (*connect.Response[v1.SubmitRevokeVersionResponse], error) {
+	return c.submitRevokeVersion.CallUnary(ctx, req)
+}
+
 // GetCertificateBundle calls neoline.v1.ManagedCertificateService.GetCertificateBundle.
 func (c *managedCertificateServiceClient) GetCertificateBundle(ctx context.Context, req *connect.Request[v1.GetCertificateBundleRequest]) (*connect.Response[v1.GetCertificateBundleResponse], error) {
 	return c.getCertificateBundle.CallUnary(ctx, req)
@@ -184,6 +211,11 @@ func (c *managedCertificateServiceClient) GetCertificateBundle(ctx context.Conte
 // ActivatePreviousVersion calls neoline.v1.ManagedCertificateService.ActivatePreviousVersion.
 func (c *managedCertificateServiceClient) ActivatePreviousVersion(ctx context.Context, req *connect.Request[v1.ActivatePreviousVersionRequest]) (*connect.Response[v1.ActivatePreviousVersionResponse], error) {
 	return c.activatePreviousVersion.CallUnary(ctx, req)
+}
+
+// DeleteManagedCertificate calls neoline.v1.ManagedCertificateService.DeleteManagedCertificate.
+func (c *managedCertificateServiceClient) DeleteManagedCertificate(ctx context.Context, req *connect.Request[v1.DeleteManagedCertificateRequest]) (*connect.Response[v1.DeleteManagedCertificateResponse], error) {
+	return c.deleteManagedCertificate.CallUnary(ctx, req)
 }
 
 // ManagedCertificateServiceHandler is an implementation of the neoline.v1.ManagedCertificateService
@@ -195,8 +227,10 @@ type ManagedCertificateServiceHandler interface {
 	UpdateManagedCertificate(context.Context, *connect.Request[v1.UpdateManagedCertificateRequest]) (*connect.Response[v1.UpdateManagedCertificateResponse], error)
 	SubmitIssueOperation(context.Context, *connect.Request[v1.SubmitIssueOperationRequest]) (*connect.Response[v1.SubmitIssueOperationResponse], error)
 	SubmitRenewOperation(context.Context, *connect.Request[v1.SubmitRenewOperationRequest]) (*connect.Response[v1.SubmitRenewOperationResponse], error)
+	SubmitRevokeVersion(context.Context, *connect.Request[v1.SubmitRevokeVersionRequest]) (*connect.Response[v1.SubmitRevokeVersionResponse], error)
 	GetCertificateBundle(context.Context, *connect.Request[v1.GetCertificateBundleRequest]) (*connect.Response[v1.GetCertificateBundleResponse], error)
 	ActivatePreviousVersion(context.Context, *connect.Request[v1.ActivatePreviousVersionRequest]) (*connect.Response[v1.ActivatePreviousVersionResponse], error)
+	DeleteManagedCertificate(context.Context, *connect.Request[v1.DeleteManagedCertificateRequest]) (*connect.Response[v1.DeleteManagedCertificateResponse], error)
 }
 
 // NewManagedCertificateServiceHandler builds an HTTP handler from the service implementation. It
@@ -242,6 +276,12 @@ func NewManagedCertificateServiceHandler(svc ManagedCertificateServiceHandler, o
 		connect.WithSchema(managedCertificateServiceMethods.ByName("SubmitRenewOperation")),
 		connect.WithHandlerOptions(opts...),
 	)
+	managedCertificateServiceSubmitRevokeVersionHandler := connect.NewUnaryHandler(
+		ManagedCertificateServiceSubmitRevokeVersionProcedure,
+		svc.SubmitRevokeVersion,
+		connect.WithSchema(managedCertificateServiceMethods.ByName("SubmitRevokeVersion")),
+		connect.WithHandlerOptions(opts...),
+	)
 	managedCertificateServiceGetCertificateBundleHandler := connect.NewUnaryHandler(
 		ManagedCertificateServiceGetCertificateBundleProcedure,
 		svc.GetCertificateBundle,
@@ -252,6 +292,12 @@ func NewManagedCertificateServiceHandler(svc ManagedCertificateServiceHandler, o
 		ManagedCertificateServiceActivatePreviousVersionProcedure,
 		svc.ActivatePreviousVersion,
 		connect.WithSchema(managedCertificateServiceMethods.ByName("ActivatePreviousVersion")),
+		connect.WithHandlerOptions(opts...),
+	)
+	managedCertificateServiceDeleteManagedCertificateHandler := connect.NewUnaryHandler(
+		ManagedCertificateServiceDeleteManagedCertificateProcedure,
+		svc.DeleteManagedCertificate,
+		connect.WithSchema(managedCertificateServiceMethods.ByName("DeleteManagedCertificate")),
 		connect.WithHandlerOptions(opts...),
 	)
 	return "/neoline.v1.ManagedCertificateService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -268,10 +314,14 @@ func NewManagedCertificateServiceHandler(svc ManagedCertificateServiceHandler, o
 			managedCertificateServiceSubmitIssueOperationHandler.ServeHTTP(w, r)
 		case ManagedCertificateServiceSubmitRenewOperationProcedure:
 			managedCertificateServiceSubmitRenewOperationHandler.ServeHTTP(w, r)
+		case ManagedCertificateServiceSubmitRevokeVersionProcedure:
+			managedCertificateServiceSubmitRevokeVersionHandler.ServeHTTP(w, r)
 		case ManagedCertificateServiceGetCertificateBundleProcedure:
 			managedCertificateServiceGetCertificateBundleHandler.ServeHTTP(w, r)
 		case ManagedCertificateServiceActivatePreviousVersionProcedure:
 			managedCertificateServiceActivatePreviousVersionHandler.ServeHTTP(w, r)
+		case ManagedCertificateServiceDeleteManagedCertificateProcedure:
+			managedCertificateServiceDeleteManagedCertificateHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -305,10 +355,18 @@ func (UnimplementedManagedCertificateServiceHandler) SubmitRenewOperation(contex
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("neoline.v1.ManagedCertificateService.SubmitRenewOperation is not implemented"))
 }
 
+func (UnimplementedManagedCertificateServiceHandler) SubmitRevokeVersion(context.Context, *connect.Request[v1.SubmitRevokeVersionRequest]) (*connect.Response[v1.SubmitRevokeVersionResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("neoline.v1.ManagedCertificateService.SubmitRevokeVersion is not implemented"))
+}
+
 func (UnimplementedManagedCertificateServiceHandler) GetCertificateBundle(context.Context, *connect.Request[v1.GetCertificateBundleRequest]) (*connect.Response[v1.GetCertificateBundleResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("neoline.v1.ManagedCertificateService.GetCertificateBundle is not implemented"))
 }
 
 func (UnimplementedManagedCertificateServiceHandler) ActivatePreviousVersion(context.Context, *connect.Request[v1.ActivatePreviousVersionRequest]) (*connect.Response[v1.ActivatePreviousVersionResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("neoline.v1.ManagedCertificateService.ActivatePreviousVersion is not implemented"))
+}
+
+func (UnimplementedManagedCertificateServiceHandler) DeleteManagedCertificate(context.Context, *connect.Request[v1.DeleteManagedCertificateRequest]) (*connect.Response[v1.DeleteManagedCertificateResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("neoline.v1.ManagedCertificateService.DeleteManagedCertificate is not implemented"))
 }

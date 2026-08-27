@@ -264,7 +264,20 @@ export interface CertificateOperation {
   next_attempt_at?: string
   created_at: string
   updated_at: string
+  target_version_id?: string
+  revocation_reason?: CertificateRevocationReason
 }
+
+export type CertificateRevocationReason =
+  | "unspecified"
+  | "key_compromise"
+  | "ca_compromise"
+  | "affiliation_changed"
+  | "superseded"
+  | "cessation_of_operation"
+  | "certificate_hold"
+  | "privilege_withdrawn"
+  | "aa_compromise"
 
 export interface CertificateVersionMetadata {
   id: string
@@ -278,6 +291,7 @@ export interface CertificateVersionMetadata {
   staging_untrusted: boolean
   created_at?: string
   revoked_at?: string
+  revoke_pending?: boolean
 }
 
 export interface CertificateBundle {

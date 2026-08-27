@@ -1086,6 +1086,19 @@ Admin 可在 Web 控制台「证书 → 托管证书」或通过 `ManagedCertifi
 
 ManagedCertificate 通过 `notify_group_ids` 引用 NotifyGroup；创建/更新校验 ID；删除 NotifyGroup 仅从证书引用中移除。事件包括首次失败、24 小时持续失败提醒、恢复、7 天临期与 Expired；节流状态持久化于 `notification_state`。详见 [托管证书 — 通知](./certificate-management-managed-certificates.md#证书生命周期通知)。
 
+### 吊销与安全破坏性操作
+
+**状态：** 已实现（#25）
+
+- `SubmitRevokeVersion`：对 active/previous 异步 ACME 吊销；接受后立即 `revoke_pending` 停分发；Mongo lease + 退避重试；CA 失败保持阻止。
+- RFC 5280 reason 可选，默认 unspecified；吊销 active 不自动回滚/issue。
+- `DeleteManagedCertificate`：零 Server 分配且无运行 operation；级联本地 desired/versions/ops；不隐式 CA 吊销；保留 audit_logs。
+- Issuer/DNS 删除：被 desired/active/previous 引用时 `failed_precondition`。
+- `auto_renew_enabled=false` 仅停止 reconciler；active 仍可下载，手动 Issue/Renew 可用。
+- UI：Revoke / 激活过期 previous / 本地 Delete 使用独立确认文案。
+
+详见 [证书管理 — 停用/吊销/回滚/删除](./certificate-management-destructive-operations.md)。
+
 ## 未来增强
 
 ### 更多探测类型

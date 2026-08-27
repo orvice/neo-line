@@ -56,6 +56,12 @@ type Store interface {
 	CreateManagedCertificate(ctx context.Context, cert ManagedCertificate) (ManagedCertificate, error)
 	GetManagedCertificate(ctx context.Context, id string) (ManagedCertificate, error)
 	UpdateManagedCertificate(ctx context.Context, id string, cert ManagedCertificate) (ManagedCertificate, error)
+	DeleteManagedCertificate(ctx context.Context, id string) error
+	MarkVersionRevokePending(ctx context.Context, managedCertID, versionID string) error
+	ClearVersionRevokePending(ctx context.Context, managedCertID, versionID string) error
+	CompleteRevokeVersion(ctx context.Context, managedCertID, versionID, opID, leaseOwner string, revokedAt time.Time) error
+	CountManagedCertificatesReferencingIssuer(ctx context.Context, issuerID string) (int64, error)
+	CountManagedCertificatesReferencingDNSAccount(ctx context.Context, dnsID string) (int64, error)
 
 	CreateCertificateOperation(ctx context.Context, op CertificateOperation) (CertificateOperation, error)
 	GetCertificateOperation(ctx context.Context, id string) (CertificateOperation, error)

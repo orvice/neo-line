@@ -29,6 +29,7 @@ type Store interface {
 	CreateManagedCertificate(ctx context.Context, cert store.ManagedCertificate) (store.ManagedCertificate, error)
 	GetManagedCertificate(ctx context.Context, id string) (store.ManagedCertificate, error)
 	UpdateManagedCertificate(ctx context.Context, id string, cert store.ManagedCertificate) (store.ManagedCertificate, error)
+	DeleteManagedCertificate(ctx context.Context, id string) error
 
 	CreateCertificateOperation(ctx context.Context, op store.CertificateOperation) (store.CertificateOperation, error)
 	GetCertificateOperation(ctx context.Context, id string) (store.CertificateOperation, error)
@@ -67,6 +68,12 @@ type Store interface {
 	TryRecordExpiredNotification(ctx context.Context, certID, versionID string, now time.Time) (bool, error)
 	SetCertificateNotificationWarning(ctx context.Context, certID, warning string, at time.Time) error
 	GetNotifyGroup(ctx context.Context, id string) (store.NotifyGroup, error)
+
+	MarkVersionRevokePending(ctx context.Context, managedCertID, versionID string) error
+	ClearVersionRevokePending(ctx context.Context, managedCertID, versionID string) error
+	CompleteRevokeVersion(ctx context.Context, managedCertID, versionID, opID, leaseOwner string, revokedAt time.Time) error
+	CountManagedCertificatesReferencingIssuer(ctx context.Context, issuerID string) (int64, error)
+	CountManagedCertificatesReferencingDNSAccount(ctx context.Context, dnsID string) (int64, error)
 }
 
 // TokenVerifier validates DNS provider API tokens before persistence.
@@ -220,6 +227,9 @@ func (m *Manager) UpdateDNSProviderAccount(ctx context.Context, id string, input
 }
 
 func (m *Manager) DeleteDNSProviderAccount(ctx context.Context, id string) error {
+	if err := m.ensureDNSAccountDeletable(ctx, id); err != nil {
+		return err
+	}
 	return m.store.DeleteDNSProviderAccount(ctx, id)
 }
 

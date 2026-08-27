@@ -40,6 +40,18 @@ var ErrVersionNotFound = errors.New("certificate version not found")
 // ErrVersionRevoked is returned when activating a revoked certificate version.
 var ErrVersionRevoked = errors.New("certificate version is revoked")
 
+// ErrVersionRevokePending is returned when revoking a version already pending revoke.
+var ErrVersionRevokePending = errors.New("certificate version revoke is already pending")
+
+// ErrManagedCertificateHasServerAssignments is returned when delete is blocked by server_ids.
+var ErrManagedCertificateHasServerAssignments = errors.New("managed certificate still has server assignments")
+
+// ErrManagedCertificateOperationInFlight is returned when delete is blocked by a running operation.
+var ErrManagedCertificateOperationInFlight = errors.New("managed certificate has a running operation")
+
+// ErrCertificateResourceReferenced is returned when deleting an issuer or DNS account still referenced.
+var ErrCertificateResourceReferenced = errors.New("resource is referenced by a managed certificate")
+
 // ErrInvalidServerIDs is returned when server_ids reference missing servers.
 var ErrInvalidServerIDs = errors.New("one or more server_ids do not exist")
 
@@ -372,6 +384,202 @@ func (s *MongoStore) ActivatePreviousVersion(ctx context.Context, managedCertID,
 		return ErrActiveVersionConflict
 	}
 	return nil
+}
+
+func versionSlotField(versionID string, cert ManagedCertificate) (fieldPrefix string, err error) {
+	if cert.ActiveVersion != nil && cert.ActiveVersion.ID == versionID {
+		return "active_version", nil
+	}
+	if cert.PreviousVersion != nil && cert.PreviousVersion.ID == versionID {
+		return "previous_version", nil
+	}
+	return "", ErrVersionNotFound
+}
+
+// MarkVersionRevokePending sets revoke_pending on the target active or previous version.
+func (s *MongoStore) MarkVersionRevokePending(ctx context.Context, managedCertID, versionID string) error {
+	cert, err := s.GetManagedCertificate(ctx, managedCertID)
+	if err != nil {
+		return err
+	}
+	slot, err := versionSlotField(versionID, cert)
+	if err != nil {
+		return err
+	}
+	v := cert.ActiveVersion
+	if slot == "previous_version" {
+		v = cert.PreviousVersion
+	}
+	if v.RevokedAt != nil {
+		return ErrVersionRevoked
+	}
+	if v.RevokePending {
+		return ErrVersionRevokePending
+	}
+	now := time.Now().UTC()
+	res, err := s.managedCertificates().UpdateOne(ctx, bson.M{
+		"id":                 managedCertID,
+		slot + ".id":         versionID,
+		slot + ".revoked_at": bson.M{"$exists": false},
+	}, bson.M{
+		"$set": bson.M{
+			slot + ".revoke_pending": true,
+			"updated_at":             now,
+		},
+	})
+	if err != nil {
+		return err
+	}
+	if res.MatchedCount == 0 {
+		return ErrActiveVersionConflict
+	}
+	return nil
+}
+
+// ClearVersionRevokePending clears revoke_pending when operation creation fails after marking.
+func (s *MongoStore) ClearVersionRevokePending(ctx context.Context, managedCertID, versionID string) error {
+	cert, err := s.GetManagedCertificate(ctx, managedCertID)
+	if err != nil {
+		return err
+	}
+	slot, err := versionSlotField(versionID, cert)
+	if err != nil {
+		return err
+	}
+	_, err = s.managedCertificates().UpdateOne(ctx, bson.M{
+		"id":         managedCertID,
+		slot + ".id": versionID,
+	}, bson.M{
+		"$set": bson.M{
+			slot + ".revoke_pending": false,
+			"updated_at":             time.Now().UTC(),
+		},
+	})
+	return err
+}
+
+// CompleteRevokeVersion marks a version revoked and succeeds the Revoke operation.
+func (s *MongoStore) CompleteRevokeVersion(ctx context.Context, managedCertID, versionID, opID, leaseOwner string, revokedAt time.Time) error {
+	now := time.Now().UTC()
+	held, err := s.certificateOperations().CountDocuments(ctx, bson.M{
+		"id":          opID,
+		"status":      CertOpStatusRunning,
+		"lease_owner": leaseOwner,
+	})
+	if err != nil {
+		return err
+	}
+	if held == 0 {
+		return ErrCertificateOperationConflict
+	}
+	cert, err := s.GetManagedCertificate(ctx, managedCertID)
+	if err != nil {
+		return err
+	}
+	slot, err := versionSlotField(versionID, cert)
+	if err != nil {
+		return err
+	}
+	res, err := s.managedCertificates().UpdateOne(ctx, bson.M{
+		"id":         managedCertID,
+		slot + ".id": versionID,
+	}, bson.M{
+		"$set": bson.M{
+			slot + ".revoked_at":     revokedAt,
+			slot + ".revoke_pending": false,
+			"updated_at":             now,
+		},
+	})
+	if err != nil {
+		return err
+	}
+	if res.MatchedCount == 0 {
+		return ErrActiveVersionConflict
+	}
+	opRes, err := s.certificateOperations().UpdateOne(ctx, bson.M{
+		"id":          opID,
+		"status":      CertOpStatusRunning,
+		"lease_owner": leaseOwner,
+	}, bson.M{
+		"$set": bson.M{
+			"status":               CertOpStatusSucceeded,
+			"finished_at":          now,
+			"updated_at":           now,
+			"error_summary":        "",
+			"next_attempt_at":      nil,
+			"consecutive_failures": uint32(0),
+			"lease_owner":          "",
+			"lease_expires_at":     nil,
+		},
+	})
+	if err != nil {
+		return err
+	}
+	if opRes.MatchedCount == 0 {
+		return ErrCertificateOperationConflict
+	}
+	return nil
+}
+
+// DeleteManagedCertificate removes local certificate state and cascades operations.
+func (s *MongoStore) DeleteManagedCertificate(ctx context.Context, id string) error {
+	cert, err := s.GetManagedCertificate(ctx, id)
+	if err != nil {
+		return err
+	}
+	if len(cert.ServerIDs) > 0 {
+		return ErrManagedCertificateHasServerAssignments
+	}
+	running, err := s.HasRunningCertificateOperation(ctx, id)
+	if err != nil {
+		return err
+	}
+	if running {
+		return ErrManagedCertificateOperationInFlight
+	}
+	if _, err := s.certificateOperations().DeleteMany(ctx, bson.M{"managed_certificate_id": id}); err != nil {
+		return err
+	}
+	res, err := s.managedCertificates().DeleteOne(ctx, bson.M{"id": id})
+	if err != nil {
+		return err
+	}
+	if res.DeletedCount == 0 {
+		return mongo.ErrNoDocuments
+	}
+	return nil
+}
+
+func managedCertReferencesIssuerFilter(issuerID string) bson.M {
+	return bson.M{
+		"$or": []bson.M{
+			{"certificate_issuer_id": issuerID},
+			{"active_version.config_snapshot.certificate_issuer_id": issuerID},
+			{"active_version.certificate_issuer_id": issuerID},
+			{"previous_version.config_snapshot.certificate_issuer_id": issuerID},
+			{"previous_version.certificate_issuer_id": issuerID},
+		},
+	}
+}
+
+func managedCertReferencesDNSFilter(dnsID string) bson.M {
+	return bson.M{
+		"$or": []bson.M{
+			{"dns_provider_account_id": dnsID},
+			{"active_version.config_snapshot.dns_provider_account_id": dnsID},
+			{"previous_version.config_snapshot.dns_provider_account_id": dnsID},
+		},
+	}
+}
+
+// CountManagedCertificatesReferencingIssuer counts desired/active/previous references.
+func (s *MongoStore) CountManagedCertificatesReferencingIssuer(ctx context.Context, issuerID string) (int64, error) {
+	return s.managedCertificates().CountDocuments(ctx, managedCertReferencesIssuerFilter(issuerID))
+}
+
+// CountManagedCertificatesReferencingDNSAccount counts desired/active/previous references.
+func (s *MongoStore) CountManagedCertificatesReferencingDNSAccount(ctx context.Context, dnsID string) (int64, error) {
+	return s.managedCertificates().CountDocuments(ctx, managedCertReferencesDNSFilter(dnsID))
 }
 
 // validateServerIDs ensures every ID exists in servers. An empty slice is allowed.

@@ -29,6 +29,8 @@ type PublicOperation struct {
 	Status               string
 	AttemptCount         uint32
 	ConfigSnapshot       store.IssueConfigSnapshot
+	TargetVersionID      string
+	RevokeReason         uint32
 	ErrorSummary         string
 	Warning              string
 	StartedAt            *time.Time
@@ -72,6 +74,8 @@ func publicOperationFromStore(op store.CertificateOperation) PublicOperation {
 		Status:               op.Status,
 		AttemptCount:         op.AttemptCount,
 		ConfigSnapshot:       op.ConfigSnapshot,
+		TargetVersionID:      op.TargetVersionID,
+		RevokeReason:         op.RevokeReason,
 		ErrorSummary:         op.ErrorSummary,
 		Warning:              op.Warning,
 		StartedAt:            op.StartedAt,
@@ -97,6 +101,7 @@ func publicVersionFromStore(v *store.CertificateVersion) *PublicCertificateVersi
 		KeyType:          v.KeyType,
 		StagingUntrusted: v.StagingUntrusted,
 		CreatedAt:        v.CreatedAt.Unix(),
+		RevokePending:    v.RevokePending,
 	}
 	if v.RevokedAt != nil {
 		out.RevokedAt = v.RevokedAt.Unix()
@@ -221,11 +226,17 @@ func (m *Manager) UpdateManagedCertificate(ctx context.Context, id string, input
 		return PublicManagedCertificate{}, err
 	}
 	renewRunning := err == nil
-	if (issueRunning || renewRunning) && issueFieldsChanged(existing, updated) {
+	runningRevoke, err := m.store.FindRunningCertificateOperation(ctx, id, store.CertOpTypeRevoke)
+	if err != nil && !store.IsNotFound(err) {
+		return PublicManagedCertificate{}, err
+	}
+	revokeRunning := err == nil
+	if (issueRunning || renewRunning || revokeRunning) && issueFieldsChanged(existing, updated) {
 		return PublicManagedCertificate{}, ErrIssueFieldsLocked
 	}
 	_ = runningIssue
 	_ = runningRenew
+	_ = runningRevoke
 
 	updated.ActiveVersion = existing.ActiveVersion
 	updated.PreviousVersion = existing.PreviousVersion

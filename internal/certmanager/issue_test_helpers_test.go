@@ -21,7 +21,8 @@ import (
 )
 
 type fakeIssueACME struct {
-	issueFn func(ctx context.Context, req IssueRequest) (IssueResult, error)
+	issueFn  func(ctx context.Context, req IssueRequest) (IssueResult, error)
+	revokeFn func(ctx context.Context, issuer store.CertificateIssuer, leaf []byte, reason *uint) error
 }
 
 func (f *fakeIssueACME) FetchDirectory(context.Context, string) (DirectoryMeta, error) {
@@ -37,6 +38,13 @@ func (f *fakeIssueACME) IssueCertificate(ctx context.Context, req IssueRequest) 
 		return f.issueFn(ctx, req)
 	}
 	return IssueResult{}, nil
+}
+
+func (f *fakeIssueACME) RevokeCertificate(ctx context.Context, issuer store.CertificateIssuer, leaf []byte, reason *uint) error {
+	if f.revokeFn != nil {
+		return f.revokeFn(ctx, issuer, leaf, reason)
+	}
+	return nil
 }
 
 type dnsFactoryFunc func(store.DNSProviderAccount) (challenge.Provider, error)

@@ -75,6 +75,8 @@
 - Admin 可下载 **active** 或 **previous** bundle（`GetCertificateBundle.version_slot`），响应含准确 version ID 且 `Cache-Control: no-store`。
 - Admin 可将任何 **未吊销** previous 重新激活（允许过期版本；UI 需显著警告并确认）；回滚后 desired config **不变**。
 - 已吊销 previous（`revoked_at` 已设置）永远不能重新激活。
+- Admin 可 **`SubmitRevokeVersion`** 吊销 active 或 previous（详见 [停用/吊销/回滚/删除](./certificate-management-destructive-operations.md)）。
+- Admin 可 **`DeleteManagedCertificate`** 删除无 Server 分配且无运行 operation 的证书（本地级联，不隐式吊销）。
 - `active_validity` 根据当前时间计算 Missing / Valid / RenewalDue / Expired / Revoked，与 operation 状态、auto-renew 正交。
 
 ### 自动续期（#22）

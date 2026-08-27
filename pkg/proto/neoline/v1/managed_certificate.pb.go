@@ -238,6 +238,74 @@ func (CertificateOperationStatus) EnumDescriptor() ([]byte, []int) {
 	return file_neoline_v1_managed_certificate_proto_rawDescGZIP(), []int{3}
 }
 
+// CertificateRevocationReason maps to RFC 5280 CRLReason codes for ACME revoke.
+type CertificateRevocationReason int32
+
+const (
+	CertificateRevocationReason_CERTIFICATE_REVOCATION_REASON_UNSPECIFIED            CertificateRevocationReason = 0
+	CertificateRevocationReason_CERTIFICATE_REVOCATION_REASON_KEY_COMPROMISE         CertificateRevocationReason = 1
+	CertificateRevocationReason_CERTIFICATE_REVOCATION_REASON_CA_COMPROMISE          CertificateRevocationReason = 2
+	CertificateRevocationReason_CERTIFICATE_REVOCATION_REASON_AFFILIATION_CHANGED    CertificateRevocationReason = 3
+	CertificateRevocationReason_CERTIFICATE_REVOCATION_REASON_SUPERSEDED             CertificateRevocationReason = 4
+	CertificateRevocationReason_CERTIFICATE_REVOCATION_REASON_CESSATION_OF_OPERATION CertificateRevocationReason = 5
+	CertificateRevocationReason_CERTIFICATE_REVOCATION_REASON_CERTIFICATE_HOLD       CertificateRevocationReason = 6
+	CertificateRevocationReason_CERTIFICATE_REVOCATION_REASON_PRIVILEGE_WITHDRAWN    CertificateRevocationReason = 9
+	CertificateRevocationReason_CERTIFICATE_REVOCATION_REASON_AA_COMPROMISE          CertificateRevocationReason = 10
+)
+
+// Enum value maps for CertificateRevocationReason.
+var (
+	CertificateRevocationReason_name = map[int32]string{
+		0:  "CERTIFICATE_REVOCATION_REASON_UNSPECIFIED",
+		1:  "CERTIFICATE_REVOCATION_REASON_KEY_COMPROMISE",
+		2:  "CERTIFICATE_REVOCATION_REASON_CA_COMPROMISE",
+		3:  "CERTIFICATE_REVOCATION_REASON_AFFILIATION_CHANGED",
+		4:  "CERTIFICATE_REVOCATION_REASON_SUPERSEDED",
+		5:  "CERTIFICATE_REVOCATION_REASON_CESSATION_OF_OPERATION",
+		6:  "CERTIFICATE_REVOCATION_REASON_CERTIFICATE_HOLD",
+		9:  "CERTIFICATE_REVOCATION_REASON_PRIVILEGE_WITHDRAWN",
+		10: "CERTIFICATE_REVOCATION_REASON_AA_COMPROMISE",
+	}
+	CertificateRevocationReason_value = map[string]int32{
+		"CERTIFICATE_REVOCATION_REASON_UNSPECIFIED":            0,
+		"CERTIFICATE_REVOCATION_REASON_KEY_COMPROMISE":         1,
+		"CERTIFICATE_REVOCATION_REASON_CA_COMPROMISE":          2,
+		"CERTIFICATE_REVOCATION_REASON_AFFILIATION_CHANGED":    3,
+		"CERTIFICATE_REVOCATION_REASON_SUPERSEDED":             4,
+		"CERTIFICATE_REVOCATION_REASON_CESSATION_OF_OPERATION": 5,
+		"CERTIFICATE_REVOCATION_REASON_CERTIFICATE_HOLD":       6,
+		"CERTIFICATE_REVOCATION_REASON_PRIVILEGE_WITHDRAWN":    9,
+		"CERTIFICATE_REVOCATION_REASON_AA_COMPROMISE":          10,
+	}
+)
+
+func (x CertificateRevocationReason) Enum() *CertificateRevocationReason {
+	p := new(CertificateRevocationReason)
+	*p = x
+	return p
+}
+
+func (x CertificateRevocationReason) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (CertificateRevocationReason) Descriptor() protoreflect.EnumDescriptor {
+	return file_neoline_v1_managed_certificate_proto_enumTypes[4].Descriptor()
+}
+
+func (CertificateRevocationReason) Type() protoreflect.EnumType {
+	return &file_neoline_v1_managed_certificate_proto_enumTypes[4]
+}
+
+func (x CertificateRevocationReason) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use CertificateRevocationReason.Descriptor instead.
+func (CertificateRevocationReason) EnumDescriptor() ([]byte, []int) {
+	return file_neoline_v1_managed_certificate_proto_rawDescGZIP(), []int{4}
+}
+
 // CertificateVersionSlot selects which stored version to download.
 type CertificateVersionSlot int32
 
@@ -272,11 +340,11 @@ func (x CertificateVersionSlot) String() string {
 }
 
 func (CertificateVersionSlot) Descriptor() protoreflect.EnumDescriptor {
-	return file_neoline_v1_managed_certificate_proto_enumTypes[4].Descriptor()
+	return file_neoline_v1_managed_certificate_proto_enumTypes[5].Descriptor()
 }
 
 func (CertificateVersionSlot) Type() protoreflect.EnumType {
-	return &file_neoline_v1_managed_certificate_proto_enumTypes[4]
+	return &file_neoline_v1_managed_certificate_proto_enumTypes[5]
 }
 
 func (x CertificateVersionSlot) Number() protoreflect.EnumNumber {
@@ -285,7 +353,7 @@ func (x CertificateVersionSlot) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use CertificateVersionSlot.Descriptor instead.
 func (CertificateVersionSlot) EnumDescriptor() ([]byte, []int) {
-	return file_neoline_v1_managed_certificate_proto_rawDescGZIP(), []int{4}
+	return file_neoline_v1_managed_certificate_proto_rawDescGZIP(), []int{5}
 }
 
 // IssueConfigSnapshot captures issuance parameters frozen at operation creation.
@@ -372,8 +440,11 @@ type CertificateOperation struct {
 	NextAttemptAt        *timestamppb.Timestamp     `protobuf:"bytes,11,opt,name=next_attempt_at,json=nextAttemptAt,proto3" json:"next_attempt_at,omitempty"`
 	CreatedAt            *timestamppb.Timestamp     `protobuf:"bytes,12,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt            *timestamppb.Timestamp     `protobuf:"bytes,13,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	unknownFields        protoimpl.UnknownFields
-	sizeCache            protoimpl.SizeCache
+	// Revoke operations only: target CertificateVersion id.
+	TargetVersionId  string                      `protobuf:"bytes,14,opt,name=target_version_id,json=targetVersionId,proto3" json:"target_version_id,omitempty"`
+	RevocationReason CertificateRevocationReason `protobuf:"varint,15,opt,name=revocation_reason,json=revocationReason,proto3,enum=neoline.v1.CertificateRevocationReason" json:"revocation_reason,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *CertificateOperation) Reset() {
@@ -497,6 +568,20 @@ func (x *CertificateOperation) GetUpdatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *CertificateOperation) GetTargetVersionId() string {
+	if x != nil {
+		return x.TargetVersionId
+	}
+	return ""
+}
+
+func (x *CertificateOperation) GetRevocationReason() CertificateRevocationReason {
+	if x != nil {
+		return x.RevocationReason
+	}
+	return CertificateRevocationReason_CERTIFICATE_REVOCATION_REASON_UNSPECIFIED
+}
+
 // CertificateVersionMetadata exposes active/previous version facts without PEM secrets.
 type CertificateVersionMetadata struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
@@ -511,8 +596,10 @@ type CertificateVersionMetadata struct {
 	StagingUntrusted bool                   `protobuf:"varint,9,opt,name=staging_untrusted,json=stagingUntrusted,proto3" json:"staging_untrusted,omitempty"`
 	CreatedAt        *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	RevokedAt        *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=revoked_at,json=revokedAt,proto3" json:"revoked_at,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	// True while a Revoke operation is pending or running for this version.
+	RevokePending bool `protobuf:"varint,12,opt,name=revoke_pending,json=revokePending,proto3" json:"revoke_pending,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *CertificateVersionMetadata) Reset() {
@@ -620,6 +707,13 @@ func (x *CertificateVersionMetadata) GetRevokedAt() *timestamppb.Timestamp {
 		return x.RevokedAt
 	}
 	return nil
+}
+
+func (x *CertificateVersionMetadata) GetRevokePending() bool {
+	if x != nil {
+		return x.RevokePending
+	}
+	return false
 }
 
 type CertificateBundle struct {
@@ -1115,6 +1209,191 @@ func (x *SubmitRenewOperationResponse) GetOperation() *CertificateOperation {
 	return nil
 }
 
+type SubmitRevokeVersionRequest struct {
+	state                protoimpl.MessageState `protogen:"open.v1"`
+	ManagedCertificateId string                 `protobuf:"bytes,1,opt,name=managed_certificate_id,json=managedCertificateId,proto3" json:"managed_certificate_id,omitempty"`
+	VersionId            string                 `protobuf:"bytes,2,opt,name=version_id,json=versionId,proto3" json:"version_id,omitempty"`
+	// Defaults to unspecified (RFC 5280 reason 0) when omitted.
+	RevocationReason CertificateRevocationReason `protobuf:"varint,3,opt,name=revocation_reason,json=revocationReason,proto3,enum=neoline.v1.CertificateRevocationReason" json:"revocation_reason,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *SubmitRevokeVersionRequest) Reset() {
+	*x = SubmitRevokeVersionRequest{}
+	mi := &file_neoline_v1_managed_certificate_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SubmitRevokeVersionRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SubmitRevokeVersionRequest) ProtoMessage() {}
+
+func (x *SubmitRevokeVersionRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_neoline_v1_managed_certificate_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SubmitRevokeVersionRequest.ProtoReflect.Descriptor instead.
+func (*SubmitRevokeVersionRequest) Descriptor() ([]byte, []int) {
+	return file_neoline_v1_managed_certificate_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *SubmitRevokeVersionRequest) GetManagedCertificateId() string {
+	if x != nil {
+		return x.ManagedCertificateId
+	}
+	return ""
+}
+
+func (x *SubmitRevokeVersionRequest) GetVersionId() string {
+	if x != nil {
+		return x.VersionId
+	}
+	return ""
+}
+
+func (x *SubmitRevokeVersionRequest) GetRevocationReason() CertificateRevocationReason {
+	if x != nil {
+		return x.RevocationReason
+	}
+	return CertificateRevocationReason_CERTIFICATE_REVOCATION_REASON_UNSPECIFIED
+}
+
+type SubmitRevokeVersionResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Operation     *CertificateOperation  `protobuf:"bytes,1,opt,name=operation,proto3" json:"operation,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SubmitRevokeVersionResponse) Reset() {
+	*x = SubmitRevokeVersionResponse{}
+	mi := &file_neoline_v1_managed_certificate_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SubmitRevokeVersionResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SubmitRevokeVersionResponse) ProtoMessage() {}
+
+func (x *SubmitRevokeVersionResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_neoline_v1_managed_certificate_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SubmitRevokeVersionResponse.ProtoReflect.Descriptor instead.
+func (*SubmitRevokeVersionResponse) Descriptor() ([]byte, []int) {
+	return file_neoline_v1_managed_certificate_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *SubmitRevokeVersionResponse) GetOperation() *CertificateOperation {
+	if x != nil {
+		return x.Operation
+	}
+	return nil
+}
+
+type DeleteManagedCertificateRequest struct {
+	state                protoimpl.MessageState `protogen:"open.v1"`
+	ManagedCertificateId string                 `protobuf:"bytes,1,opt,name=managed_certificate_id,json=managedCertificateId,proto3" json:"managed_certificate_id,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
+}
+
+func (x *DeleteManagedCertificateRequest) Reset() {
+	*x = DeleteManagedCertificateRequest{}
+	mi := &file_neoline_v1_managed_certificate_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteManagedCertificateRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteManagedCertificateRequest) ProtoMessage() {}
+
+func (x *DeleteManagedCertificateRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_neoline_v1_managed_certificate_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteManagedCertificateRequest.ProtoReflect.Descriptor instead.
+func (*DeleteManagedCertificateRequest) Descriptor() ([]byte, []int) {
+	return file_neoline_v1_managed_certificate_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *DeleteManagedCertificateRequest) GetManagedCertificateId() string {
+	if x != nil {
+		return x.ManagedCertificateId
+	}
+	return ""
+}
+
+type DeleteManagedCertificateResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteManagedCertificateResponse) Reset() {
+	*x = DeleteManagedCertificateResponse{}
+	mi := &file_neoline_v1_managed_certificate_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteManagedCertificateResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteManagedCertificateResponse) ProtoMessage() {}
+
+func (x *DeleteManagedCertificateResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_neoline_v1_managed_certificate_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteManagedCertificateResponse.ProtoReflect.Descriptor instead.
+func (*DeleteManagedCertificateResponse) Descriptor() ([]byte, []int) {
+	return file_neoline_v1_managed_certificate_proto_rawDescGZIP(), []int{15}
+}
+
 // ManagedCertificate holds desired config, assignments, and version container.
 // Secrets are never returned on read.
 type ManagedCertificate struct {
@@ -1153,7 +1432,7 @@ type ManagedCertificate struct {
 
 func (x *ManagedCertificate) Reset() {
 	*x = ManagedCertificate{}
-	mi := &file_neoline_v1_managed_certificate_proto_msgTypes[12]
+	mi := &file_neoline_v1_managed_certificate_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1165,7 +1444,7 @@ func (x *ManagedCertificate) String() string {
 func (*ManagedCertificate) ProtoMessage() {}
 
 func (x *ManagedCertificate) ProtoReflect() protoreflect.Message {
-	mi := &file_neoline_v1_managed_certificate_proto_msgTypes[12]
+	mi := &file_neoline_v1_managed_certificate_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1178,7 +1457,7 @@ func (x *ManagedCertificate) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ManagedCertificate.ProtoReflect.Descriptor instead.
 func (*ManagedCertificate) Descriptor() ([]byte, []int) {
-	return file_neoline_v1_managed_certificate_proto_rawDescGZIP(), []int{12}
+	return file_neoline_v1_managed_certificate_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *ManagedCertificate) GetId() string {
@@ -1345,7 +1624,7 @@ type ListManagedCertificatesRequest struct {
 
 func (x *ListManagedCertificatesRequest) Reset() {
 	*x = ListManagedCertificatesRequest{}
-	mi := &file_neoline_v1_managed_certificate_proto_msgTypes[13]
+	mi := &file_neoline_v1_managed_certificate_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1357,7 +1636,7 @@ func (x *ListManagedCertificatesRequest) String() string {
 func (*ListManagedCertificatesRequest) ProtoMessage() {}
 
 func (x *ListManagedCertificatesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_neoline_v1_managed_certificate_proto_msgTypes[13]
+	mi := &file_neoline_v1_managed_certificate_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1370,7 +1649,7 @@ func (x *ListManagedCertificatesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListManagedCertificatesRequest.ProtoReflect.Descriptor instead.
 func (*ListManagedCertificatesRequest) Descriptor() ([]byte, []int) {
-	return file_neoline_v1_managed_certificate_proto_rawDescGZIP(), []int{13}
+	return file_neoline_v1_managed_certificate_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *ListManagedCertificatesRequest) GetPageSize() uint32 {
@@ -1397,7 +1676,7 @@ type ListManagedCertificatesResponse struct {
 
 func (x *ListManagedCertificatesResponse) Reset() {
 	*x = ListManagedCertificatesResponse{}
-	mi := &file_neoline_v1_managed_certificate_proto_msgTypes[14]
+	mi := &file_neoline_v1_managed_certificate_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1409,7 +1688,7 @@ func (x *ListManagedCertificatesResponse) String() string {
 func (*ListManagedCertificatesResponse) ProtoMessage() {}
 
 func (x *ListManagedCertificatesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_neoline_v1_managed_certificate_proto_msgTypes[14]
+	mi := &file_neoline_v1_managed_certificate_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1422,7 +1701,7 @@ func (x *ListManagedCertificatesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListManagedCertificatesResponse.ProtoReflect.Descriptor instead.
 func (*ListManagedCertificatesResponse) Descriptor() ([]byte, []int) {
-	return file_neoline_v1_managed_certificate_proto_rawDescGZIP(), []int{14}
+	return file_neoline_v1_managed_certificate_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *ListManagedCertificatesResponse) GetCertificates() []*ManagedCertificate {
@@ -1448,7 +1727,7 @@ type CreateManagedCertificateRequest struct {
 
 func (x *CreateManagedCertificateRequest) Reset() {
 	*x = CreateManagedCertificateRequest{}
-	mi := &file_neoline_v1_managed_certificate_proto_msgTypes[15]
+	mi := &file_neoline_v1_managed_certificate_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1460,7 +1739,7 @@ func (x *CreateManagedCertificateRequest) String() string {
 func (*CreateManagedCertificateRequest) ProtoMessage() {}
 
 func (x *CreateManagedCertificateRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_neoline_v1_managed_certificate_proto_msgTypes[15]
+	mi := &file_neoline_v1_managed_certificate_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1473,7 +1752,7 @@ func (x *CreateManagedCertificateRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateManagedCertificateRequest.ProtoReflect.Descriptor instead.
 func (*CreateManagedCertificateRequest) Descriptor() ([]byte, []int) {
-	return file_neoline_v1_managed_certificate_proto_rawDescGZIP(), []int{15}
+	return file_neoline_v1_managed_certificate_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *CreateManagedCertificateRequest) GetCertificate() *ManagedCertificate {
@@ -1492,7 +1771,7 @@ type CreateManagedCertificateResponse struct {
 
 func (x *CreateManagedCertificateResponse) Reset() {
 	*x = CreateManagedCertificateResponse{}
-	mi := &file_neoline_v1_managed_certificate_proto_msgTypes[16]
+	mi := &file_neoline_v1_managed_certificate_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1504,7 +1783,7 @@ func (x *CreateManagedCertificateResponse) String() string {
 func (*CreateManagedCertificateResponse) ProtoMessage() {}
 
 func (x *CreateManagedCertificateResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_neoline_v1_managed_certificate_proto_msgTypes[16]
+	mi := &file_neoline_v1_managed_certificate_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1517,7 +1796,7 @@ func (x *CreateManagedCertificateResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateManagedCertificateResponse.ProtoReflect.Descriptor instead.
 func (*CreateManagedCertificateResponse) Descriptor() ([]byte, []int) {
-	return file_neoline_v1_managed_certificate_proto_rawDescGZIP(), []int{16}
+	return file_neoline_v1_managed_certificate_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *CreateManagedCertificateResponse) GetCertificate() *ManagedCertificate {
@@ -1536,7 +1815,7 @@ type GetManagedCertificateRequest struct {
 
 func (x *GetManagedCertificateRequest) Reset() {
 	*x = GetManagedCertificateRequest{}
-	mi := &file_neoline_v1_managed_certificate_proto_msgTypes[17]
+	mi := &file_neoline_v1_managed_certificate_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1548,7 +1827,7 @@ func (x *GetManagedCertificateRequest) String() string {
 func (*GetManagedCertificateRequest) ProtoMessage() {}
 
 func (x *GetManagedCertificateRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_neoline_v1_managed_certificate_proto_msgTypes[17]
+	mi := &file_neoline_v1_managed_certificate_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1561,7 +1840,7 @@ func (x *GetManagedCertificateRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetManagedCertificateRequest.ProtoReflect.Descriptor instead.
 func (*GetManagedCertificateRequest) Descriptor() ([]byte, []int) {
-	return file_neoline_v1_managed_certificate_proto_rawDescGZIP(), []int{17}
+	return file_neoline_v1_managed_certificate_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *GetManagedCertificateRequest) GetManagedCertificateId() string {
@@ -1580,7 +1859,7 @@ type GetManagedCertificateResponse struct {
 
 func (x *GetManagedCertificateResponse) Reset() {
 	*x = GetManagedCertificateResponse{}
-	mi := &file_neoline_v1_managed_certificate_proto_msgTypes[18]
+	mi := &file_neoline_v1_managed_certificate_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1592,7 +1871,7 @@ func (x *GetManagedCertificateResponse) String() string {
 func (*GetManagedCertificateResponse) ProtoMessage() {}
 
 func (x *GetManagedCertificateResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_neoline_v1_managed_certificate_proto_msgTypes[18]
+	mi := &file_neoline_v1_managed_certificate_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1605,7 +1884,7 @@ func (x *GetManagedCertificateResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetManagedCertificateResponse.ProtoReflect.Descriptor instead.
 func (*GetManagedCertificateResponse) Descriptor() ([]byte, []int) {
-	return file_neoline_v1_managed_certificate_proto_rawDescGZIP(), []int{18}
+	return file_neoline_v1_managed_certificate_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *GetManagedCertificateResponse) GetCertificate() *ManagedCertificate {
@@ -1625,7 +1904,7 @@ type UpdateManagedCertificateRequest struct {
 
 func (x *UpdateManagedCertificateRequest) Reset() {
 	*x = UpdateManagedCertificateRequest{}
-	mi := &file_neoline_v1_managed_certificate_proto_msgTypes[19]
+	mi := &file_neoline_v1_managed_certificate_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1637,7 +1916,7 @@ func (x *UpdateManagedCertificateRequest) String() string {
 func (*UpdateManagedCertificateRequest) ProtoMessage() {}
 
 func (x *UpdateManagedCertificateRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_neoline_v1_managed_certificate_proto_msgTypes[19]
+	mi := &file_neoline_v1_managed_certificate_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1650,7 +1929,7 @@ func (x *UpdateManagedCertificateRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateManagedCertificateRequest.ProtoReflect.Descriptor instead.
 func (*UpdateManagedCertificateRequest) Descriptor() ([]byte, []int) {
-	return file_neoline_v1_managed_certificate_proto_rawDescGZIP(), []int{19}
+	return file_neoline_v1_managed_certificate_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *UpdateManagedCertificateRequest) GetManagedCertificateId() string {
@@ -1676,7 +1955,7 @@ type UpdateManagedCertificateResponse struct {
 
 func (x *UpdateManagedCertificateResponse) Reset() {
 	*x = UpdateManagedCertificateResponse{}
-	mi := &file_neoline_v1_managed_certificate_proto_msgTypes[20]
+	mi := &file_neoline_v1_managed_certificate_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1688,7 +1967,7 @@ func (x *UpdateManagedCertificateResponse) String() string {
 func (*UpdateManagedCertificateResponse) ProtoMessage() {}
 
 func (x *UpdateManagedCertificateResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_neoline_v1_managed_certificate_proto_msgTypes[20]
+	mi := &file_neoline_v1_managed_certificate_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1701,7 +1980,7 @@ func (x *UpdateManagedCertificateResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateManagedCertificateResponse.ProtoReflect.Descriptor instead.
 func (*UpdateManagedCertificateResponse) Descriptor() ([]byte, []int) {
-	return file_neoline_v1_managed_certificate_proto_rawDescGZIP(), []int{20}
+	return file_neoline_v1_managed_certificate_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *UpdateManagedCertificateResponse) GetCertificate() *ManagedCertificate {
@@ -1721,7 +2000,7 @@ const file_neoline_v1_managed_certificate_proto_rawDesc = "" +
 	"\adomains\x18\x01 \x03(\tR\adomains\x122\n" +
 	"\x15certificate_issuer_id\x18\x02 \x01(\tR\x13certificateIssuerId\x125\n" +
 	"\x17dns_provider_account_id\x18\x03 \x01(\tR\x14dnsProviderAccountId\x129\n" +
-	"\bkey_type\x18\x04 \x01(\x0e2\x1e.neoline.v1.CertificateKeyTypeR\akeyType\"\xb6\x05\n" +
+	"\bkey_type\x18\x04 \x01(\x0e2\x1e.neoline.v1.CertificateKeyTypeR\akeyType\"\xb8\x06\n" +
 	"\x14CertificateOperation\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x124\n" +
 	"\x16managed_certificate_id\x18\x02 \x01(\tR\x14managedCertificateId\x128\n" +
@@ -1740,7 +2019,9 @@ const file_neoline_v1_managed_certificate_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\xc6\x04\n" +
+	"updated_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12*\n" +
+	"\x11target_version_id\x18\x0e \x01(\tR\x0ftargetVersionId\x12T\n" +
+	"\x11revocation_reason\x18\x0f \x01(\x0e2'.neoline.v1.CertificateRevocationReasonR\x10revocationReason\"\xed\x04\n" +
 	"\x1aCertificateVersionMetadata\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12H\n" +
 	"\x0fconfig_snapshot\x18\x02 \x01(\v2\x1f.neoline.v1.IssueConfigSnapshotR\x0econfigSnapshot\x12)\n" +
@@ -1756,7 +2037,8 @@ const file_neoline_v1_managed_certificate_proto_rawDesc = "" +
 	"created_at\x18\n" +
 	" \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"revoked_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\trevokedAt\"\x93\x04\n" +
+	"revoked_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\trevokedAt\x12%\n" +
+	"\x0erevoke_pending\x18\f \x01(\bR\rrevokePending\"\x93\x04\n" +
 	"\x11CertificateBundle\x124\n" +
 	"\x16managed_certificate_id\x18\x01 \x01(\tR\x14managedCertificateId\x12\x1d\n" +
 	"\n" +
@@ -1790,7 +2072,17 @@ const file_neoline_v1_managed_certificate_proto_rawDesc = "" +
 	"\x1bSubmitRenewOperationRequest\x124\n" +
 	"\x16managed_certificate_id\x18\x01 \x01(\tR\x14managedCertificateId\"^\n" +
 	"\x1cSubmitRenewOperationResponse\x12>\n" +
-	"\toperation\x18\x01 \x01(\v2 .neoline.v1.CertificateOperationR\toperation\"\xf8\t\n" +
+	"\toperation\x18\x01 \x01(\v2 .neoline.v1.CertificateOperationR\toperation\"\xc7\x01\n" +
+	"\x1aSubmitRevokeVersionRequest\x124\n" +
+	"\x16managed_certificate_id\x18\x01 \x01(\tR\x14managedCertificateId\x12\x1d\n" +
+	"\n" +
+	"version_id\x18\x02 \x01(\tR\tversionId\x12T\n" +
+	"\x11revocation_reason\x18\x03 \x01(\x0e2'.neoline.v1.CertificateRevocationReasonR\x10revocationReason\"]\n" +
+	"\x1bSubmitRevokeVersionResponse\x12>\n" +
+	"\toperation\x18\x01 \x01(\v2 .neoline.v1.CertificateOperationR\toperation\"W\n" +
+	"\x1fDeleteManagedCertificateRequest\x124\n" +
+	"\x16managed_certificate_id\x18\x01 \x01(\tR\x14managedCertificateId\"\"\n" +
+	" DeleteManagedCertificateResponse\"\xf8\t\n" +
 	"\x12ManagedCertificate\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x18\n" +
@@ -1860,20 +2152,33 @@ const file_neoline_v1_managed_certificate_proto_rawDesc = "" +
 	"$CERTIFICATE_OPERATION_STATUS_PENDING\x10\x01\x12(\n" +
 	"$CERTIFICATE_OPERATION_STATUS_RUNNING\x10\x02\x12*\n" +
 	"&CERTIFICATE_OPERATION_STATUS_SUCCEEDED\x10\x03\x12'\n" +
-	"#CERTIFICATE_OPERATION_STATUS_FAILED\x10\x04*\x8e\x01\n" +
+	"#CERTIFICATE_OPERATION_STATUS_FAILED\x10\x04*\xea\x03\n" +
+	"\x1bCertificateRevocationReason\x12-\n" +
+	")CERTIFICATE_REVOCATION_REASON_UNSPECIFIED\x10\x00\x120\n" +
+	",CERTIFICATE_REVOCATION_REASON_KEY_COMPROMISE\x10\x01\x12/\n" +
+	"+CERTIFICATE_REVOCATION_REASON_CA_COMPROMISE\x10\x02\x125\n" +
+	"1CERTIFICATE_REVOCATION_REASON_AFFILIATION_CHANGED\x10\x03\x12,\n" +
+	"(CERTIFICATE_REVOCATION_REASON_SUPERSEDED\x10\x04\x128\n" +
+	"4CERTIFICATE_REVOCATION_REASON_CESSATION_OF_OPERATION\x10\x05\x122\n" +
+	".CERTIFICATE_REVOCATION_REASON_CERTIFICATE_HOLD\x10\x06\x125\n" +
+	"1CERTIFICATE_REVOCATION_REASON_PRIVILEGE_WITHDRAWN\x10\t\x12/\n" +
+	"+CERTIFICATE_REVOCATION_REASON_AA_COMPROMISE\x10\n" +
+	"*\x8e\x01\n" +
 	"\x16CertificateVersionSlot\x12(\n" +
 	"$CERTIFICATE_VERSION_SLOT_UNSPECIFIED\x10\x00\x12#\n" +
 	"\x1fCERTIFICATE_VERSION_SLOT_ACTIVE\x10\x01\x12%\n" +
-	"!CERTIFICATE_VERSION_SLOT_PREVIOUS\x10\x022\xb0\a\n" +
+	"!CERTIFICATE_VERSION_SLOT_PREVIOUS\x10\x022\x93\t\n" +
 	"\x19ManagedCertificateService\x12t\n" +
 	"\x17ListManagedCertificates\x12*.neoline.v1.ListManagedCertificatesRequest\x1a+.neoline.v1.ListManagedCertificatesResponse\"\x00\x12w\n" +
 	"\x18CreateManagedCertificate\x12+.neoline.v1.CreateManagedCertificateRequest\x1a,.neoline.v1.CreateManagedCertificateResponse\"\x00\x12n\n" +
 	"\x15GetManagedCertificate\x12(.neoline.v1.GetManagedCertificateRequest\x1a).neoline.v1.GetManagedCertificateResponse\"\x00\x12w\n" +
 	"\x18UpdateManagedCertificate\x12+.neoline.v1.UpdateManagedCertificateRequest\x1a,.neoline.v1.UpdateManagedCertificateResponse\"\x00\x12k\n" +
 	"\x14SubmitIssueOperation\x12'.neoline.v1.SubmitIssueOperationRequest\x1a(.neoline.v1.SubmitIssueOperationResponse\"\x00\x12k\n" +
-	"\x14SubmitRenewOperation\x12'.neoline.v1.SubmitRenewOperationRequest\x1a(.neoline.v1.SubmitRenewOperationResponse\"\x00\x12k\n" +
+	"\x14SubmitRenewOperation\x12'.neoline.v1.SubmitRenewOperationRequest\x1a(.neoline.v1.SubmitRenewOperationResponse\"\x00\x12h\n" +
+	"\x13SubmitRevokeVersion\x12&.neoline.v1.SubmitRevokeVersionRequest\x1a'.neoline.v1.SubmitRevokeVersionResponse\"\x00\x12k\n" +
 	"\x14GetCertificateBundle\x12'.neoline.v1.GetCertificateBundleRequest\x1a(.neoline.v1.GetCertificateBundleResponse\"\x00\x12t\n" +
-	"\x17ActivatePreviousVersion\x12*.neoline.v1.ActivatePreviousVersionRequest\x1a+.neoline.v1.ActivatePreviousVersionResponse\"\x00B;Z9github.com/orvice/neo-line/pkg/proto/neoline/v1;neolinev1b\x06proto3"
+	"\x17ActivatePreviousVersion\x12*.neoline.v1.ActivatePreviousVersionRequest\x1a+.neoline.v1.ActivatePreviousVersionResponse\"\x00\x12w\n" +
+	"\x18DeleteManagedCertificate\x12+.neoline.v1.DeleteManagedCertificateRequest\x1a,.neoline.v1.DeleteManagedCertificateResponse\"\x00B;Z9github.com/orvice/neo-line/pkg/proto/neoline/v1;neolinev1b\x06proto3"
 
 var (
 	file_neoline_v1_managed_certificate_proto_rawDescOnce sync.Once
@@ -1887,98 +2192,110 @@ func file_neoline_v1_managed_certificate_proto_rawDescGZIP() []byte {
 	return file_neoline_v1_managed_certificate_proto_rawDescData
 }
 
-var file_neoline_v1_managed_certificate_proto_enumTypes = make([]protoimpl.EnumInfo, 5)
-var file_neoline_v1_managed_certificate_proto_msgTypes = make([]protoimpl.MessageInfo, 21)
+var file_neoline_v1_managed_certificate_proto_enumTypes = make([]protoimpl.EnumInfo, 6)
+var file_neoline_v1_managed_certificate_proto_msgTypes = make([]protoimpl.MessageInfo, 25)
 var file_neoline_v1_managed_certificate_proto_goTypes = []any{
 	(CertificateKeyType)(0),                  // 0: neoline.v1.CertificateKeyType
 	(CertificateValidity)(0),                 // 1: neoline.v1.CertificateValidity
 	(CertificateOperationType)(0),            // 2: neoline.v1.CertificateOperationType
 	(CertificateOperationStatus)(0),          // 3: neoline.v1.CertificateOperationStatus
-	(CertificateVersionSlot)(0),              // 4: neoline.v1.CertificateVersionSlot
-	(*IssueConfigSnapshot)(nil),              // 5: neoline.v1.IssueConfigSnapshot
-	(*CertificateOperation)(nil),             // 6: neoline.v1.CertificateOperation
-	(*CertificateVersionMetadata)(nil),       // 7: neoline.v1.CertificateVersionMetadata
-	(*CertificateBundle)(nil),                // 8: neoline.v1.CertificateBundle
-	(*GetCertificateBundleRequest)(nil),      // 9: neoline.v1.GetCertificateBundleRequest
-	(*ActivatePreviousVersionRequest)(nil),   // 10: neoline.v1.ActivatePreviousVersionRequest
-	(*ActivatePreviousVersionResponse)(nil),  // 11: neoline.v1.ActivatePreviousVersionResponse
-	(*GetCertificateBundleResponse)(nil),     // 12: neoline.v1.GetCertificateBundleResponse
-	(*SubmitIssueOperationRequest)(nil),      // 13: neoline.v1.SubmitIssueOperationRequest
-	(*SubmitIssueOperationResponse)(nil),     // 14: neoline.v1.SubmitIssueOperationResponse
-	(*SubmitRenewOperationRequest)(nil),      // 15: neoline.v1.SubmitRenewOperationRequest
-	(*SubmitRenewOperationResponse)(nil),     // 16: neoline.v1.SubmitRenewOperationResponse
-	(*ManagedCertificate)(nil),               // 17: neoline.v1.ManagedCertificate
-	(*ListManagedCertificatesRequest)(nil),   // 18: neoline.v1.ListManagedCertificatesRequest
-	(*ListManagedCertificatesResponse)(nil),  // 19: neoline.v1.ListManagedCertificatesResponse
-	(*CreateManagedCertificateRequest)(nil),  // 20: neoline.v1.CreateManagedCertificateRequest
-	(*CreateManagedCertificateResponse)(nil), // 21: neoline.v1.CreateManagedCertificateResponse
-	(*GetManagedCertificateRequest)(nil),     // 22: neoline.v1.GetManagedCertificateRequest
-	(*GetManagedCertificateResponse)(nil),    // 23: neoline.v1.GetManagedCertificateResponse
-	(*UpdateManagedCertificateRequest)(nil),  // 24: neoline.v1.UpdateManagedCertificateRequest
-	(*UpdateManagedCertificateResponse)(nil), // 25: neoline.v1.UpdateManagedCertificateResponse
-	(*timestamppb.Timestamp)(nil),            // 26: google.protobuf.Timestamp
+	(CertificateRevocationReason)(0),         // 4: neoline.v1.CertificateRevocationReason
+	(CertificateVersionSlot)(0),              // 5: neoline.v1.CertificateVersionSlot
+	(*IssueConfigSnapshot)(nil),              // 6: neoline.v1.IssueConfigSnapshot
+	(*CertificateOperation)(nil),             // 7: neoline.v1.CertificateOperation
+	(*CertificateVersionMetadata)(nil),       // 8: neoline.v1.CertificateVersionMetadata
+	(*CertificateBundle)(nil),                // 9: neoline.v1.CertificateBundle
+	(*GetCertificateBundleRequest)(nil),      // 10: neoline.v1.GetCertificateBundleRequest
+	(*ActivatePreviousVersionRequest)(nil),   // 11: neoline.v1.ActivatePreviousVersionRequest
+	(*ActivatePreviousVersionResponse)(nil),  // 12: neoline.v1.ActivatePreviousVersionResponse
+	(*GetCertificateBundleResponse)(nil),     // 13: neoline.v1.GetCertificateBundleResponse
+	(*SubmitIssueOperationRequest)(nil),      // 14: neoline.v1.SubmitIssueOperationRequest
+	(*SubmitIssueOperationResponse)(nil),     // 15: neoline.v1.SubmitIssueOperationResponse
+	(*SubmitRenewOperationRequest)(nil),      // 16: neoline.v1.SubmitRenewOperationRequest
+	(*SubmitRenewOperationResponse)(nil),     // 17: neoline.v1.SubmitRenewOperationResponse
+	(*SubmitRevokeVersionRequest)(nil),       // 18: neoline.v1.SubmitRevokeVersionRequest
+	(*SubmitRevokeVersionResponse)(nil),      // 19: neoline.v1.SubmitRevokeVersionResponse
+	(*DeleteManagedCertificateRequest)(nil),  // 20: neoline.v1.DeleteManagedCertificateRequest
+	(*DeleteManagedCertificateResponse)(nil), // 21: neoline.v1.DeleteManagedCertificateResponse
+	(*ManagedCertificate)(nil),               // 22: neoline.v1.ManagedCertificate
+	(*ListManagedCertificatesRequest)(nil),   // 23: neoline.v1.ListManagedCertificatesRequest
+	(*ListManagedCertificatesResponse)(nil),  // 24: neoline.v1.ListManagedCertificatesResponse
+	(*CreateManagedCertificateRequest)(nil),  // 25: neoline.v1.CreateManagedCertificateRequest
+	(*CreateManagedCertificateResponse)(nil), // 26: neoline.v1.CreateManagedCertificateResponse
+	(*GetManagedCertificateRequest)(nil),     // 27: neoline.v1.GetManagedCertificateRequest
+	(*GetManagedCertificateResponse)(nil),    // 28: neoline.v1.GetManagedCertificateResponse
+	(*UpdateManagedCertificateRequest)(nil),  // 29: neoline.v1.UpdateManagedCertificateRequest
+	(*UpdateManagedCertificateResponse)(nil), // 30: neoline.v1.UpdateManagedCertificateResponse
+	(*timestamppb.Timestamp)(nil),            // 31: google.protobuf.Timestamp
 }
 var file_neoline_v1_managed_certificate_proto_depIdxs = []int32{
 	0,  // 0: neoline.v1.IssueConfigSnapshot.key_type:type_name -> neoline.v1.CertificateKeyType
 	2,  // 1: neoline.v1.CertificateOperation.type:type_name -> neoline.v1.CertificateOperationType
 	3,  // 2: neoline.v1.CertificateOperation.status:type_name -> neoline.v1.CertificateOperationStatus
-	5,  // 3: neoline.v1.CertificateOperation.config_snapshot:type_name -> neoline.v1.IssueConfigSnapshot
-	26, // 4: neoline.v1.CertificateOperation.started_at:type_name -> google.protobuf.Timestamp
-	26, // 5: neoline.v1.CertificateOperation.finished_at:type_name -> google.protobuf.Timestamp
-	26, // 6: neoline.v1.CertificateOperation.next_attempt_at:type_name -> google.protobuf.Timestamp
-	26, // 7: neoline.v1.CertificateOperation.created_at:type_name -> google.protobuf.Timestamp
-	26, // 8: neoline.v1.CertificateOperation.updated_at:type_name -> google.protobuf.Timestamp
-	5,  // 9: neoline.v1.CertificateVersionMetadata.config_snapshot:type_name -> neoline.v1.IssueConfigSnapshot
-	26, // 10: neoline.v1.CertificateVersionMetadata.not_before:type_name -> google.protobuf.Timestamp
-	26, // 11: neoline.v1.CertificateVersionMetadata.not_after:type_name -> google.protobuf.Timestamp
-	0,  // 12: neoline.v1.CertificateVersionMetadata.key_type:type_name -> neoline.v1.CertificateKeyType
-	26, // 13: neoline.v1.CertificateVersionMetadata.created_at:type_name -> google.protobuf.Timestamp
-	26, // 14: neoline.v1.CertificateVersionMetadata.revoked_at:type_name -> google.protobuf.Timestamp
-	0,  // 15: neoline.v1.CertificateBundle.key_type:type_name -> neoline.v1.CertificateKeyType
-	26, // 16: neoline.v1.CertificateBundle.not_before:type_name -> google.protobuf.Timestamp
-	26, // 17: neoline.v1.CertificateBundle.not_after:type_name -> google.protobuf.Timestamp
-	1,  // 18: neoline.v1.CertificateBundle.validity:type_name -> neoline.v1.CertificateValidity
-	4,  // 19: neoline.v1.GetCertificateBundleRequest.version_slot:type_name -> neoline.v1.CertificateVersionSlot
-	17, // 20: neoline.v1.ActivatePreviousVersionResponse.certificate:type_name -> neoline.v1.ManagedCertificate
-	8,  // 21: neoline.v1.GetCertificateBundleResponse.bundle:type_name -> neoline.v1.CertificateBundle
-	6,  // 22: neoline.v1.SubmitIssueOperationResponse.operation:type_name -> neoline.v1.CertificateOperation
-	6,  // 23: neoline.v1.SubmitRenewOperationResponse.operation:type_name -> neoline.v1.CertificateOperation
-	0,  // 24: neoline.v1.ManagedCertificate.key_type:type_name -> neoline.v1.CertificateKeyType
-	1,  // 25: neoline.v1.ManagedCertificate.active_validity:type_name -> neoline.v1.CertificateValidity
-	6,  // 26: neoline.v1.ManagedCertificate.latest_operation:type_name -> neoline.v1.CertificateOperation
-	26, // 27: neoline.v1.ManagedCertificate.created_at:type_name -> google.protobuf.Timestamp
-	26, // 28: neoline.v1.ManagedCertificate.updated_at:type_name -> google.protobuf.Timestamp
-	7,  // 29: neoline.v1.ManagedCertificate.active_version:type_name -> neoline.v1.CertificateVersionMetadata
-	7,  // 30: neoline.v1.ManagedCertificate.previous_version:type_name -> neoline.v1.CertificateVersionMetadata
-	26, // 31: neoline.v1.ManagedCertificate.next_renewal_at:type_name -> google.protobuf.Timestamp
-	26, // 32: neoline.v1.ManagedCertificate.last_notification_warning_at:type_name -> google.protobuf.Timestamp
-	17, // 33: neoline.v1.ListManagedCertificatesResponse.certificates:type_name -> neoline.v1.ManagedCertificate
-	17, // 34: neoline.v1.CreateManagedCertificateRequest.certificate:type_name -> neoline.v1.ManagedCertificate
-	17, // 35: neoline.v1.CreateManagedCertificateResponse.certificate:type_name -> neoline.v1.ManagedCertificate
-	17, // 36: neoline.v1.GetManagedCertificateResponse.certificate:type_name -> neoline.v1.ManagedCertificate
-	17, // 37: neoline.v1.UpdateManagedCertificateRequest.certificate:type_name -> neoline.v1.ManagedCertificate
-	17, // 38: neoline.v1.UpdateManagedCertificateResponse.certificate:type_name -> neoline.v1.ManagedCertificate
-	18, // 39: neoline.v1.ManagedCertificateService.ListManagedCertificates:input_type -> neoline.v1.ListManagedCertificatesRequest
-	20, // 40: neoline.v1.ManagedCertificateService.CreateManagedCertificate:input_type -> neoline.v1.CreateManagedCertificateRequest
-	22, // 41: neoline.v1.ManagedCertificateService.GetManagedCertificate:input_type -> neoline.v1.GetManagedCertificateRequest
-	24, // 42: neoline.v1.ManagedCertificateService.UpdateManagedCertificate:input_type -> neoline.v1.UpdateManagedCertificateRequest
-	13, // 43: neoline.v1.ManagedCertificateService.SubmitIssueOperation:input_type -> neoline.v1.SubmitIssueOperationRequest
-	15, // 44: neoline.v1.ManagedCertificateService.SubmitRenewOperation:input_type -> neoline.v1.SubmitRenewOperationRequest
-	9,  // 45: neoline.v1.ManagedCertificateService.GetCertificateBundle:input_type -> neoline.v1.GetCertificateBundleRequest
-	10, // 46: neoline.v1.ManagedCertificateService.ActivatePreviousVersion:input_type -> neoline.v1.ActivatePreviousVersionRequest
-	19, // 47: neoline.v1.ManagedCertificateService.ListManagedCertificates:output_type -> neoline.v1.ListManagedCertificatesResponse
-	21, // 48: neoline.v1.ManagedCertificateService.CreateManagedCertificate:output_type -> neoline.v1.CreateManagedCertificateResponse
-	23, // 49: neoline.v1.ManagedCertificateService.GetManagedCertificate:output_type -> neoline.v1.GetManagedCertificateResponse
-	25, // 50: neoline.v1.ManagedCertificateService.UpdateManagedCertificate:output_type -> neoline.v1.UpdateManagedCertificateResponse
-	14, // 51: neoline.v1.ManagedCertificateService.SubmitIssueOperation:output_type -> neoline.v1.SubmitIssueOperationResponse
-	16, // 52: neoline.v1.ManagedCertificateService.SubmitRenewOperation:output_type -> neoline.v1.SubmitRenewOperationResponse
-	12, // 53: neoline.v1.ManagedCertificateService.GetCertificateBundle:output_type -> neoline.v1.GetCertificateBundleResponse
-	11, // 54: neoline.v1.ManagedCertificateService.ActivatePreviousVersion:output_type -> neoline.v1.ActivatePreviousVersionResponse
-	47, // [47:55] is the sub-list for method output_type
-	39, // [39:47] is the sub-list for method input_type
-	39, // [39:39] is the sub-list for extension type_name
-	39, // [39:39] is the sub-list for extension extendee
-	0,  // [0:39] is the sub-list for field type_name
+	6,  // 3: neoline.v1.CertificateOperation.config_snapshot:type_name -> neoline.v1.IssueConfigSnapshot
+	31, // 4: neoline.v1.CertificateOperation.started_at:type_name -> google.protobuf.Timestamp
+	31, // 5: neoline.v1.CertificateOperation.finished_at:type_name -> google.protobuf.Timestamp
+	31, // 6: neoline.v1.CertificateOperation.next_attempt_at:type_name -> google.protobuf.Timestamp
+	31, // 7: neoline.v1.CertificateOperation.created_at:type_name -> google.protobuf.Timestamp
+	31, // 8: neoline.v1.CertificateOperation.updated_at:type_name -> google.protobuf.Timestamp
+	4,  // 9: neoline.v1.CertificateOperation.revocation_reason:type_name -> neoline.v1.CertificateRevocationReason
+	6,  // 10: neoline.v1.CertificateVersionMetadata.config_snapshot:type_name -> neoline.v1.IssueConfigSnapshot
+	31, // 11: neoline.v1.CertificateVersionMetadata.not_before:type_name -> google.protobuf.Timestamp
+	31, // 12: neoline.v1.CertificateVersionMetadata.not_after:type_name -> google.protobuf.Timestamp
+	0,  // 13: neoline.v1.CertificateVersionMetadata.key_type:type_name -> neoline.v1.CertificateKeyType
+	31, // 14: neoline.v1.CertificateVersionMetadata.created_at:type_name -> google.protobuf.Timestamp
+	31, // 15: neoline.v1.CertificateVersionMetadata.revoked_at:type_name -> google.protobuf.Timestamp
+	0,  // 16: neoline.v1.CertificateBundle.key_type:type_name -> neoline.v1.CertificateKeyType
+	31, // 17: neoline.v1.CertificateBundle.not_before:type_name -> google.protobuf.Timestamp
+	31, // 18: neoline.v1.CertificateBundle.not_after:type_name -> google.protobuf.Timestamp
+	1,  // 19: neoline.v1.CertificateBundle.validity:type_name -> neoline.v1.CertificateValidity
+	5,  // 20: neoline.v1.GetCertificateBundleRequest.version_slot:type_name -> neoline.v1.CertificateVersionSlot
+	22, // 21: neoline.v1.ActivatePreviousVersionResponse.certificate:type_name -> neoline.v1.ManagedCertificate
+	9,  // 22: neoline.v1.GetCertificateBundleResponse.bundle:type_name -> neoline.v1.CertificateBundle
+	7,  // 23: neoline.v1.SubmitIssueOperationResponse.operation:type_name -> neoline.v1.CertificateOperation
+	7,  // 24: neoline.v1.SubmitRenewOperationResponse.operation:type_name -> neoline.v1.CertificateOperation
+	4,  // 25: neoline.v1.SubmitRevokeVersionRequest.revocation_reason:type_name -> neoline.v1.CertificateRevocationReason
+	7,  // 26: neoline.v1.SubmitRevokeVersionResponse.operation:type_name -> neoline.v1.CertificateOperation
+	0,  // 27: neoline.v1.ManagedCertificate.key_type:type_name -> neoline.v1.CertificateKeyType
+	1,  // 28: neoline.v1.ManagedCertificate.active_validity:type_name -> neoline.v1.CertificateValidity
+	7,  // 29: neoline.v1.ManagedCertificate.latest_operation:type_name -> neoline.v1.CertificateOperation
+	31, // 30: neoline.v1.ManagedCertificate.created_at:type_name -> google.protobuf.Timestamp
+	31, // 31: neoline.v1.ManagedCertificate.updated_at:type_name -> google.protobuf.Timestamp
+	8,  // 32: neoline.v1.ManagedCertificate.active_version:type_name -> neoline.v1.CertificateVersionMetadata
+	8,  // 33: neoline.v1.ManagedCertificate.previous_version:type_name -> neoline.v1.CertificateVersionMetadata
+	31, // 34: neoline.v1.ManagedCertificate.next_renewal_at:type_name -> google.protobuf.Timestamp
+	31, // 35: neoline.v1.ManagedCertificate.last_notification_warning_at:type_name -> google.protobuf.Timestamp
+	22, // 36: neoline.v1.ListManagedCertificatesResponse.certificates:type_name -> neoline.v1.ManagedCertificate
+	22, // 37: neoline.v1.CreateManagedCertificateRequest.certificate:type_name -> neoline.v1.ManagedCertificate
+	22, // 38: neoline.v1.CreateManagedCertificateResponse.certificate:type_name -> neoline.v1.ManagedCertificate
+	22, // 39: neoline.v1.GetManagedCertificateResponse.certificate:type_name -> neoline.v1.ManagedCertificate
+	22, // 40: neoline.v1.UpdateManagedCertificateRequest.certificate:type_name -> neoline.v1.ManagedCertificate
+	22, // 41: neoline.v1.UpdateManagedCertificateResponse.certificate:type_name -> neoline.v1.ManagedCertificate
+	23, // 42: neoline.v1.ManagedCertificateService.ListManagedCertificates:input_type -> neoline.v1.ListManagedCertificatesRequest
+	25, // 43: neoline.v1.ManagedCertificateService.CreateManagedCertificate:input_type -> neoline.v1.CreateManagedCertificateRequest
+	27, // 44: neoline.v1.ManagedCertificateService.GetManagedCertificate:input_type -> neoline.v1.GetManagedCertificateRequest
+	29, // 45: neoline.v1.ManagedCertificateService.UpdateManagedCertificate:input_type -> neoline.v1.UpdateManagedCertificateRequest
+	14, // 46: neoline.v1.ManagedCertificateService.SubmitIssueOperation:input_type -> neoline.v1.SubmitIssueOperationRequest
+	16, // 47: neoline.v1.ManagedCertificateService.SubmitRenewOperation:input_type -> neoline.v1.SubmitRenewOperationRequest
+	18, // 48: neoline.v1.ManagedCertificateService.SubmitRevokeVersion:input_type -> neoline.v1.SubmitRevokeVersionRequest
+	10, // 49: neoline.v1.ManagedCertificateService.GetCertificateBundle:input_type -> neoline.v1.GetCertificateBundleRequest
+	11, // 50: neoline.v1.ManagedCertificateService.ActivatePreviousVersion:input_type -> neoline.v1.ActivatePreviousVersionRequest
+	20, // 51: neoline.v1.ManagedCertificateService.DeleteManagedCertificate:input_type -> neoline.v1.DeleteManagedCertificateRequest
+	24, // 52: neoline.v1.ManagedCertificateService.ListManagedCertificates:output_type -> neoline.v1.ListManagedCertificatesResponse
+	26, // 53: neoline.v1.ManagedCertificateService.CreateManagedCertificate:output_type -> neoline.v1.CreateManagedCertificateResponse
+	28, // 54: neoline.v1.ManagedCertificateService.GetManagedCertificate:output_type -> neoline.v1.GetManagedCertificateResponse
+	30, // 55: neoline.v1.ManagedCertificateService.UpdateManagedCertificate:output_type -> neoline.v1.UpdateManagedCertificateResponse
+	15, // 56: neoline.v1.ManagedCertificateService.SubmitIssueOperation:output_type -> neoline.v1.SubmitIssueOperationResponse
+	17, // 57: neoline.v1.ManagedCertificateService.SubmitRenewOperation:output_type -> neoline.v1.SubmitRenewOperationResponse
+	19, // 58: neoline.v1.ManagedCertificateService.SubmitRevokeVersion:output_type -> neoline.v1.SubmitRevokeVersionResponse
+	13, // 59: neoline.v1.ManagedCertificateService.GetCertificateBundle:output_type -> neoline.v1.GetCertificateBundleResponse
+	12, // 60: neoline.v1.ManagedCertificateService.ActivatePreviousVersion:output_type -> neoline.v1.ActivatePreviousVersionResponse
+	21, // 61: neoline.v1.ManagedCertificateService.DeleteManagedCertificate:output_type -> neoline.v1.DeleteManagedCertificateResponse
+	52, // [52:62] is the sub-list for method output_type
+	42, // [42:52] is the sub-list for method input_type
+	42, // [42:42] is the sub-list for extension type_name
+	42, // [42:42] is the sub-list for extension extendee
+	0,  // [0:42] is the sub-list for field type_name
 }
 
 func init() { file_neoline_v1_managed_certificate_proto_init() }
@@ -1986,14 +2303,14 @@ func file_neoline_v1_managed_certificate_proto_init() {
 	if File_neoline_v1_managed_certificate_proto != nil {
 		return
 	}
-	file_neoline_v1_managed_certificate_proto_msgTypes[12].OneofWrappers = []any{}
+	file_neoline_v1_managed_certificate_proto_msgTypes[16].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_neoline_v1_managed_certificate_proto_rawDesc), len(file_neoline_v1_managed_certificate_proto_rawDesc)),
-			NumEnums:      5,
-			NumMessages:   21,
+			NumEnums:      6,
+			NumMessages:   25,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

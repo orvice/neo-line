@@ -154,7 +154,7 @@ func (m *Manager) runOperation(ctx context.Context, opID string) {
 	go m.heartbeatOperationLease(attemptCtx, opID, heartbeatDone)
 	defer close(heartbeatDone)
 
-	warning, runErr := m.executeCertificateIssuance(attemptCtx, op, m.replicaID)
+	warning, runErr := m.executeOperation(attemptCtx, op, m.replicaID)
 	if runErr == nil {
 		m.notifyOperationSuccess(ctx, op)
 		return
@@ -183,6 +183,15 @@ func (m *Manager) notifyOperationFailure(ctx context.Context, op store.Certifica
 		return
 	}
 	m.certNotifier.OnOperationFailure(ctx, cert, op, errorSummary)
+}
+
+func (m *Manager) executeOperation(ctx context.Context, op store.CertificateOperation, leaseOwner string) (warning string, err error) {
+	switch op.Type {
+	case store.CertOpTypeRevoke:
+		return "", m.executeCertificateRevocation(ctx, op, leaseOwner)
+	default:
+		return m.executeCertificateIssuance(ctx, op, leaseOwner)
+	}
 }
 
 func (m *Manager) heartbeatOperationLease(ctx context.Context, opID string, done <-chan struct{}) {
@@ -224,6 +233,9 @@ func (m *Manager) cleanupPendingTXT(ctx context.Context, op store.CertificateOpe
 
 func (m *Manager) handleOperationFailure(ctx context.Context, op store.CertificateOperation, runErr error) {
 	summary := sanitizeIssueError(runErr)
+	if op.Type == store.CertOpTypeRevoke {
+		summary = sanitizeRevokeError(runErr)
+	}
 	if isPermanentOperationError(runErr) {
 		_ = m.store.MarkCertificateOperationFailed(ctx, op.ID, m.replicaID, summary)
 		m.notifyOperationFailure(ctx, op, summary)

@@ -343,6 +343,9 @@ func (m *Manager) RetryCertificateIssuerRegistration(ctx context.Context, id str
 }
 
 func (m *Manager) DeleteCertificateIssuer(ctx context.Context, id string) error {
+	if err := m.ensureIssuerDeletable(ctx, id); err != nil {
+		return err
+	}
 	return m.store.DeleteCertificateIssuer(ctx, id)
 }
 

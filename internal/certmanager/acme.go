@@ -41,11 +41,12 @@ type IssueResult struct {
 	PrivateKeyPEM []byte
 }
 
-// ACMEClient fetches directory metadata, registers ACME accounts, and issues certificates.
+// ACMEClient fetches directory metadata, registers ACME accounts, issues and revokes certificates.
 type ACMEClient interface {
 	FetchDirectory(ctx context.Context, directoryURL string) (DirectoryMeta, error)
 	RegisterAccount(ctx context.Context, issuer store.CertificateIssuer) error
 	IssueCertificate(ctx context.Context, req IssueRequest) (IssueResult, error)
+	RevokeCertificate(ctx context.Context, issuer store.CertificateIssuer, leafCertPEM []byte, reason *uint) error
 }
 
 // LegoACMEClient registers accounts through go-acme/lego/v4 using the system
@@ -204,6 +205,26 @@ func (c *LegoACMEClient) IssueCertificate(ctx context.Context, req IssueRequest)
 		return IssueResult{}, err
 	}
 	return IssueResult{FullchainPEM: fullchain, PrivateKeyPEM: keyPEM}, nil
+}
+
+func (c *LegoACMEClient) RevokeCertificate(ctx context.Context, issuer store.CertificateIssuer, leafCertPEM []byte, reason *uint) error {
+	key, err := parseAccountKeyPEM(issuer.AccountKeyPEM)
+	if err != nil {
+		return err
+	}
+	client, err := c.newLegoClient(issuer.DirectoryURL, issuer.Email, key)
+	if err != nil {
+		return err
+	}
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
+	if reason != nil {
+		return client.Certificate.RevokeWithReason(leafCertPEM, reason)
+	}
+	return client.Certificate.Revoke(leafCertPEM)
 }
 
 type noopDNSProvider struct{}
