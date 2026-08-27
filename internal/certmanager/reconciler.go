@@ -39,6 +39,7 @@ func (r *Reconciler) Reconcile(ctx context.Context) {
 		return
 	}
 	r.mgr.reconcileAutoRenew(ctx)
+	r.mgr.refreshValidityMetrics(ctx)
 	if r.mgr.certNotifier != nil {
 		r.mgr.certNotifier.ScanValidityNotifications(ctx)
 	}

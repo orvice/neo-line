@@ -410,6 +410,13 @@ neo-line 在 Butterfly 框架自动暴露的 Prometheus registry 上注册自身
 - `neoline_certificate_days_remaining{monitor_id,server_id}`：观测到 TLS 证书时，距离过期的剩余天数。
 - `neoline_enabled_monitors`：当前已启用的 monitor 数量。
 - `neoline_scheduler_reconcile_total`：调度器 reconcile tick 总数。
+- `neoline_managed_cert_validity{validity}`：ManagedCertificate 按 active validity 状态的数量（Missing / Valid / RenewalDue / Expired / Revoked）。
+- `neoline_cert_operation_total{op_type,result}`：证书 operation 计数（issue/renew/revoke × succeeded/failed/retry_scheduled）。
+- `neoline_cert_renew_failures_total`：Renew operation 失败尝试累计。
+- `neoline_server_cert_list_total`：Server `ListCertificates` 成功次数。
+- `neoline_server_cert_bundle_download_total`：Server `GetCertificateBundle` 成功次数。
+
+证书指标 **不使用** certificate ID 作为 label，避免高基数。Monitor 探测指标 `neoline_certificate_days_remaining` 仍按 monitor/server 标注，与 ManagedCertificate 生命周期独立。
 
 指标定义集中在 `internal/metric`，由该包 `init()` 注册到 `otel.PrometheusRegistry()`。
 
@@ -1098,6 +1105,15 @@ ManagedCertificate 通过 `notify_group_ids` 引用 NotifyGroup；创建/更新�
 - UI：Revoke / 激活过期 previous / 本地 Delete 使用独立确认文案。
 
 详见 [证书管理 — 停用/吊销/回滚/删除](./certificate-management-destructive-operations.md)。
+
+### 证书运维、指标与范围
+
+**状态：** 已实现（#27）
+
+- 中文运维文档：[默认值、Mongo Secret 假设、CA/EAB、metrics](./certificate-management-operations.md)。
+- 明确 [首版 out-of-scope 边界](./certificate-management-out-of-scope.md)（无 REST 文件端点、无 Server agent/CLI、无 MCP 证书 tools、无公开状态页证书字段、无 TLS Monitor 自动关联等）。
+- 领域 glossary：[CONTEXT.md](../CONTEXT.md)；架构决策：[docs/adr/](./adr/)。
+- 跨模块 lifecycle smoke 测试与 Connect 五服务契约测试覆盖完整签发、续期、分发、吊销与删除路径（fake ACME/DNS/notifier/clock）。
 
 ## 未来增强
 

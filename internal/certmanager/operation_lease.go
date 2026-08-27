@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/orvice/neo-line/internal/metric"
 	"github.com/orvice/neo-line/internal/store"
 )
 
@@ -156,6 +157,7 @@ func (m *Manager) runOperation(ctx context.Context, opID string) {
 
 	warning, runErr := m.executeOperation(attemptCtx, op, m.replicaID)
 	if runErr == nil {
+		metric.RecordCertOperation(certOpMetricType(op.Type), "succeeded")
 		m.notifyOperationSuccess(ctx, op)
 		return
 	}
@@ -236,15 +238,33 @@ func (m *Manager) handleOperationFailure(ctx context.Context, op store.Certifica
 	if op.Type == store.CertOpTypeRevoke {
 		summary = sanitizeRevokeError(runErr)
 	}
+	if op.Type == store.CertOpTypeRenew {
+		metric.CertRenewFailuresTotal.Inc()
+	}
 	if isPermanentOperationError(runErr) {
+		metric.RecordCertOperation(certOpMetricType(op.Type), "failed")
 		_ = m.store.MarkCertificateOperationFailed(ctx, op.ID, m.replicaID, summary)
 		m.notifyOperationFailure(ctx, op, summary)
 		return
 	}
+	metric.RecordCertOperation(certOpMetricType(op.Type), "retry_scheduled")
 	failures := op.ConsecutiveFailures + 1
 	nextAt := m.clock.Now().Add(computeRetryDelay(failures, m.jitter))
 	_ = m.store.ScheduleCertificateOperationRetry(ctx, op.ID, m.replicaID, nextAt, summary, failures)
 	m.notifyOperationFailure(ctx, op, summary)
+}
+
+func certOpMetricType(opType string) string {
+	switch opType {
+	case store.CertOpTypeIssue:
+		return "issue"
+	case store.CertOpTypeRenew:
+		return "renew"
+	case store.CertOpTypeRevoke:
+		return "revoke"
+	default:
+		return "unknown"
+	}
 }
 
 func isPermanentOperationError(err error) bool {
