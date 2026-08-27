@@ -34,6 +34,9 @@ func (s *Service) certDistributionAuditInterceptor() connect.UnaryInterceptorFun
 				metric.ServerCertListTotal.Inc()
 				return res, err
 			}
+			if err == nil && procedure == neolinev1connect.ServerCertificateServiceGetCertificateBundleProcedure {
+				metric.ServerCertBundleDownloadTotal.Inc()
+			}
 
 			audit := certDistributionAuditEntry(procedure, req, res, err, holder, start)
 			if audit == nil {
