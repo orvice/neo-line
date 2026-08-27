@@ -61,6 +61,11 @@ type Store interface {
 	FindRunningCertificateOperation(ctx context.Context, managedCertificateID, opType string) (CertificateOperation, error)
 	ListCertificateOperationsByCertificate(ctx context.Context, managedCertificateID string, limit int64) ([]CertificateOperation, error)
 	LatestCertificateOperation(ctx context.Context, managedCertificateID string) (CertificateOperation, error)
+	ClaimPendingIssueOperation(ctx context.Context, opID string) (CertificateOperation, error)
+	FailIssueOperation(ctx context.Context, opID, errorSummary string) error
+	FindPendingIssueOperations(ctx context.Context, limit int64) ([]CertificateOperation, error)
+	UpdateCertificateOperation(ctx context.Context, id string, op CertificateOperation) (CertificateOperation, error)
+	ActivateFirstIssueVersion(ctx context.Context, managedCertID string, version CertificateVersion, opID, warning string) error
 	ValidateNotifyGroupIDs(ctx context.Context, ids []string) error
 	ValidateServerIDs(ctx context.Context, ids []string) error
 

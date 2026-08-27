@@ -60,6 +60,28 @@ func (s *Service) UpdateManagedCertificate(ctx context.Context, req *connect.Req
 	}), nil
 }
 
+func (s *Service) SubmitIssueOperation(ctx context.Context, req *connect.Request[pb.SubmitIssueOperationRequest]) (*connect.Response[pb.SubmitIssueOperationResponse], error) {
+	op, err := s.certManager.SubmitIssueOperation(ctx, req.Msg.GetManagedCertificateId())
+	if err != nil {
+		return nil, toConnectError(err)
+	}
+	return connect.NewResponse(&pb.SubmitIssueOperationResponse{
+		Operation: certificateOperationToProto(op),
+	}), nil
+}
+
+func (s *Service) GetCertificateBundle(ctx context.Context, req *connect.Request[pb.GetCertificateBundleRequest]) (*connect.Response[pb.GetCertificateBundleResponse], error) {
+	bundle, err := s.certManager.GetCertificateBundle(ctx, req.Msg.GetManagedCertificateId())
+	if err != nil {
+		return nil, toConnectError(err)
+	}
+	resp := connect.NewResponse(&pb.GetCertificateBundleResponse{
+		Bundle: certificateBundleToProto(bundle),
+	})
+	resp.Header().Set("Cache-Control", "no-store")
+	return resp, nil
+}
+
 func managedCertificateInputFromProto(p *pb.ManagedCertificate) (certmanager.ManagedCertificateInput, error) {
 	if p == nil {
 		return certmanager.ManagedCertificateInput{}, errors.New("certificate is required")

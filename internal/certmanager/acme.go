@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/go-acme/lego/v4/certcrypto"
+	"github.com/go-acme/lego/v4/certificate"
 	"github.com/go-acme/lego/v4/challenge"
 	"github.com/go-acme/lego/v4/lego"
 	"github.com/go-acme/lego/v4/registration"
@@ -26,10 +27,25 @@ type DirectoryMeta struct {
 	TermsOfService string
 }
 
-// ACMEClient fetches directory metadata and registers ACME accounts.
+// IssueRequest carries parameters for ACME certificate issuance.
+type IssueRequest struct {
+	Issuer  store.CertificateIssuer
+	Domains []string
+	KeyType string
+	DNS     challenge.Provider
+}
+
+// IssueResult is raw PEM material returned by ACME issuance before validation.
+type IssueResult struct {
+	FullchainPEM  []byte
+	PrivateKeyPEM []byte
+}
+
+// ACMEClient fetches directory metadata, registers ACME accounts, and issues certificates.
 type ACMEClient interface {
 	FetchDirectory(ctx context.Context, directoryURL string) (DirectoryMeta, error)
 	RegisterAccount(ctx context.Context, issuer store.CertificateIssuer) error
+	IssueCertificate(ctx context.Context, req IssueRequest) (IssueResult, error)
 }
 
 // LegoACMEClient registers accounts through go-acme/lego/v4 using the system
@@ -129,6 +145,65 @@ func (c *LegoACMEClient) RegisterAccount(ctx context.Context, issuer store.Certi
 	}
 	_, err = client.Registration.Register(registration.RegisterOptions{TermsOfServiceAgreed: true})
 	return err
+}
+
+func legoCertKeyType(keyType string) certcrypto.KeyType {
+	switch keyType {
+	case store.CertKeyTypeRSA2048:
+		return certcrypto.RSA2048
+	default:
+		return certcrypto.EC256
+	}
+}
+
+func (c *LegoACMEClient) IssueCertificate(ctx context.Context, req IssueRequest) (IssueResult, error) {
+	key, err := parseAccountKeyPEM(req.Issuer.AccountKeyPEM)
+	if err != nil {
+		return IssueResult{}, err
+	}
+	user := &legoUser{email: req.Issuer.Email, key: key}
+	config := lego.NewConfig(user)
+	config.CADirURL = req.Issuer.DirectoryURL
+	config.Certificate.KeyType = legoCertKeyType(req.KeyType)
+	config.HTTPClient = c.httpClient
+	client, err := lego.NewClient(config)
+	if err != nil {
+		return IssueResult{}, err
+	}
+	if req.DNS == nil {
+		return IssueResult{}, errors.New("dns provider is required")
+	}
+	if err := client.Challenge.SetDNS01Provider(req.DNS); err != nil {
+		return IssueResult{}, err
+	}
+
+	select {
+	case <-ctx.Done():
+		return IssueResult{}, ctx.Err()
+	default:
+	}
+
+	certKey, err := generateCertificateKey(req.KeyType)
+	if err != nil {
+		return IssueResult{}, err
+	}
+	resource, err := client.Certificate.Obtain(certificate.ObtainRequest{
+		Domains:    req.Domains,
+		Bundle:     true,
+		PrivateKey: certKey,
+	})
+	if err != nil {
+		return IssueResult{}, err
+	}
+	fullchain, err := assembleFullchain(resource.Certificate, resource.IssuerCertificate)
+	if err != nil {
+		return IssueResult{}, err
+	}
+	keyPEM, err := marshalPrivateKeyPKCS8(certKey)
+	if err != nil {
+		return IssueResult{}, err
+	}
+	return IssueResult{FullchainPEM: fullchain, PrivateKeyPEM: keyPEM}, nil
 }
 
 type noopDNSProvider struct{}

@@ -13,6 +13,7 @@ import (
 )
 
 type fakeStore struct {
+	noopIssueStore
 	accounts map[string]store.DNSProviderAccount
 	order    []string
 }

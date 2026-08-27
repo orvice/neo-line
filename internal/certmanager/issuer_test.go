@@ -21,6 +21,7 @@ import (
 )
 
 type fakeIssuerStore struct {
+	noopIssueStore
 	mu      sync.Mutex
 	issuers map[string]store.CertificateIssuer
 	order   []string

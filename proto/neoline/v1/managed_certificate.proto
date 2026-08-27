@@ -62,6 +62,50 @@ message CertificateOperation {
   google.protobuf.Timestamp updated_at = 13;
 }
 
+// CertificateVersionMetadata exposes active/previous version facts without PEM secrets.
+message CertificateVersionMetadata {
+  string id = 1;
+  IssueConfigSnapshot config_snapshot = 2;
+  string leaf_fingerprint = 3;
+  string serial_number = 4;
+  string issuer_common_name = 5;
+  google.protobuf.Timestamp not_before = 6;
+  google.protobuf.Timestamp not_after = 7;
+  CertificateKeyType key_type = 8;
+  bool staging_untrusted = 9;
+  google.protobuf.Timestamp created_at = 10;
+}
+
+message CertificateBundle {
+  string managed_certificate_id = 1;
+  string version_id = 2;
+  repeated string domains = 3;
+  CertificateKeyType key_type = 4;
+  string leaf_fingerprint = 5;
+  google.protobuf.Timestamp not_before = 6;
+  google.protobuf.Timestamp not_after = 7;
+  CertificateValidity validity = 8;
+  bool staging_untrusted = 9;
+  bytes fullchain_pem = 10;
+  bytes private_key_pem = 11;
+}
+
+message GetCertificateBundleRequest {
+  string managed_certificate_id = 1;
+}
+
+message GetCertificateBundleResponse {
+  CertificateBundle bundle = 1;
+}
+
+message SubmitIssueOperationRequest {
+  string managed_certificate_id = 1;
+}
+
+message SubmitIssueOperationResponse {
+  CertificateOperation operation = 1;
+}
+
 // ManagedCertificate holds desired config, assignments, and version container.
 // Secrets are never returned on read.
 message ManagedCertificate {
@@ -82,6 +126,7 @@ message ManagedCertificate {
   CertificateOperation latest_operation = 13;
   google.protobuf.Timestamp created_at = 14;
   google.protobuf.Timestamp updated_at = 15;
+  CertificateVersionMetadata active_version = 16;
 }
 
 message ListManagedCertificatesRequest {
@@ -125,4 +170,6 @@ service ManagedCertificateService {
   rpc CreateManagedCertificate(CreateManagedCertificateRequest) returns (CreateManagedCertificateResponse) {}
   rpc GetManagedCertificate(GetManagedCertificateRequest) returns (GetManagedCertificateResponse) {}
   rpc UpdateManagedCertificate(UpdateManagedCertificateRequest) returns (UpdateManagedCertificateResponse) {}
+  rpc SubmitIssueOperation(SubmitIssueOperationRequest) returns (SubmitIssueOperationResponse) {}
+  rpc GetCertificateBundle(GetCertificateBundleRequest) returns (GetCertificateBundleResponse) {}
 }

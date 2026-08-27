@@ -15,7 +15,11 @@ const (
 	CertKeyTypeECP256  = "ec_p256"
 	CertKeyTypeRSA2048 = "rsa_2048"
 
-	CertValidityMissing = "Missing"
+	CertValidityMissing    = "Missing"
+	CertValidityValid      = "Valid"
+	CertValidityRenewalDue = "RenewalDue"
+	CertValidityExpired    = "Expired"
+	CertValidityRevoked    = "Revoked"
 
 	DefaultRenewBeforeDays = uint32(30)
 	MaxCertificateDomains  = 100
@@ -23,6 +27,12 @@ const (
 
 // ErrManagedCertificateNameTaken is returned when a certificate name collides.
 var ErrManagedCertificateNameTaken = errors.New("managed certificate name already exists")
+
+// ErrCertificateOperationConflict is returned when an operation state transition fails.
+var ErrCertificateOperationConflict = errors.New("certificate operation state conflict")
+
+// ErrActiveVersionConflict is returned when activating a version would violate invariants.
+var ErrActiveVersionConflict = errors.New("active certificate version conflict")
 
 // ErrInvalidServerIDs is returned when server_ids reference missing servers.
 var ErrInvalidServerIDs = errors.New("one or more server_ids do not exist")
@@ -38,10 +48,21 @@ type IssueConfigSnapshot struct {
 	KeyType              string   `bson:"key_type" json:"key_type"`
 }
 
-// CertificateVersion holds an immutable issued bundle. Populated by #18.
+// CertificateVersion holds an immutable issued bundle and issuance snapshot.
 type CertificateVersion struct {
-	ID        string    `bson:"id" json:"id"`
-	CreatedAt time.Time `bson:"created_at" json:"created_at"`
+	ID                  string              `bson:"id" json:"id"`
+	ConfigSnapshot      IssueConfigSnapshot `bson:"config_snapshot" json:"config_snapshot"`
+	FullchainPEM        string              `bson:"fullchain_pem" json:"-"`
+	PrivateKeyPEM       string              `bson:"private_key_pem" json:"-"`
+	LeafFingerprint     string              `bson:"leaf_fingerprint" json:"leaf_fingerprint"`
+	SerialNumber        string              `bson:"serial_number" json:"serial_number"`
+	IssuerCommonName    string              `bson:"issuer_common_name" json:"issuer_common_name"`
+	NotBefore           time.Time           `bson:"not_before" json:"not_before"`
+	NotAfter            time.Time           `bson:"not_after" json:"not_after"`
+	KeyType             string              `bson:"key_type" json:"key_type"`
+	StagingUntrusted    bool                `bson:"staging_untrusted" json:"staging_untrusted"`
+	CertificateIssuerID string              `bson:"certificate_issuer_id" json:"certificate_issuer_id"`
+	CreatedAt           time.Time           `bson:"created_at" json:"created_at"`
 }
 
 // ManagedCertificate is the admin-managed desired config and version container.
@@ -130,6 +151,49 @@ func (s *MongoStore) UpdateManagedCertificate(ctx context.Context, id string, ce
 		return ManagedCertificate{}, err
 	}
 	return cert, nil
+}
+
+// ActivateFirstIssueVersion atomically sets active_version when none exists and marks the
+// Issue operation succeeded. Used for the first successful ACME issue (#18).
+func (s *MongoStore) ActivateFirstIssueVersion(ctx context.Context, managedCertID string, version CertificateVersion, opID, warning string) error {
+	now := time.Now().UTC()
+	res, err := s.managedCertificates().UpdateOne(ctx, bson.M{
+		"id": managedCertID,
+		"$or": []bson.M{
+			{"active_version": nil},
+			{"active_version": bson.M{"$exists": false}},
+		},
+	}, bson.M{
+		"$set": bson.M{
+			"active_version": version,
+			"updated_at":     now,
+		},
+	})
+	if err != nil {
+		return err
+	}
+	if res.MatchedCount == 0 {
+		return ErrActiveVersionConflict
+	}
+	opSet := bson.M{
+		"status":      CertOpStatusSucceeded,
+		"finished_at": now,
+		"updated_at":  now,
+	}
+	if warning != "" {
+		opSet["warning"] = warning
+	}
+	opRes, err := s.certificateOperations().UpdateOne(ctx, bson.M{
+		"id":     opID,
+		"status": CertOpStatusRunning,
+	}, bson.M{"$set": opSet})
+	if err != nil {
+		return err
+	}
+	if opRes.MatchedCount == 0 {
+		return ErrCertificateOperationConflict
+	}
+	return nil
 }
 
 // validateServerIDs ensures every ID exists in servers. An empty slice is allowed.
