@@ -455,6 +455,17 @@ export function ManagedCertificateDetailPage() {
                           .join("、")}
                   </dd>
                 </div>
+                {cert.last_notification_warning ? (
+                  <div>
+                    <dt className="text-muted-foreground">最近通知告警</dt>
+                    <dd className="text-amber-700">{cert.last_notification_warning}</dd>
+                    {cert.last_notification_warning_at ? (
+                      <dd className="text-muted-foreground text-xs">
+                        {formatTime(cert.last_notification_warning_at)}
+                      </dd>
+                    ) : null}
+                  </div>
+                ) : null}
               </dl>
             </CardContent>
           </Card>

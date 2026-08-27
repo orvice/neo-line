@@ -67,3 +67,27 @@ func (noopIssueStore) ActivateSubsequentIssueVersion(context.Context, string, st
 func (noopIssueStore) ActivatePreviousVersion(context.Context, string, string) error {
 	return errors.New("not implemented")
 }
+func (noopIssueStore) ListManagedCertificatesForNotifications(context.Context) ([]store.ManagedCertificate, error) {
+	return nil, nil
+}
+func (noopIssueStore) TryRecordOperationFailureNotification(context.Context, string, time.Time) (bool, error) {
+	return false, nil
+}
+func (noopIssueStore) TryRecordOperationFailureReminder(context.Context, string, time.Time) (bool, error) {
+	return false, nil
+}
+func (noopIssueStore) TryRecordOperationRecovery(context.Context, string, time.Time) (bool, error) {
+	return false, nil
+}
+func (noopIssueStore) TryRecordSevenDayReminder(context.Context, string, string, time.Time) (bool, error) {
+	return false, nil
+}
+func (noopIssueStore) TryRecordExpiredNotification(context.Context, string, string, time.Time) (bool, error) {
+	return false, nil
+}
+func (noopIssueStore) SetCertificateNotificationWarning(context.Context, string, string, time.Time) error {
+	return nil
+}
+func (noopIssueStore) GetNotifyGroup(context.Context, string) (store.NotifyGroup, error) {
+	return store.NotifyGroup{}, errors.New("not implemented")
+}

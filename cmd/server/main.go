@@ -15,6 +15,7 @@ import (
 	"github.com/orvice/neo-line/internal/alert"
 	"github.com/orvice/neo-line/internal/archive"
 	"github.com/orvice/neo-line/internal/certmanager"
+	"github.com/orvice/neo-line/internal/certnotify"
 	"github.com/orvice/neo-line/internal/connectapi"
 	"github.com/orvice/neo-line/internal/mcpserver"
 	"github.com/orvice/neo-line/internal/scheduler"
@@ -175,6 +176,8 @@ func main() {
 					certmanager.NewLegoACMEClient(nil),
 					certmanager.NewCloudflareDNSFactory(nil),
 				)
+				certNotifier := certnotify.New(mongoStore, slog.Default().With("component", "certnotify"))
+				certMgr.SetCertNotifier(certNotifier)
 				return nil
 			},
 			func() error {

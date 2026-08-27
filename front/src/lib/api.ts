@@ -607,6 +607,8 @@ function managedCertificateFromProto(c: PbManagedCertificate): ManagedCertificat
     latest_operation: c.latestOperation
       ? certificateOperationFromProto(c.latestOperation)
       : undefined,
+    last_notification_warning: c.lastNotificationWarning || undefined,
+    last_notification_warning_at: iso(c.lastNotificationWarningAt),
     created_at: iso(c.createdAt) ?? "",
     updated_at: iso(c.updatedAt) ?? "",
   }

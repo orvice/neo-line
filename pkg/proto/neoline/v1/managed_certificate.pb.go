@@ -1144,8 +1144,11 @@ type ManagedCertificate struct {
 	EffectiveRenewalWindowDays uint32 `protobuf:"varint,19,opt,name=effective_renewal_window_days,json=effectiveRenewalWindowDays,proto3" json:"effective_renewal_window_days,omitempty"`
 	// When auto-renew should next trigger (not_after minus effective window).
 	NextRenewalAt *timestamppb.Timestamp `protobuf:"bytes,20,opt,name=next_renewal_at,json=nextRenewalAt,proto3" json:"next_renewal_at,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	// Most recent notification channel delivery warning, if any.
+	LastNotificationWarning   string                 `protobuf:"bytes,21,opt,name=last_notification_warning,json=lastNotificationWarning,proto3" json:"last_notification_warning,omitempty"`
+	LastNotificationWarningAt *timestamppb.Timestamp `protobuf:"bytes,22,opt,name=last_notification_warning_at,json=lastNotificationWarningAt,proto3" json:"last_notification_warning_at,omitempty"`
+	unknownFields             protoimpl.UnknownFields
+	sizeCache                 protoimpl.SizeCache
 }
 
 func (x *ManagedCertificate) Reset() {
@@ -1314,6 +1317,20 @@ func (x *ManagedCertificate) GetEffectiveRenewalWindowDays() uint32 {
 func (x *ManagedCertificate) GetNextRenewalAt() *timestamppb.Timestamp {
 	if x != nil {
 		return x.NextRenewalAt
+	}
+	return nil
+}
+
+func (x *ManagedCertificate) GetLastNotificationWarning() string {
+	if x != nil {
+		return x.LastNotificationWarning
+	}
+	return ""
+}
+
+func (x *ManagedCertificate) GetLastNotificationWarningAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.LastNotificationWarningAt
 	}
 	return nil
 }
@@ -1773,7 +1790,7 @@ const file_neoline_v1_managed_certificate_proto_rawDesc = "" +
 	"\x1bSubmitRenewOperationRequest\x124\n" +
 	"\x16managed_certificate_id\x18\x01 \x01(\tR\x14managedCertificateId\"^\n" +
 	"\x1cSubmitRenewOperationResponse\x12>\n" +
-	"\toperation\x18\x01 \x01(\v2 .neoline.v1.CertificateOperationR\toperation\"\xdf\b\n" +
+	"\toperation\x18\x01 \x01(\v2 .neoline.v1.CertificateOperationR\toperation\"\xf8\t\n" +
 	"\x12ManagedCertificate\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x18\n" +
@@ -1798,7 +1815,9 @@ const file_neoline_v1_managed_certificate_proto_rawDesc = "" +
 	"\x10previous_version\x18\x11 \x01(\v2&.neoline.v1.CertificateVersionMetadataR\x0fpreviousVersion\x12E\n" +
 	"\x1fhas_unpublished_desired_changes\x18\x12 \x01(\bR\x1chasUnpublishedDesiredChanges\x12A\n" +
 	"\x1deffective_renewal_window_days\x18\x13 \x01(\rR\x1aeffectiveRenewalWindowDays\x12B\n" +
-	"\x0fnext_renewal_at\x18\x14 \x01(\v2\x1a.google.protobuf.TimestampR\rnextRenewalAtB\x15\n" +
+	"\x0fnext_renewal_at\x18\x14 \x01(\v2\x1a.google.protobuf.TimestampR\rnextRenewalAt\x12:\n" +
+	"\x19last_notification_warning\x18\x15 \x01(\tR\x17lastNotificationWarning\x12[\n" +
+	"\x1clast_notification_warning_at\x18\x16 \x01(\v2\x1a.google.protobuf.TimestampR\x19lastNotificationWarningAtB\x15\n" +
 	"\x13_auto_renew_enabled\"\\\n" +
 	"\x1eListManagedCertificatesRequest\x12\x1b\n" +
 	"\tpage_size\x18\x01 \x01(\rR\bpageSize\x12\x1d\n" +
@@ -1932,33 +1951,34 @@ var file_neoline_v1_managed_certificate_proto_depIdxs = []int32{
 	7,  // 29: neoline.v1.ManagedCertificate.active_version:type_name -> neoline.v1.CertificateVersionMetadata
 	7,  // 30: neoline.v1.ManagedCertificate.previous_version:type_name -> neoline.v1.CertificateVersionMetadata
 	26, // 31: neoline.v1.ManagedCertificate.next_renewal_at:type_name -> google.protobuf.Timestamp
-	17, // 32: neoline.v1.ListManagedCertificatesResponse.certificates:type_name -> neoline.v1.ManagedCertificate
-	17, // 33: neoline.v1.CreateManagedCertificateRequest.certificate:type_name -> neoline.v1.ManagedCertificate
-	17, // 34: neoline.v1.CreateManagedCertificateResponse.certificate:type_name -> neoline.v1.ManagedCertificate
-	17, // 35: neoline.v1.GetManagedCertificateResponse.certificate:type_name -> neoline.v1.ManagedCertificate
-	17, // 36: neoline.v1.UpdateManagedCertificateRequest.certificate:type_name -> neoline.v1.ManagedCertificate
-	17, // 37: neoline.v1.UpdateManagedCertificateResponse.certificate:type_name -> neoline.v1.ManagedCertificate
-	18, // 38: neoline.v1.ManagedCertificateService.ListManagedCertificates:input_type -> neoline.v1.ListManagedCertificatesRequest
-	20, // 39: neoline.v1.ManagedCertificateService.CreateManagedCertificate:input_type -> neoline.v1.CreateManagedCertificateRequest
-	22, // 40: neoline.v1.ManagedCertificateService.GetManagedCertificate:input_type -> neoline.v1.GetManagedCertificateRequest
-	24, // 41: neoline.v1.ManagedCertificateService.UpdateManagedCertificate:input_type -> neoline.v1.UpdateManagedCertificateRequest
-	13, // 42: neoline.v1.ManagedCertificateService.SubmitIssueOperation:input_type -> neoline.v1.SubmitIssueOperationRequest
-	15, // 43: neoline.v1.ManagedCertificateService.SubmitRenewOperation:input_type -> neoline.v1.SubmitRenewOperationRequest
-	9,  // 44: neoline.v1.ManagedCertificateService.GetCertificateBundle:input_type -> neoline.v1.GetCertificateBundleRequest
-	10, // 45: neoline.v1.ManagedCertificateService.ActivatePreviousVersion:input_type -> neoline.v1.ActivatePreviousVersionRequest
-	19, // 46: neoline.v1.ManagedCertificateService.ListManagedCertificates:output_type -> neoline.v1.ListManagedCertificatesResponse
-	21, // 47: neoline.v1.ManagedCertificateService.CreateManagedCertificate:output_type -> neoline.v1.CreateManagedCertificateResponse
-	23, // 48: neoline.v1.ManagedCertificateService.GetManagedCertificate:output_type -> neoline.v1.GetManagedCertificateResponse
-	25, // 49: neoline.v1.ManagedCertificateService.UpdateManagedCertificate:output_type -> neoline.v1.UpdateManagedCertificateResponse
-	14, // 50: neoline.v1.ManagedCertificateService.SubmitIssueOperation:output_type -> neoline.v1.SubmitIssueOperationResponse
-	16, // 51: neoline.v1.ManagedCertificateService.SubmitRenewOperation:output_type -> neoline.v1.SubmitRenewOperationResponse
-	12, // 52: neoline.v1.ManagedCertificateService.GetCertificateBundle:output_type -> neoline.v1.GetCertificateBundleResponse
-	11, // 53: neoline.v1.ManagedCertificateService.ActivatePreviousVersion:output_type -> neoline.v1.ActivatePreviousVersionResponse
-	46, // [46:54] is the sub-list for method output_type
-	38, // [38:46] is the sub-list for method input_type
-	38, // [38:38] is the sub-list for extension type_name
-	38, // [38:38] is the sub-list for extension extendee
-	0,  // [0:38] is the sub-list for field type_name
+	26, // 32: neoline.v1.ManagedCertificate.last_notification_warning_at:type_name -> google.protobuf.Timestamp
+	17, // 33: neoline.v1.ListManagedCertificatesResponse.certificates:type_name -> neoline.v1.ManagedCertificate
+	17, // 34: neoline.v1.CreateManagedCertificateRequest.certificate:type_name -> neoline.v1.ManagedCertificate
+	17, // 35: neoline.v1.CreateManagedCertificateResponse.certificate:type_name -> neoline.v1.ManagedCertificate
+	17, // 36: neoline.v1.GetManagedCertificateResponse.certificate:type_name -> neoline.v1.ManagedCertificate
+	17, // 37: neoline.v1.UpdateManagedCertificateRequest.certificate:type_name -> neoline.v1.ManagedCertificate
+	17, // 38: neoline.v1.UpdateManagedCertificateResponse.certificate:type_name -> neoline.v1.ManagedCertificate
+	18, // 39: neoline.v1.ManagedCertificateService.ListManagedCertificates:input_type -> neoline.v1.ListManagedCertificatesRequest
+	20, // 40: neoline.v1.ManagedCertificateService.CreateManagedCertificate:input_type -> neoline.v1.CreateManagedCertificateRequest
+	22, // 41: neoline.v1.ManagedCertificateService.GetManagedCertificate:input_type -> neoline.v1.GetManagedCertificateRequest
+	24, // 42: neoline.v1.ManagedCertificateService.UpdateManagedCertificate:input_type -> neoline.v1.UpdateManagedCertificateRequest
+	13, // 43: neoline.v1.ManagedCertificateService.SubmitIssueOperation:input_type -> neoline.v1.SubmitIssueOperationRequest
+	15, // 44: neoline.v1.ManagedCertificateService.SubmitRenewOperation:input_type -> neoline.v1.SubmitRenewOperationRequest
+	9,  // 45: neoline.v1.ManagedCertificateService.GetCertificateBundle:input_type -> neoline.v1.GetCertificateBundleRequest
+	10, // 46: neoline.v1.ManagedCertificateService.ActivatePreviousVersion:input_type -> neoline.v1.ActivatePreviousVersionRequest
+	19, // 47: neoline.v1.ManagedCertificateService.ListManagedCertificates:output_type -> neoline.v1.ListManagedCertificatesResponse
+	21, // 48: neoline.v1.ManagedCertificateService.CreateManagedCertificate:output_type -> neoline.v1.CreateManagedCertificateResponse
+	23, // 49: neoline.v1.ManagedCertificateService.GetManagedCertificate:output_type -> neoline.v1.GetManagedCertificateResponse
+	25, // 50: neoline.v1.ManagedCertificateService.UpdateManagedCertificate:output_type -> neoline.v1.UpdateManagedCertificateResponse
+	14, // 51: neoline.v1.ManagedCertificateService.SubmitIssueOperation:output_type -> neoline.v1.SubmitIssueOperationResponse
+	16, // 52: neoline.v1.ManagedCertificateService.SubmitRenewOperation:output_type -> neoline.v1.SubmitRenewOperationResponse
+	12, // 53: neoline.v1.ManagedCertificateService.GetCertificateBundle:output_type -> neoline.v1.GetCertificateBundleResponse
+	11, // 54: neoline.v1.ManagedCertificateService.ActivatePreviousVersion:output_type -> neoline.v1.ActivatePreviousVersionResponse
+	47, // [47:55] is the sub-list for method output_type
+	39, // [39:47] is the sub-list for method input_type
+	39, // [39:39] is the sub-list for extension type_name
+	39, // [39:39] is the sub-list for extension extendee
+	0,  // [0:39] is the sub-list for field type_name
 }
 
 func init() { file_neoline_v1_managed_certificate_proto_init() }

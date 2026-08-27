@@ -5,6 +5,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/orvice/neo-line/internal/certnotify"
 	"github.com/orvice/neo-line/internal/store"
 )
 
@@ -57,6 +58,15 @@ type Store interface {
 	ActivateFirstIssueVersion(ctx context.Context, managedCertID string, version store.CertificateVersion, opID, leaseOwner, warning string) error
 	ActivateSubsequentIssueVersion(ctx context.Context, managedCertID string, version store.CertificateVersion, expectedActiveID, opID, leaseOwner, warning string) error
 	ActivatePreviousVersion(ctx context.Context, managedCertID, versionID string) error
+
+	ListManagedCertificatesForNotifications(ctx context.Context) ([]store.ManagedCertificate, error)
+	TryRecordOperationFailureNotification(ctx context.Context, certID string, now time.Time) (bool, error)
+	TryRecordOperationFailureReminder(ctx context.Context, certID string, now time.Time) (bool, error)
+	TryRecordOperationRecovery(ctx context.Context, certID string, now time.Time) (bool, error)
+	TryRecordSevenDayReminder(ctx context.Context, certID, versionID string, now time.Time) (bool, error)
+	TryRecordExpiredNotification(ctx context.Context, certID, versionID string, now time.Time) (bool, error)
+	SetCertificateNotificationWarning(ctx context.Context, certID, warning string, at time.Time) error
+	GetNotifyGroup(ctx context.Context, id string) (store.NotifyGroup, error)
 }
 
 // TokenVerifier validates DNS provider API tokens before persistence.
@@ -83,6 +93,7 @@ type Manager struct {
 	clock          Clock
 	replicaID      string
 	jitter         JitterFunc
+	certNotifier   *certnotify.Dispatcher
 	claimingLeases atomic.Bool
 }
 
@@ -96,6 +107,13 @@ func NewManagerWithACME(st Store, verifier TokenVerifier, acme ACMEClient) *Mana
 
 func NewManagerWithDeps(st Store, verifier TokenVerifier, acme ACMEClient, dnsFactory DNSProviderFactory) *Manager {
 	return &Manager{store: st, verifier: verifier, acme: acme, dnsFactory: dnsFactory, clock: realClock{}}
+}
+
+// SetCertNotifier wires certificate lifecycle notifications (optional in tests).
+func (m *Manager) SetCertNotifier(n *certnotify.Dispatcher) {
+	if m != nil {
+		m.certNotifier = n
+	}
 }
 
 // DNSAccountInput is the mutable DNS provider account fields supplied by API

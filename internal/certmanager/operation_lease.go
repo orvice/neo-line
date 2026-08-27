@@ -156,11 +156,33 @@ func (m *Manager) runOperation(ctx context.Context, opID string) {
 
 	warning, runErr := m.executeCertificateIssuance(attemptCtx, op, m.replicaID)
 	if runErr == nil {
-		_ = warning
+		m.notifyOperationSuccess(ctx, op)
 		return
 	}
 	_ = warning
 	m.handleOperationFailure(ctx, op, runErr)
+}
+
+func (m *Manager) notifyOperationSuccess(ctx context.Context, op store.CertificateOperation) {
+	if m.certNotifier == nil {
+		return
+	}
+	cert, err := m.store.GetManagedCertificate(ctx, op.ManagedCertificateID)
+	if err != nil {
+		return
+	}
+	m.certNotifier.OnOperationSuccess(ctx, cert, op)
+}
+
+func (m *Manager) notifyOperationFailure(ctx context.Context, op store.CertificateOperation, errorSummary string) {
+	if m.certNotifier == nil {
+		return
+	}
+	cert, err := m.store.GetManagedCertificate(ctx, op.ManagedCertificateID)
+	if err != nil {
+		return
+	}
+	m.certNotifier.OnOperationFailure(ctx, cert, op, errorSummary)
 }
 
 func (m *Manager) heartbeatOperationLease(ctx context.Context, opID string, done <-chan struct{}) {
@@ -204,11 +226,13 @@ func (m *Manager) handleOperationFailure(ctx context.Context, op store.Certifica
 	summary := sanitizeIssueError(runErr)
 	if isPermanentOperationError(runErr) {
 		_ = m.store.MarkCertificateOperationFailed(ctx, op.ID, m.replicaID, summary)
+		m.notifyOperationFailure(ctx, op, summary)
 		return
 	}
 	failures := op.ConsecutiveFailures + 1
 	nextAt := m.clock.Now().Add(computeRetryDelay(failures, m.jitter))
 	_ = m.store.ScheduleCertificateOperationRetry(ctx, op.ID, m.replicaID, nextAt, summary, failures)
+	m.notifyOperationFailure(ctx, op, summary)
 }
 
 func isPermanentOperationError(err error) bool {

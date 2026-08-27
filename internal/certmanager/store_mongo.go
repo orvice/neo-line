@@ -180,3 +180,35 @@ func (s *mongoStore) ActivateSubsequentIssueVersion(ctx context.Context, managed
 func (s *mongoStore) ActivatePreviousVersion(ctx context.Context, managedCertID, versionID string) error {
 	return s.st.ActivatePreviousVersion(ctx, managedCertID, versionID)
 }
+
+func (s *mongoStore) ListManagedCertificatesForNotifications(ctx context.Context) ([]store.ManagedCertificate, error) {
+	return s.st.ListManagedCertificatesForNotifications(ctx)
+}
+
+func (s *mongoStore) TryRecordOperationFailureNotification(ctx context.Context, certID string, now time.Time) (bool, error) {
+	return s.st.TryRecordOperationFailureNotification(ctx, certID, now)
+}
+
+func (s *mongoStore) TryRecordOperationFailureReminder(ctx context.Context, certID string, now time.Time) (bool, error) {
+	return s.st.TryRecordOperationFailureReminder(ctx, certID, now)
+}
+
+func (s *mongoStore) TryRecordOperationRecovery(ctx context.Context, certID string, now time.Time) (bool, error) {
+	return s.st.TryRecordOperationRecovery(ctx, certID, now)
+}
+
+func (s *mongoStore) TryRecordSevenDayReminder(ctx context.Context, certID, versionID string, now time.Time) (bool, error) {
+	return s.st.TryRecordSevenDayReminder(ctx, certID, versionID, now)
+}
+
+func (s *mongoStore) TryRecordExpiredNotification(ctx context.Context, certID, versionID string, now time.Time) (bool, error) {
+	return s.st.TryRecordExpiredNotification(ctx, certID, versionID, now)
+}
+
+func (s *mongoStore) SetCertificateNotificationWarning(ctx context.Context, certID, warning string, at time.Time) error {
+	return s.st.SetCertificateNotificationWarning(ctx, certID, warning, at)
+}
+
+func (s *mongoStore) GetNotifyGroup(ctx context.Context, id string) (store.NotifyGroup, error) {
+	return s.st.GetNotifyGroup(ctx, id)
+}

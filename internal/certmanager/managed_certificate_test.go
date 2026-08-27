@@ -245,6 +245,142 @@ func (f *managedCertFakeStore) ValidateServerIDs(_ context.Context, ids []string
 	return nil
 }
 
+func (f *managedCertFakeStore) GetNotifyGroup(_ context.Context, id string) (store.NotifyGroup, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	ng, ok := f.notify[id]
+	if !ok {
+		return store.NotifyGroup{}, mongo.ErrNoDocuments
+	}
+	return ng, nil
+}
+
+func (f *managedCertFakeStore) ListManagedCertificatesForNotifications(_ context.Context) ([]store.ManagedCertificate, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	out := make([]store.ManagedCertificate, 0)
+	for _, id := range f.certOrd {
+		c := f.certs[id]
+		if len(c.NotifyGroupIDs) > 0 && c.ActiveVersion != nil {
+			out = append(out, c)
+		}
+	}
+	return out, nil
+}
+
+func (f *managedCertFakeStore) ensureNotificationState(cert *store.ManagedCertificate) {
+	if cert.NotificationState == nil {
+		cert.NotificationState = &store.CertificateNotificationState{}
+	}
+}
+
+func (f *managedCertFakeStore) TryRecordOperationFailureNotification(_ context.Context, certID string, now time.Time) (bool, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	cert, ok := f.certs[certID]
+	if !ok {
+		return false, mongo.ErrNoDocuments
+	}
+	f.ensureNotificationState(&cert)
+	if cert.NotificationState.HadOperationFailure {
+		return false, nil
+	}
+	cert.NotificationState.HadOperationFailure = true
+	cert.NotificationState.LastFailNotifiedAt = &now
+	f.certs[certID] = cert
+	return true, nil
+}
+
+func (f *managedCertFakeStore) TryRecordOperationFailureReminder(_ context.Context, certID string, now time.Time) (bool, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	cert, ok := f.certs[certID]
+	if !ok {
+		return false, mongo.ErrNoDocuments
+	}
+	f.ensureNotificationState(&cert)
+	if !cert.NotificationState.HadOperationFailure || cert.NotificationState.LastFailNotifiedAt == nil {
+		return false, nil
+	}
+	if now.Sub(*cert.NotificationState.LastFailNotifiedAt) < store.CertNotificationFailReminderInterval {
+		return false, nil
+	}
+	cert.NotificationState.LastFailNotifiedAt = &now
+	f.certs[certID] = cert
+	return true, nil
+}
+
+func (f *managedCertFakeStore) TryRecordOperationRecovery(_ context.Context, certID string, now time.Time) (bool, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	cert, ok := f.certs[certID]
+	if !ok {
+		return false, mongo.ErrNoDocuments
+	}
+	if cert.NotificationState == nil || !cert.NotificationState.HadOperationFailure {
+		return false, nil
+	}
+	cert.NotificationState.HadOperationFailure = false
+	cert.NotificationState.LastFailNotifiedAt = nil
+	cert.UpdatedAt = now
+	f.certs[certID] = cert
+	return true, nil
+}
+
+func (f *managedCertFakeStore) TryRecordSevenDayReminder(_ context.Context, certID, versionID string, now time.Time) (bool, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	cert, ok := f.certs[certID]
+	if !ok {
+		return false, mongo.ErrNoDocuments
+	}
+	if cert.ActiveVersion == nil || cert.ActiveVersion.ID != versionID {
+		return false, nil
+	}
+	f.ensureNotificationState(&cert)
+	if cert.NotificationState.SevenDayReminderVersionID == versionID {
+		return false, nil
+	}
+	cert.NotificationState.SevenDayReminderVersionID = versionID
+	cert.UpdatedAt = now
+	f.certs[certID] = cert
+	return true, nil
+}
+
+func (f *managedCertFakeStore) TryRecordExpiredNotification(_ context.Context, certID, versionID string, now time.Time) (bool, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	cert, ok := f.certs[certID]
+	if !ok {
+		return false, mongo.ErrNoDocuments
+	}
+	if cert.ActiveVersion == nil || cert.ActiveVersion.ID != versionID {
+		return false, nil
+	}
+	f.ensureNotificationState(&cert)
+	if cert.NotificationState.ExpiredNotifiedVersionID == versionID {
+		return false, nil
+	}
+	cert.NotificationState.ExpiredNotifiedVersionID = versionID
+	cert.UpdatedAt = now
+	f.certs[certID] = cert
+	return true, nil
+}
+
+func (f *managedCertFakeStore) SetCertificateNotificationWarning(_ context.Context, certID, warning string, at time.Time) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	cert, ok := f.certs[certID]
+	if !ok {
+		return mongo.ErrNoDocuments
+	}
+	f.ensureNotificationState(&cert)
+	cert.NotificationState.LastNotificationWarning = warning
+	cert.NotificationState.LastNotificationWarningAt = &at
+	f.certs[certID] = cert
+	return nil
+}
+
 func (f *managedCertFakeStore) ClaimPendingIssueOperation(ctx context.Context, opID string) (store.CertificateOperation, error) {
 	now := time.Now().UTC()
 	return f.TryClaimCertificateOperation(ctx, store.CertificateOperationClaimParams{
