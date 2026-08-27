@@ -151,6 +151,29 @@ func (f *managedCertFakeStore) MarkCertificateOperationFailed(_ context.Context,
 	return nil
 }
 
+func (f *managedCertFakeStore) FailExpiredCertificateOperations(_ context.Context, now time.Time) (int64, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	var n int64
+	for id, op := range f.ops {
+		if (op.Status != store.CertOpStatusPending && op.Status != store.CertOpStatusRunning) || op.DeadlineAt == nil {
+			continue
+		}
+		if now.Before(*op.DeadlineAt) {
+			continue
+		}
+		op.Status = store.CertOpStatusFailed
+		op.ErrorSummary = store.OperationTotalTimeoutSummary
+		op.FinishedAt = &now
+		op.LeaseOwner = ""
+		op.LeaseExpiresAt = nil
+		op.UpdatedAt = now
+		f.ops[id] = op
+		n++
+	}
+	return n, nil
+}
+
 func (f *managedCertFakeStore) ClearCertificateOperationPendingTXT(_ context.Context, opID string) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()

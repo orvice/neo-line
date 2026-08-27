@@ -183,6 +183,28 @@ func (s *MongoStore) ClearCertificateOperationPendingTXT(ctx context.Context, op
 	return err
 }
 
+// FailExpiredCertificateOperations marks in-flight operations whose deadline has
+// passed as terminally Failed. Returns the number of documents updated.
+func (s *MongoStore) FailExpiredCertificateOperations(ctx context.Context, now time.Time) (int64, error) {
+	res, err := s.certificateOperations().UpdateMany(ctx, bson.M{
+		"status":      bson.M{"$in": CertOpInFlightStatuses},
+		"deadline_at": bson.M{"$lte": now},
+	}, bson.M{
+		"$set": bson.M{
+			"status":           CertOpStatusFailed,
+			"error_summary":    OperationTotalTimeoutSummary,
+			"finished_at":      now,
+			"lease_owner":      "",
+			"lease_expires_at": nil,
+			"updated_at":       now,
+		},
+	})
+	if err != nil {
+		return 0, err
+	}
+	return res.ModifiedCount, nil
+}
+
 // HasRunningCertificateOperation reports whether the certificate has a Pending or
 // Running operation (used to block delete).
 func (s *MongoStore) HasRunningCertificateOperation(ctx context.Context, managedCertificateID string) (bool, error) {

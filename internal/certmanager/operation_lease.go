@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"os"
-	"sync"
 	"time"
 
 	"github.com/orvice/neo-line/internal/metric"
@@ -14,13 +13,16 @@ import (
 )
 
 const (
-	operationPollInterval       = 5 * time.Second
-	operationLeaseDuration      = store.DefaultOperationLeaseDuration
-	operationHeartbeatInterval  = operationLeaseDuration / 3
-	operationAttemptGracePeriod = 2 * time.Minute
+	operationPollInterval      = 5 * time.Second
+	operationLeaseDuration     = store.DefaultOperationLeaseDuration
+	operationHeartbeatInterval = operationLeaseDuration / 3
+	// OperationAttemptGracePeriod bounds in-flight attempt cleanup after shutdown.
+	OperationAttemptGracePeriod = 2 * time.Minute
 	operationRetryInitial       = 15 * time.Minute
 	operationRetryMax           = 12 * time.Hour
 )
+
+var operationAttemptGracePeriod = OperationAttemptGracePeriod
 
 // JitterFunc adds bounded jitter to retry delays; tests inject deterministic values.
 type JitterFunc func(base time.Duration) time.Duration
@@ -70,8 +72,6 @@ func newReplicaID() string {
 	return host + "-" + hex.EncodeToString(buf[:])
 }
 
-var operationInflight sync.Map // opID -> struct{}
-
 // StartOperationRunner polls for claimable operations and executes them with leases.
 func (m *Manager) StartOperationRunner(ctx context.Context) {
 	if m.replicaID == "" {
@@ -80,6 +80,9 @@ func (m *Manager) StartOperationRunner(ctx context.Context) {
 	if m.jitter == nil {
 		m.jitter = defaultJitter
 	}
+	m.runnerCtxMu.Lock()
+	m.runnerCtx = ctx
+	m.runnerCtxMu.Unlock()
 	m.claimingLeases.Store(true)
 	go m.runOperationPollLoop(ctx)
 }
@@ -108,24 +111,38 @@ func (m *Manager) runOperationPollLoop(ctx context.Context) {
 
 func (m *Manager) pollClaimableOperations(ctx context.Context) {
 	now := m.clock.Now()
+	_, _ = m.store.FailExpiredCertificateOperations(ctx, now)
 	ops, err := m.store.FindClaimableCertificateOperations(ctx, now, 20)
 	if err != nil {
 		return
 	}
 	for _, op := range ops {
+		if operationDeadlineExceeded(op, now) {
+			continue
+		}
 		m.triggerOperation(op.ID)
 	}
 }
 
 func (m *Manager) triggerOperation(opID string) {
-	go m.runOperation(context.Background(), opID)
+	m.runnerCtxMu.RLock()
+	ctx := m.runnerCtx
+	m.runnerCtxMu.RUnlock()
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	go m.runOperation(ctx, opID)
 }
 
 func (m *Manager) runOperation(ctx context.Context, opID string) {
-	if _, loaded := operationInflight.LoadOrStore(opID, struct{}{}); loaded {
+	if _, loaded := m.opInflight.LoadOrStore(opID, struct{}{}); loaded {
 		return
 	}
-	defer operationInflight.Delete(opID)
+	m.opInflightWG.Add(1)
+	defer func() {
+		m.opInflight.Delete(opID)
+		m.opInflightWG.Done()
+	}()
 
 	now := m.clock.Now()
 	op, err := m.store.TryClaimCertificateOperation(ctx, store.CertificateOperationClaimParams{
@@ -135,6 +152,10 @@ func (m *Manager) runOperation(ctx context.Context, opID string) {
 		LeaseExpires: now.Add(operationLeaseDuration),
 	})
 	if err != nil {
+		return
+	}
+	if operationDeadlineExceeded(op, now) {
+		m.failOperationDeadlineExceeded(ctx, op)
 		return
 	}
 
@@ -241,7 +262,10 @@ func (m *Manager) handleOperationFailure(ctx context.Context, op store.Certifica
 	if op.Type == store.CertOpTypeRenew {
 		metric.CertRenewFailuresTotal.Inc()
 	}
-	if isPermanentOperationError(runErr) {
+	if isPermanentOperationError(runErr) || operationDeadlineExceeded(op, m.clock.Now()) {
+		if operationDeadlineExceeded(op, m.clock.Now()) {
+			summary = store.OperationTotalTimeoutSummary
+		}
 		metric.RecordCertOperation(certOpMetricType(op.Type), "failed")
 		_ = m.store.MarkCertificateOperationFailed(ctx, op.ID, m.replicaID, summary)
 		m.notifyOperationFailure(ctx, op, summary)
@@ -250,6 +274,12 @@ func (m *Manager) handleOperationFailure(ctx context.Context, op store.Certifica
 	metric.RecordCertOperation(certOpMetricType(op.Type), "retry_scheduled")
 	failures := op.ConsecutiveFailures + 1
 	nextAt := m.clock.Now().Add(computeRetryDelay(failures, m.jitter))
+	if op.DeadlineAt != nil && !nextAt.Before(*op.DeadlineAt) {
+		metric.RecordCertOperation(certOpMetricType(op.Type), "failed")
+		_ = m.store.MarkCertificateOperationFailed(ctx, op.ID, m.replicaID, store.OperationTotalTimeoutSummary)
+		m.notifyOperationFailure(ctx, op, store.OperationTotalTimeoutSummary)
+		return
+	}
 	_ = m.store.ScheduleCertificateOperationRetry(ctx, op.ID, m.replicaID, nextAt, summary, failures)
 	m.notifyOperationFailure(ctx, op, summary)
 }
@@ -269,6 +299,30 @@ func certOpMetricType(opType string) string {
 
 func isPermanentOperationError(err error) bool {
 	return errors.Is(err, ErrIssuerNotReady)
+}
+
+func operationDeadlineExceeded(op store.CertificateOperation, now time.Time) bool {
+	return op.DeadlineAt != nil && !now.Before(*op.DeadlineAt)
+}
+
+func (m *Manager) failOperationDeadlineExceeded(ctx context.Context, op store.CertificateOperation) {
+	metric.RecordCertOperation(certOpMetricType(op.Type), "failed")
+	_ = m.store.MarkCertificateOperationFailed(ctx, op.ID, m.replicaID, store.OperationTotalTimeoutSummary)
+	m.notifyOperationFailure(ctx, op, store.OperationTotalTimeoutSummary)
+}
+
+// WaitForInflightOperations blocks until all operation goroutines finish or ctx
+// expires. Used during graceful shutdown before closing MongoDB.
+func (m *Manager) WaitForInflightOperations(ctx context.Context) {
+	done := make(chan struct{})
+	go func() {
+		m.opInflightWG.Wait()
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-ctx.Done():
+	}
 }
 
 func (m *Manager) persistPendingTXT(ctx context.Context, opID, owner string, records []store.DNSChallengeRecord) {

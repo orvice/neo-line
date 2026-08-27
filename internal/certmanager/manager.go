@@ -2,6 +2,7 @@ package certmanager
 
 import (
 	"context"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -45,6 +46,7 @@ type Store interface {
 	UpdateCertificateOperationPendingTXT(ctx context.Context, opID, owner string, records []store.DNSChallengeRecord) error
 	ScheduleCertificateOperationRetry(ctx context.Context, opID, owner string, nextAttemptAt time.Time, errorSummary string, consecutiveFailures uint32) error
 	MarkCertificateOperationFailed(ctx context.Context, opID, owner, errorSummary string) error
+	FailExpiredCertificateOperations(ctx context.Context, now time.Time) (int64, error)
 	ClearCertificateOperationPendingTXT(ctx context.Context, opID string) error
 	HasRunningCertificateOperation(ctx context.Context, managedCertificateID string) (bool, error)
 
@@ -102,6 +104,10 @@ type Manager struct {
 	jitter         JitterFunc
 	certNotifier   *certnotify.Dispatcher
 	claimingLeases atomic.Bool
+	runnerCtx      context.Context
+	runnerCtxMu    sync.RWMutex
+	opInflight     sync.Map
+	opInflightWG   sync.WaitGroup
 }
 
 func NewManager(st Store, verifier TokenVerifier) *Manager {

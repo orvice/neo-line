@@ -108,6 +108,7 @@ func TestReconcilerSevenDayNotification(t *testing.T) {
 	notAfter := time.Date(2026, 6, 8, 0, 0, 0, 0, time.UTC)
 	setFakeCert(st, certID, func(c *store.ManagedCertificate) {
 		c.NotifyGroupIDs = []string{"ntf_1"}
+		c.AutoRenewEnabled = false
 		c.ActiveVersion.NotAfter = notAfter
 	})
 	st.notify["ntf_1"] = store.NotifyGroup{

@@ -11,6 +11,7 @@
 | 有效续期窗口 | `min(renew_before_days, 证书总有效期 / 3)` | 短有效期证书避免签发后立即续期循环 |
 | Certificate reconciler 扫描 | **每小时** | 与 Monitor scheduler（5s reconcile）独立 |
 | Operation 失败退避 | **15 分钟** 起，指数至 **12 小时** 封顶 + jitter | 成功清零连续失败 |
+| Operation 总超时 | **72 小时** | 自创建起算；持久化 `deadline_at`；超时后终态 Failed，不再自动重试 |
 | DNS 传播超时 | **120** 秒 | `propagation_timeout_seconds`，范围 30–900 |
 | Server 分发限流 | **120 次 / 分钟 / token** | List + Get 合计；Redis 键 `neo-line:cert-dist:{token_id}` |
 | 失败通知提醒 | 首次立即；持续失败每 **24 小时** | 恢复通知不受失败节流影响 |

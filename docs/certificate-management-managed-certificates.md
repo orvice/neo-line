@@ -62,6 +62,7 @@
 | `config_snapshot` | 创建时冻结的 domains、issuer、dns、key_type |
 | `error_summary` / `warning` | 脱敏错误与告警摘要 |
 | `started_at` / `finished_at` / `next_attempt_at` | 时间戳 |
+| `deadline_at` | operation 总超时（默认创建后 72 小时） |
 
 ## 行为（#17 / #21）
 
@@ -127,7 +128,7 @@ ManagedCertificate 通过 `notify_group_ids` 直接引用 NotifyGroup，**不经
 - **首次 Issue/Renew 失败**：立即发送 `certificate_operation_failed`。
 - **持续失败**：同一失败 episode 内最多每 **24 小时** 发送 `certificate_operation_failed_reminder`。
 - **恢复**：此前存在失败时，首次成功 Issue/Renew 发送一次 `certificate_operation_recovered`。
-- **7 天提醒**：active 剩余 ≤7 天且尚未被新版本替换时，每个 active version 提醒一次。
+- **7 天提醒**：active 剩余 ≤7 天且尚未被新版本替换时，每个 active version 提醒一次；若已有 Renew 或会替换 active 的 Issue operation 在 Pending/Running，则跳过提醒。
 - **过期**：active 进入 `Expired` 时，每个 active version 通知一次。
 
 ### `notification_state` 字段

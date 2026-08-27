@@ -31,6 +31,9 @@ func (noopIssueStore) ScheduleCertificateOperationRetry(context.Context, string,
 func (noopIssueStore) MarkCertificateOperationFailed(context.Context, string, string, string) error {
 	return errors.New("not implemented")
 }
+func (noopIssueStore) FailExpiredCertificateOperations(context.Context, time.Time) (int64, error) {
+	return 0, nil
+}
 func (noopIssueStore) ClearCertificateOperationPendingTXT(context.Context, string) error {
 	return errors.New("not implemented")
 }

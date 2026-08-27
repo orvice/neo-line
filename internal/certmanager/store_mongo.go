@@ -157,6 +157,10 @@ func (s *mongoStore) MarkCertificateOperationFailed(ctx context.Context, opID, o
 	return s.st.MarkCertificateOperationFailed(ctx, opID, owner, errorSummary)
 }
 
+func (s *mongoStore) FailExpiredCertificateOperations(ctx context.Context, now time.Time) (int64, error) {
+	return s.st.FailExpiredCertificateOperations(ctx, now)
+}
+
 func (s *mongoStore) ClearCertificateOperationPendingTXT(ctx context.Context, opID string) error {
 	return s.st.ClearCertificateOperationPendingTXT(ctx, opID)
 }
