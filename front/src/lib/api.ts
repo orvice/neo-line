@@ -591,6 +591,8 @@ function managedCertificateFromProto(c: PbManagedCertificate): ManagedCertificat
     key_type: keyTypeFromProto(c.keyType),
     auto_renew_enabled: c.autoRenewEnabled ?? true,
     renew_before_days: c.renewBeforeDays || 30,
+    effective_renewal_window_days: c.effectiveRenewalWindowDays || undefined,
+    next_renewal_at: iso(c.nextRenewalAt),
     notify_group_ids: c.notifyGroupIds.length ? [...c.notifyGroupIds] : undefined,
     server_ids: c.serverIds.length ? [...c.serverIds] : undefined,
     active_validity: validityFromProto(c.activeValidity),
@@ -1280,6 +1282,13 @@ export const api = {
   submitIssueOperation: (id: string) =>
     call<{ operation: CertificateOperation }>(async () => {
       const res = await managedCertClient.submitIssueOperation({
+        managedCertificateId: id,
+      })
+      return { operation: certificateOperationFromProto(res.operation!) }
+    }),
+  submitRenewOperation: (id: string) =>
+    call<{ operation: CertificateOperation }>(async () => {
+      const res = await managedCertClient.submitRenewOperation({
         managedCertificateId: id,
       })
       return { operation: certificateOperationFromProto(res.operation!) }

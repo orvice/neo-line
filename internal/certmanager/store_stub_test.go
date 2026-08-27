@@ -9,6 +9,18 @@ import (
 
 type noopIssueStore struct{}
 
+func (noopIssueStore) ClaimPendingRenewOperation(context.Context, string) (store.CertificateOperation, error) {
+	return store.CertificateOperation{}, errors.New("not implemented")
+}
+func (noopIssueStore) FailRenewOperation(context.Context, string, string) error {
+	return errors.New("not implemented")
+}
+func (noopIssueStore) FindPendingRenewOperations(context.Context, int64) ([]store.CertificateOperation, error) {
+	return nil, nil
+}
+func (noopIssueStore) ListAutoRenewManagedCertificates(context.Context) ([]store.ManagedCertificate, error) {
+	return nil, nil
+}
 func (noopIssueStore) ClaimPendingIssueOperation(context.Context, string) (store.CertificateOperation, error) {
 	return store.CertificateOperation{}, errors.New("not implemented")
 }

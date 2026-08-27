@@ -5,33 +5,44 @@ import (
 	"time"
 )
 
-const issuePollInterval = 5 * time.Second
+const operationPollInterval = 5 * time.Second
 
-// StartIssueRunner polls for Pending Issue operations and executes them.
-// Full certificate reconciler behavior (#22) builds on this loop.
-func (m *Manager) StartIssueRunner(ctx context.Context) {
-	go m.runIssuePollLoop(ctx)
+// StartOperationRunner polls for Pending Issue and Renew operations and executes them.
+func (m *Manager) StartOperationRunner(ctx context.Context) {
+	go m.runOperationPollLoop(ctx)
 }
 
-func (m *Manager) runIssuePollLoop(ctx context.Context) {
-	ticker := time.NewTicker(issuePollInterval)
+// StartIssueRunner is deprecated; use StartOperationRunner.
+func (m *Manager) StartIssueRunner(ctx context.Context) {
+	m.StartOperationRunner(ctx)
+}
+
+func (m *Manager) runOperationPollLoop(ctx context.Context) {
+	ticker := time.NewTicker(operationPollInterval)
 	defer ticker.Stop()
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			m.pollPendingIssues(ctx)
+			m.pollPendingOperations(ctx)
 		}
 	}
 }
 
-func (m *Manager) pollPendingIssues(ctx context.Context) {
-	ops, err := m.store.FindPendingIssueOperations(ctx, 20)
+func (m *Manager) pollPendingOperations(ctx context.Context) {
+	issueOps, err := m.store.FindPendingIssueOperations(ctx, 20)
 	if err != nil {
 		return
 	}
-	for _, op := range ops {
+	for _, op := range issueOps {
 		m.triggerIssueOperation(op.ID)
+	}
+	renewOps, err := m.store.FindPendingRenewOperations(ctx, 20)
+	if err != nil {
+		return
+	}
+	for _, op := range renewOps {
+		m.triggerRenewOperation(op.ID)
 	}
 }

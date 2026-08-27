@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { Link, useParams } from "react-router-dom"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { ChevronLeft, Download, Pencil, RefreshCw, Rocket } from "lucide-react"
+import { ChevronLeft, Download, Pencil, RefreshCw, Repeat, Rocket } from "lucide-react"
 import { toast } from "sonner"
 
 import { api, ApiError } from "@/lib/api"
@@ -255,7 +255,18 @@ export function ManagedCertificateDetailPage() {
   const issueMutation = useMutation({
     mutationFn: () => api.submitIssueOperation(id),
     onSuccess: () => {
-      toast.success("已提交签发新版本")
+      toast.success("已提交签发新版本（使用 desired config）")
+      queryClient.invalidateQueries({ queryKey: ["managed-certificate", id] })
+    },
+    onError: (err: unknown) => {
+      toast.error(err instanceof ApiError ? err.message : "提交失败")
+    },
+  })
+
+  const renewMutation = useMutation({
+    mutationFn: () => api.submitRenewOperation(id),
+    onSuccess: () => {
+      toast.success("已提交续期（使用 active 签发快照）")
       queryClient.invalidateQueries({ queryKey: ["managed-certificate", id] })
     },
     onError: (err: unknown) => {
@@ -278,6 +289,9 @@ export function ManagedCertificateDetailPage() {
 
   const issueRunning =
     op?.type === "Issue" &&
+    (op.status === "Pending" || op.status === "Running")
+  const renewRunning =
+    op?.type === "Renew" &&
     (op.status === "Pending" || op.status === "Running")
 
   return (
@@ -319,11 +333,23 @@ export function ManagedCertificateDetailPage() {
                   {cert.has_unpublished_desired_changes || cert.active_version ? (
                     <Button
                       variant="default"
-                      disabled={issueRunning || issueMutation.isPending}
+                      disabled={issueRunning || renewRunning || issueMutation.isPending}
                       onClick={() => issueMutation.mutate()}
+                      title="发布 desired config 并签发新版本"
                     >
                       <Rocket className="size-4" />
                       签发新版本
+                    </Button>
+                  ) : null}
+                  {cert.active_version ? (
+                    <Button
+                      variant="secondary"
+                      disabled={issueRunning || renewRunning || renewMutation.isPending}
+                      onClick={() => renewMutation.mutate()}
+                      title="按 active 签发快照续期（与 desired 无关）"
+                    >
+                      <Repeat className="size-4" />
+                      续期 active
                     </Button>
                   ) : null}
                   <Button variant="outline" onClick={() => setFormOpen(true)}>
@@ -386,9 +412,36 @@ export function ManagedCertificateDetailPage() {
                   <dd>{cert.auto_renew_enabled ? "开启" : "关闭"}</dd>
                 </div>
                 <div>
-                  <dt className="text-muted-foreground">续期提前</dt>
+                  <dt className="text-muted-foreground">续期提前（配置）</dt>
                   <dd>{cert.renew_before_days} 天</dd>
                 </div>
+                {cert.active_version ? (
+                  <>
+                    <div>
+                      <dt className="text-muted-foreground">有效续期窗口</dt>
+                      <dd>
+                        {cert.effective_renewal_window_days ?? cert.renew_before_days} 天
+                        <span className="text-muted-foreground ml-1 text-xs">
+                          （min(配置, 有效期/3)）
+                        </span>
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-muted-foreground">下次自动续期</dt>
+                      <dd>
+                        {cert.auto_renew_enabled ? (
+                          cert.next_renewal_at ? (
+                            formatTime(cert.next_renewal_at)
+                          ) : (
+                            "—"
+                          )
+                        ) : (
+                          <span className="text-muted-foreground">已关闭自动续期</span>
+                        )}
+                      </dd>
+                    </div>
+                  </>
+                ) : null}
                 <div>
                   <dt className="text-muted-foreground">通知组</dt>
                   <dd>

@@ -578,6 +578,8 @@ func managedCertificateToProto(c certmanager.PublicManagedCertificate) *pb.Manag
 		out.PreviousVersion = certificateVersionToProto(c.PreviousVersion)
 	}
 	out.HasUnpublishedDesiredChanges = c.HasUnpublishedDesiredChanges
+	out.EffectiveRenewalWindowDays = c.EffectiveRenewalWindowDays
+	out.NextRenewalAt = timeToTSPtr(c.NextRenewalAt)
 	return out
 }
 

@@ -74,6 +74,17 @@
 - 已吊销 previous（`revoked_at` 已设置）永远不能重新激活。
 - `active_validity` 根据当前时间计算 Missing / Valid / RenewalDue / Expired / Revoked，与 operation 状态、auto-renew 正交。
 
+### 自动续期（#22）
+
+- **certificate reconciler** 与 Monitor scheduler **独立** 构造、启动与停止；默认 **每小时** 扫描 `auto_renew_enabled = true` 且存在 `active_version` 的证书。
+- 当 `active_validity = RenewalDue` 时，reconciler 自动创建 **Renew** operation；关闭自动续期时不创建 operation，但 active bundle 仍可下载。
+- **Renew** 严格使用 **active version 签发快照**（domains、Issuer、DNS 账户、key type），不使用尚未发布的 desired config。
+- **Issue**（「签发新版本」）使用当前 **desired config** 快照；两者语义在 UI 中分别展示。
+- `renew_before_days` 默认 **30**；**有效续期窗口** = `min(renew_before_days, 证书总有效期 / 3)`。
+- 每次 Renew 生成 **新私钥**，成功经双版本原子切换写入 active；失败时 active/previous 不变。
+- 相同 **Renew** 正在 Pending/Running 时，reconcile 或重复手动请求 **复用同一条** operation。
+- Admin 可在自动续期关闭时手动 **续期 active** 或 **签发 desired**；详情展示配置/有效窗口、下次自动续期与手动 Renew。
+
 ### 创建
 
 1. 校验 Ready Issuer、存在的 DNS 账户、NotifyGroup / Server ID（Server 可为空）。  
@@ -101,6 +112,10 @@
 | 密钥类型 | EC P-256 |
 | 自动续期 | 开启 |
 | renew_before_days | 30 |
+| 有效续期窗口 | min(renew_before_days, 证书有效期 / 3) |
+| 自动续期扫描周期 | 每小时 |
+| Issue operation 执行轮询 | 5 秒 |
+| Renew operation 执行轮询 | 5 秒（与 Issue 共用 operation runner） |
 | Server 分配 | 空（可选） |
 
 ## 相关文档

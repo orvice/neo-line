@@ -25,6 +25,37 @@ func effectiveRenewalWindow(notBefore, notAfter time.Time, renewBeforeDays uint3
 	return cfg
 }
 
+func effectiveRenewalWindowDays(notBefore, notAfter time.Time, renewBeforeDays uint32) uint32 {
+	window := effectiveRenewalWindow(notBefore, notAfter, renewBeforeDays)
+	days := window / (24 * time.Hour)
+	if days == 0 && window > 0 {
+		return 1
+	}
+	return uint32(days)
+}
+
+func nextRenewalAt(v *store.CertificateVersion, renewBeforeDays uint32) *time.Time {
+	if v == nil || !versionDistributable(v) {
+		return nil
+	}
+	window := effectiveRenewalWindow(v.NotBefore, v.NotAfter, renewBeforeDays)
+	t := v.NotAfter.Add(-window)
+	return &t
+}
+
+func renewalMetadata(cert store.ManagedCertificate, now time.Time) (effectiveDays uint32, nextAt *time.Time) {
+	if cert.ActiveVersion == nil {
+		return 0, nil
+	}
+	v := cert.ActiveVersion
+	effectiveDays = effectiveRenewalWindowDays(v.NotBefore, v.NotAfter, cert.RenewBeforeDays)
+	nextAt = nextRenewalAt(v, cert.RenewBeforeDays)
+	if nextAt != nil && now.After(v.NotAfter) {
+		return effectiveDays, nil
+	}
+	return effectiveDays, nextAt
+}
+
 func computeVersionValidity(v *store.CertificateVersion, renewBeforeDays uint32, now time.Time) (validity string, bundleAvailable bool) {
 	if v == nil {
 		return store.CertValidityMissing, false
@@ -38,7 +69,7 @@ func computeVersionValidity(v *store.CertificateVersion, renewBeforeDays uint32,
 	}
 	if !now.Before(v.NotBefore) {
 		window := effectiveRenewalWindow(v.NotBefore, v.NotAfter, renewBeforeDays)
-		if now.After(v.NotAfter.Add(-window)) {
+		if !now.Before(v.NotAfter.Add(-window)) {
 			return store.CertValidityRenewalDue, bundleAvailable
 		}
 	}

@@ -116,6 +116,22 @@ func (s *mongoStore) FindPendingIssueOperations(ctx context.Context, limit int64
 	return s.st.FindPendingIssueOperations(ctx, limit)
 }
 
+func (s *mongoStore) ClaimPendingRenewOperation(ctx context.Context, opID string) (store.CertificateOperation, error) {
+	return s.st.ClaimPendingRenewOperation(ctx, opID)
+}
+
+func (s *mongoStore) FailRenewOperation(ctx context.Context, opID, errorSummary string) error {
+	return s.st.FailRenewOperation(ctx, opID, errorSummary)
+}
+
+func (s *mongoStore) FindPendingRenewOperations(ctx context.Context, limit int64) ([]store.CertificateOperation, error) {
+	return s.st.FindPendingRenewOperations(ctx, limit)
+}
+
+func (s *mongoStore) ListAutoRenewManagedCertificates(ctx context.Context) ([]store.ManagedCertificate, error) {
+	return s.st.ListAutoRenewManagedCertificates(ctx)
+}
+
 func (s *mongoStore) UpdateCertificateOperation(ctx context.Context, id string, op store.CertificateOperation) (store.CertificateOperation, error) {
 	return s.st.UpdateCertificateOperation(ctx, id, op)
 }

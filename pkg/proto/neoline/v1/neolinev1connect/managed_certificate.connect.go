@@ -49,6 +49,9 @@ const (
 	// ManagedCertificateServiceSubmitIssueOperationProcedure is the fully-qualified name of the
 	// ManagedCertificateService's SubmitIssueOperation RPC.
 	ManagedCertificateServiceSubmitIssueOperationProcedure = "/neoline.v1.ManagedCertificateService/SubmitIssueOperation"
+	// ManagedCertificateServiceSubmitRenewOperationProcedure is the fully-qualified name of the
+	// ManagedCertificateService's SubmitRenewOperation RPC.
+	ManagedCertificateServiceSubmitRenewOperationProcedure = "/neoline.v1.ManagedCertificateService/SubmitRenewOperation"
 	// ManagedCertificateServiceGetCertificateBundleProcedure is the fully-qualified name of the
 	// ManagedCertificateService's GetCertificateBundle RPC.
 	ManagedCertificateServiceGetCertificateBundleProcedure = "/neoline.v1.ManagedCertificateService/GetCertificateBundle"
@@ -64,6 +67,7 @@ type ManagedCertificateServiceClient interface {
 	GetManagedCertificate(context.Context, *connect.Request[v1.GetManagedCertificateRequest]) (*connect.Response[v1.GetManagedCertificateResponse], error)
 	UpdateManagedCertificate(context.Context, *connect.Request[v1.UpdateManagedCertificateRequest]) (*connect.Response[v1.UpdateManagedCertificateResponse], error)
 	SubmitIssueOperation(context.Context, *connect.Request[v1.SubmitIssueOperationRequest]) (*connect.Response[v1.SubmitIssueOperationResponse], error)
+	SubmitRenewOperation(context.Context, *connect.Request[v1.SubmitRenewOperationRequest]) (*connect.Response[v1.SubmitRenewOperationResponse], error)
 	GetCertificateBundle(context.Context, *connect.Request[v1.GetCertificateBundleRequest]) (*connect.Response[v1.GetCertificateBundleResponse], error)
 	ActivatePreviousVersion(context.Context, *connect.Request[v1.ActivatePreviousVersionRequest]) (*connect.Response[v1.ActivatePreviousVersionResponse], error)
 }
@@ -109,6 +113,12 @@ func NewManagedCertificateServiceClient(httpClient connect.HTTPClient, baseURL s
 			connect.WithSchema(managedCertificateServiceMethods.ByName("SubmitIssueOperation")),
 			connect.WithClientOptions(opts...),
 		),
+		submitRenewOperation: connect.NewClient[v1.SubmitRenewOperationRequest, v1.SubmitRenewOperationResponse](
+			httpClient,
+			baseURL+ManagedCertificateServiceSubmitRenewOperationProcedure,
+			connect.WithSchema(managedCertificateServiceMethods.ByName("SubmitRenewOperation")),
+			connect.WithClientOptions(opts...),
+		),
 		getCertificateBundle: connect.NewClient[v1.GetCertificateBundleRequest, v1.GetCertificateBundleResponse](
 			httpClient,
 			baseURL+ManagedCertificateServiceGetCertificateBundleProcedure,
@@ -131,6 +141,7 @@ type managedCertificateServiceClient struct {
 	getManagedCertificate    *connect.Client[v1.GetManagedCertificateRequest, v1.GetManagedCertificateResponse]
 	updateManagedCertificate *connect.Client[v1.UpdateManagedCertificateRequest, v1.UpdateManagedCertificateResponse]
 	submitIssueOperation     *connect.Client[v1.SubmitIssueOperationRequest, v1.SubmitIssueOperationResponse]
+	submitRenewOperation     *connect.Client[v1.SubmitRenewOperationRequest, v1.SubmitRenewOperationResponse]
 	getCertificateBundle     *connect.Client[v1.GetCertificateBundleRequest, v1.GetCertificateBundleResponse]
 	activatePreviousVersion  *connect.Client[v1.ActivatePreviousVersionRequest, v1.ActivatePreviousVersionResponse]
 }
@@ -160,6 +171,11 @@ func (c *managedCertificateServiceClient) SubmitIssueOperation(ctx context.Conte
 	return c.submitIssueOperation.CallUnary(ctx, req)
 }
 
+// SubmitRenewOperation calls neoline.v1.ManagedCertificateService.SubmitRenewOperation.
+func (c *managedCertificateServiceClient) SubmitRenewOperation(ctx context.Context, req *connect.Request[v1.SubmitRenewOperationRequest]) (*connect.Response[v1.SubmitRenewOperationResponse], error) {
+	return c.submitRenewOperation.CallUnary(ctx, req)
+}
+
 // GetCertificateBundle calls neoline.v1.ManagedCertificateService.GetCertificateBundle.
 func (c *managedCertificateServiceClient) GetCertificateBundle(ctx context.Context, req *connect.Request[v1.GetCertificateBundleRequest]) (*connect.Response[v1.GetCertificateBundleResponse], error) {
 	return c.getCertificateBundle.CallUnary(ctx, req)
@@ -178,6 +194,7 @@ type ManagedCertificateServiceHandler interface {
 	GetManagedCertificate(context.Context, *connect.Request[v1.GetManagedCertificateRequest]) (*connect.Response[v1.GetManagedCertificateResponse], error)
 	UpdateManagedCertificate(context.Context, *connect.Request[v1.UpdateManagedCertificateRequest]) (*connect.Response[v1.UpdateManagedCertificateResponse], error)
 	SubmitIssueOperation(context.Context, *connect.Request[v1.SubmitIssueOperationRequest]) (*connect.Response[v1.SubmitIssueOperationResponse], error)
+	SubmitRenewOperation(context.Context, *connect.Request[v1.SubmitRenewOperationRequest]) (*connect.Response[v1.SubmitRenewOperationResponse], error)
 	GetCertificateBundle(context.Context, *connect.Request[v1.GetCertificateBundleRequest]) (*connect.Response[v1.GetCertificateBundleResponse], error)
 	ActivatePreviousVersion(context.Context, *connect.Request[v1.ActivatePreviousVersionRequest]) (*connect.Response[v1.ActivatePreviousVersionResponse], error)
 }
@@ -219,6 +236,12 @@ func NewManagedCertificateServiceHandler(svc ManagedCertificateServiceHandler, o
 		connect.WithSchema(managedCertificateServiceMethods.ByName("SubmitIssueOperation")),
 		connect.WithHandlerOptions(opts...),
 	)
+	managedCertificateServiceSubmitRenewOperationHandler := connect.NewUnaryHandler(
+		ManagedCertificateServiceSubmitRenewOperationProcedure,
+		svc.SubmitRenewOperation,
+		connect.WithSchema(managedCertificateServiceMethods.ByName("SubmitRenewOperation")),
+		connect.WithHandlerOptions(opts...),
+	)
 	managedCertificateServiceGetCertificateBundleHandler := connect.NewUnaryHandler(
 		ManagedCertificateServiceGetCertificateBundleProcedure,
 		svc.GetCertificateBundle,
@@ -243,6 +266,8 @@ func NewManagedCertificateServiceHandler(svc ManagedCertificateServiceHandler, o
 			managedCertificateServiceUpdateManagedCertificateHandler.ServeHTTP(w, r)
 		case ManagedCertificateServiceSubmitIssueOperationProcedure:
 			managedCertificateServiceSubmitIssueOperationHandler.ServeHTTP(w, r)
+		case ManagedCertificateServiceSubmitRenewOperationProcedure:
+			managedCertificateServiceSubmitRenewOperationHandler.ServeHTTP(w, r)
 		case ManagedCertificateServiceGetCertificateBundleProcedure:
 			managedCertificateServiceGetCertificateBundleHandler.ServeHTTP(w, r)
 		case ManagedCertificateServiceActivatePreviousVersionProcedure:
@@ -274,6 +299,10 @@ func (UnimplementedManagedCertificateServiceHandler) UpdateManagedCertificate(co
 
 func (UnimplementedManagedCertificateServiceHandler) SubmitIssueOperation(context.Context, *connect.Request[v1.SubmitIssueOperationRequest]) (*connect.Response[v1.SubmitIssueOperationResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("neoline.v1.ManagedCertificateService.SubmitIssueOperation is not implemented"))
+}
+
+func (UnimplementedManagedCertificateServiceHandler) SubmitRenewOperation(context.Context, *connect.Request[v1.SubmitRenewOperationRequest]) (*connect.Response[v1.SubmitRenewOperationResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("neoline.v1.ManagedCertificateService.SubmitRenewOperation is not implemented"))
 }
 
 func (UnimplementedManagedCertificateServiceHandler) GetCertificateBundle(context.Context, *connect.Request[v1.GetCertificateBundleRequest]) (*connect.Response[v1.GetCertificateBundleResponse], error) {

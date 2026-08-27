@@ -86,6 +86,7 @@ func main() {
 	schedCtx, cancelSched := context.WithCancel(context.Background())
 	archiveDone := make(chan struct{})
 	schedDone := make(chan struct{})
+	certReconcilerDone := make(chan struct{})
 
 	config := &app.Config{
 		Service: "neo-line",
@@ -179,7 +180,12 @@ func main() {
 			func() error {
 				certCtx, cancel := context.WithCancel(schedCtx)
 				certRunnerCancel = cancel
-				certMgr.StartIssueRunner(certCtx)
+				certMgr.StartOperationRunner(certCtx)
+				reconciler := certmanager.NewReconciler(certMgr)
+				go func() {
+					reconciler.Start(certCtx)
+					close(certReconcilerDone)
+				}()
 				go func() {
 					archiver.Run(schedCtx)
 					close(archiveDone)
@@ -198,6 +204,11 @@ func main() {
 				cancelSched()
 				if certRunnerCancel != nil {
 					certRunnerCancel()
+				}
+				select {
+				case <-certReconcilerDone:
+				case <-time.After(15 * time.Second):
+					log.Println("certificate reconciler shutdown timed out")
 				}
 				// Wait for in-flight probes to finish before closing the store
 				// so no probe writes to a closed MongoDB client.

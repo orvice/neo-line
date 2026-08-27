@@ -66,7 +66,7 @@ func (m *Manager) runIssueOperation(ctx context.Context, opID string) {
 		return
 	}
 
-	warning, runErr := m.executeIssue(ctx, op)
+	warning, runErr := m.executeCertificateIssuance(ctx, op)
 	if runErr == nil {
 		return
 	}
@@ -74,7 +74,7 @@ func (m *Manager) runIssueOperation(ctx context.Context, opID string) {
 	_ = m.store.FailIssueOperation(ctx, opID, sanitizeIssueError(runErr))
 }
 
-func (m *Manager) executeIssue(ctx context.Context, op store.CertificateOperation) (warning string, err error) {
+func (m *Manager) executeCertificateIssuance(ctx context.Context, op store.CertificateOperation) (warning string, err error) {
 	snap := op.ConfigSnapshot
 	issuer, err := m.store.GetCertificateIssuer(ctx, snap.CertificateIssuerID)
 	if err != nil {

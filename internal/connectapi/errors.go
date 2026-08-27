@@ -30,6 +30,8 @@ func toConnectError(err error) error {
 		return connect.NewError(connect.CodeInvalidArgument, err)
 	case errors.Is(err, certmanager.ErrIssueFieldsLocked):
 		return connect.NewError(connect.CodeFailedPrecondition, err)
+	case errors.Is(err, certmanager.ErrNoActiveVersion), errors.Is(err, certmanager.ErrIssuanceOperationInFlight):
+		return connect.NewError(connect.CodeFailedPrecondition, err)
 	case errors.Is(err, certmanager.ErrCertificateNotAuthorized):
 		return connect.NewError(connect.CodeNotFound, errors.New("not found"))
 	case errors.Is(err, certmanager.ErrBundleNotAvailable):
