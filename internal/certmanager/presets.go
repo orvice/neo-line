@@ -192,6 +192,14 @@ func (m *Manager) CreateCertificateIssuer(ctx context.Context, input IssuerInput
 	}
 	meta, err := m.acme.FetchDirectory(ctx, directoryURL)
 	if err != nil {
+		if m.logger != nil {
+			attrs := []any{
+				"error_stage", "fetch_acme_directory",
+				"acme_host", safeURLHost(directoryURL),
+			}
+			attrs = append(attrs, safeErrorAttrs(err)...)
+			m.logger.ErrorContext(ctx, "fetch ACME directory failed", attrs...)
+		}
 		return PublicIssuer{}, err
 	}
 	if meta.TermsOfService != "" && !input.TermsOfServiceAgreed {
@@ -220,7 +228,23 @@ func (m *Manager) CreateCertificateIssuer(ctx context.Context, input IssuerInput
 	}
 	created, err := m.store.CreateCertificateIssuer(ctx, issuer)
 	if err != nil {
+		if m.logger != nil {
+			attrs := []any{
+				"error_stage", "persist_certificate_issuer",
+				"acme_host", safeURLHost(directoryURL),
+			}
+			attrs = append(attrs, safeErrorAttrs(err)...)
+			m.logger.ErrorContext(ctx, "persist certificate issuer failed", attrs...)
+		}
 		return PublicIssuer{}, err
+	}
+	if m.logger != nil {
+		m.logger.InfoContext(ctx, "certificate issuer created",
+			"issuer_id", created.ID,
+			"acme_host", safeURLHost(created.DirectoryURL),
+			"registration_status", created.RegistrationStatus,
+			"staging_untrusted", created.StagingUntrusted,
+		)
 	}
 	m.startRegistration(created.ID)
 	return publicFromIssuer(created), nil
@@ -359,43 +383,105 @@ func (m *Manager) startRegistration(id string) {
 		return
 	}
 	ctx := m.backgroundContext()
+	if m.logger != nil {
+		m.logger.InfoContext(ctx, "certificate issuer registration scheduled", "issuer_id", id)
+	}
 	if !m.launchBackgroundTask(func() {
 		defer m.registrationInflight.Delete(id)
 		m.runRegistration(ctx, id)
 	}) {
 		m.registrationInflight.Delete(id)
+		if m.logger != nil {
+			m.logger.ErrorContext(ctx, "certificate issuer registration task rejected", "issuer_id", id, "error_stage", "background_task_rejected")
+		}
 	}
 }
 
 func (m *Manager) runRegistration(ctx context.Context, id string) {
 	if ctx.Err() != nil {
+		if m.logger != nil {
+			m.logger.WarnContext(ctx, "certificate issuer registration interrupted before start", "issuer_id", id)
+		}
 		m.failInterruptedRegistration(ctx, id)
 		return
 	}
 	issuer, err := m.store.GetCertificateIssuer(ctx, id)
 	if err != nil {
+		if m.logger != nil {
+			attrs := []any{"issuer_id", id, "error_stage", "load_certificate_issuer"}
+			attrs = append(attrs, safeErrorAttrs(err)...)
+			m.logger.ErrorContext(ctx, "load certificate issuer for registration failed", attrs...)
+		}
 		return
 	}
 	if issuer.RegistrationStatus != store.IssuerRegistrationPending {
+		if m.logger != nil {
+			m.logger.InfoContext(ctx, "certificate issuer registration skipped", "issuer_id", id, "registration_status", issuer.RegistrationStatus)
+		}
 		return
+	}
+	started := time.Now()
+	if m.logger != nil {
+		m.logger.InfoContext(ctx, "certificate issuer registration started",
+			"issuer_id", id,
+			"acme_host", safeURLHost(issuer.DirectoryURL),
+			"staging_untrusted", issuer.StagingUntrusted,
+		)
 	}
 	regErr := m.acme.RegisterAccount(ctx, issuer)
 	if ctx.Err() != nil {
+		if m.logger != nil {
+			m.logger.WarnContext(ctx, "certificate issuer registration interrupted", "issuer_id", id, "duration_ms", time.Since(started).Milliseconds())
+		}
 		m.failInterruptedRegistration(ctx, id)
 		return
 	}
 	issuer, err = m.store.GetCertificateIssuer(ctx, id)
 	if err != nil {
+		if m.logger != nil {
+			attrs := []any{"issuer_id", id, "error_stage", "reload_certificate_issuer", "duration_ms", time.Since(started).Milliseconds()}
+			attrs = append(attrs, safeErrorAttrs(err)...)
+			m.logger.ErrorContext(ctx, "reload certificate issuer after registration failed", attrs...)
+		}
 		return
 	}
 	if regErr != nil {
 		issuer.RegistrationStatus = store.IssuerRegistrationFailed
 		issuer.RegistrationError = sanitizeRegistrationError(regErr, issuer.EABKid, issuer.EABHMAC, issuer.AccountKeyPEM)
+		if m.logger != nil {
+			attrs := []any{
+				"issuer_id", id,
+				"acme_host", safeURLHost(issuer.DirectoryURL),
+				"duration_ms", time.Since(started).Milliseconds(),
+			}
+			attrs = append(attrs, safeErrorAttrs(regErr)...)
+			m.logger.ErrorContext(ctx, "certificate issuer registration failed", attrs...)
+		}
 	} else {
 		issuer.RegistrationStatus = store.IssuerRegistrationReady
 		issuer.RegistrationError = ""
+		if m.logger != nil {
+			m.logger.InfoContext(ctx, "certificate issuer registration succeeded",
+				"issuer_id", id,
+				"acme_host", safeURLHost(issuer.DirectoryURL),
+				"duration_ms", time.Since(started).Milliseconds(),
+			)
+		}
 	}
-	_, _ = m.store.UpdateCertificateIssuer(ctx, id, issuer)
+	if _, err := m.store.UpdateCertificateIssuer(ctx, id, issuer); err != nil {
+		if m.logger != nil {
+			attrs := []any{"issuer_id", id, "error_stage", "persist_registration_status"}
+			attrs = append(attrs, safeErrorAttrs(err)...)
+			m.logger.ErrorContext(ctx, "persist certificate issuer registration status failed", attrs...)
+		}
+		return
+	}
+	if m.logger != nil {
+		m.logger.InfoContext(ctx, "certificate issuer registration status persisted",
+			"issuer_id", id,
+			"registration_status", issuer.RegistrationStatus,
+		)
+	}
 }
 
 func (m *Manager) failInterruptedRegistration(ctx context.Context, id string) {
@@ -407,7 +493,9 @@ func (m *Manager) failInterruptedRegistration(ctx context.Context, id string) {
 	}
 	issuer.RegistrationStatus = store.IssuerRegistrationFailed
 	issuer.RegistrationError = issuerRegistrationInterrupted
-	if _, err := m.store.UpdateCertificateIssuer(finalizeCtx, id, issuer); err != nil {
-		m.logger.WarnContext(finalizeCtx, "finalize interrupted issuer registration", "issuer_id", id, "error", err)
+	if _, err := m.store.UpdateCertificateIssuer(finalizeCtx, id, issuer); err != nil && m.logger != nil {
+		attrs := []any{"issuer_id", id, "error_stage", "persist_interrupted_registration"}
+		attrs = append(attrs, safeErrorAttrs(err)...)
+		m.logger.ErrorContext(finalizeCtx, "finalize interrupted issuer registration failed", attrs...)
 	}
 }

@@ -82,8 +82,18 @@ func (m *Manager) StartOperationRunner(ctx context.Context) {
 	m.runnerCtx = ctx
 	m.runnerCtxMu.Unlock()
 	m.claimingLeases.Store(true)
+	if m.logger != nil {
+		m.logger.InfoContext(ctx, "certificate operation runner started",
+			"replica_id", m.replicaID,
+			"poll_interval", operationPollInterval.String(),
+			"lease_duration", operationLeaseDuration.String(),
+		)
+	}
 	if !m.launchBackgroundTask(func() { m.runOperationPollLoop(ctx) }) {
 		m.claimingLeases.Store(false)
+		if m.logger != nil {
+			m.logger.ErrorContext(ctx, "certificate operation runner failed to start", "replica_id", m.replicaID)
+		}
 	}
 }
 
@@ -94,6 +104,9 @@ func (m *Manager) runOperationPollLoop(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			m.claimingLeases.Store(false)
+			if m.logger != nil {
+				m.logger.InfoContext(ctx, "certificate operation runner stopped", "replica_id", m.replicaID)
+			}
 			return
 		case <-ticker.C:
 			if !m.claimingLeases.Load() {
@@ -109,17 +122,40 @@ func (m *Manager) pollClaimableOperations(ctx context.Context) {
 		return
 	}
 	now := m.clock.Now()
-	if _, err := m.store.FailExpiredCertificateOperations(ctx, now); err != nil {
-		m.logger.WarnContext(ctx, "fail expired certificate operations", "error", err)
+	expired, err := m.store.FailExpiredCertificateOperations(ctx, now)
+	if err != nil {
+		if m.logger != nil {
+			attrs := []any{"error_stage", "fail_expired_operations"}
+			attrs = append(attrs, safeErrorAttrs(err)...)
+			m.logger.ErrorContext(ctx, "fail expired certificate operations failed", attrs...)
+		}
+	} else if expired > 0 && m.logger != nil {
+		m.logger.WarnContext(ctx, "expired certificate operations marked failed", "count", expired)
 	}
 	ops, err := m.store.FindClaimableCertificateOperations(ctx, now, 20)
 	if err != nil {
-		m.logger.WarnContext(ctx, "find claimable certificate operations", "error", err)
+		if m.logger != nil {
+			attrs := []any{"error_stage", "find_claimable_operations"}
+			attrs = append(attrs, safeErrorAttrs(err)...)
+			m.logger.ErrorContext(ctx, "find claimable certificate operations failed", attrs...)
+		}
 		return
 	}
 	for _, op := range ops {
 		if operationDeadlineExceeded(op, now) {
+			if m.logger != nil {
+				attrs := operationLogAttrs(op)
+				attrs = append(attrs, "error_stage", "operation_deadline")
+				m.logger.WarnContext(ctx, "claimable certificate operation exceeded deadline", attrs...)
+			}
 			continue
+		}
+		if m.logger != nil {
+			attrs := operationLogAttrs(op)
+			if op.NextAttemptAt != nil {
+				attrs = append(attrs, "claimable_next_attempt_at", *op.NextAttemptAt)
+			}
+			m.logger.InfoContext(ctx, "claimable certificate operation scheduled", attrs...)
 		}
 		m.triggerOperation(op.ID)
 	}
@@ -127,10 +163,16 @@ func (m *Manager) pollClaimableOperations(ctx context.Context) {
 
 func (m *Manager) triggerOperation(opID string) {
 	if !m.claimingLeases.Load() {
+		if m.logger != nil {
+			m.logger.Warn("certificate operation trigger skipped", "operation_id", opID, "error_stage", "trigger_leases_disabled")
+		}
 		return
 	}
 	ctx, ok := m.runnerContext()
 	if !ok {
+		if m.logger != nil {
+			m.logger.Error("certificate operation trigger skipped", "operation_id", opID, "error_stage", "runner_context_unavailable")
+		}
 		return
 	}
 	if _, loaded := m.opInflight.LoadOrStore(opID, struct{}{}); loaded {
@@ -141,10 +183,14 @@ func (m *Manager) triggerOperation(opID string) {
 		m.runOperation(ctx, opID)
 	}) {
 		m.opInflight.Delete(opID)
+		if m.logger != nil {
+			m.logger.Error("certificate operation trigger failed", "operation_id", opID, "error_stage", "background_task_rejected")
+		}
 	}
 }
 
 func (m *Manager) runOperation(ctx context.Context, opID string) {
+	operationStarted := time.Now()
 	now := m.clock.Now()
 	op, err := m.store.TryClaimCertificateOperation(ctx, store.CertificateOperationClaimParams{
 		OpID:         opID,
@@ -153,15 +199,43 @@ func (m *Manager) runOperation(ctx context.Context, opID string) {
 		LeaseExpires: now.Add(operationLeaseDuration),
 	})
 	if err != nil {
+		if m.logger != nil {
+			attrs := []any{
+				"operation_id", opID,
+				"replica_id", m.replicaID,
+				"duration_ms", time.Since(operationStarted).Milliseconds(),
+			}
+			attrs = append(attrs, safeErrorAttrs(err)...)
+			if errors.Is(err, store.ErrCertificateOperationConflict) {
+				m.logger.InfoContext(ctx, "certificate operation claim skipped", attrs...)
+			} else {
+				m.logger.ErrorContext(ctx, "certificate operation claim failed", attrs...)
+			}
+		}
 		return
 	}
+	if m.logger != nil {
+		attrs := operationLogAttrs(op)
+		attrs = append(attrs, "replica_id", m.replicaID, "claim_duration_ms", time.Since(operationStarted).Milliseconds())
+		m.logger.InfoContext(ctx, "certificate operation claimed", attrs...)
+	}
 	if operationDeadlineExceeded(op, now) {
+		if m.logger != nil {
+			attrs := operationLogAttrs(op)
+			attrs = append(attrs, "error_stage", "operation_deadline")
+			m.logger.WarnContext(ctx, "certificate operation deadline exceeded before execution", attrs...)
+		}
 		m.failOperationDeadlineExceeded(ctx, op)
 		return
 	}
 
 	takeover := op.AttemptCount > 1 && len(op.PendingTXTRecords) > 0
 	if takeover {
+		if m.logger != nil {
+			attrs := operationLogAttrs(op)
+			attrs = append(attrs, "takeover", true)
+			m.logger.WarnContext(ctx, "certificate operation taking over expired lease", attrs...)
+		}
 		m.cleanupPendingTXT(ctx, op)
 	}
 
@@ -171,6 +245,11 @@ func (m *Manager) runOperation(ctx context.Context, opID string) {
 		var graceCancel context.CancelFunc
 		attemptCtx, graceCancel = context.WithTimeout(attemptCtx, OperationAttemptGracePeriod)
 		defer graceCancel()
+		if m.logger != nil {
+			attrs := operationLogAttrs(op)
+			attrs = append(attrs, "grace_period", OperationAttemptGracePeriod.String())
+			m.logger.WarnContext(ctx, "certificate operation running during shutdown grace period", attrs...)
+		}
 	}
 
 	heartbeatDone := make(chan struct{})
@@ -180,8 +259,29 @@ func (m *Manager) runOperation(ctx context.Context, opID string) {
 	warning, runErr := m.executeOperation(attemptCtx, op, m.replicaID)
 	if runErr == nil {
 		metric.RecordCertOperation(certOpMetricType(op.Type), "succeeded")
+		if m.logger != nil {
+			attrs := operationLogAttrs(op)
+			attrs = append(attrs,
+				"duration_ms", time.Since(operationStarted).Milliseconds(),
+				"warning_present", warning != "",
+			)
+			m.logger.InfoContext(ctx, "certificate operation succeeded", attrs...)
+		}
 		m.notifyOperationSuccess(ctx, op)
 		return
+	}
+	if m.logger != nil {
+		stage := operationStageOf(runErr)
+		if stage == "" {
+			stage = "operation"
+		}
+		attrs := operationLogAttrs(op)
+		attrs = append(attrs,
+			"duration_ms", time.Since(operationStarted).Milliseconds(),
+			"error_stage", stage,
+		)
+		attrs = append(attrs, safeErrorAttrs(runErr)...)
+		m.logger.ErrorContext(ctx, "certificate operation failed", attrs...)
 	}
 	_ = warning
 	m.handleOperationFailure(ctx, op, runErr)
@@ -193,6 +293,12 @@ func (m *Manager) notifyOperationSuccess(ctx context.Context, op store.Certifica
 	}
 	cert, err := m.store.GetManagedCertificate(ctx, op.ManagedCertificateID)
 	if err != nil {
+		if m.logger != nil {
+			attrs := operationLogAttrs(op)
+			attrs = append(attrs, "error_stage", "load_notification_certificate")
+			attrs = append(attrs, safeErrorAttrs(err)...)
+			m.logger.WarnContext(ctx, "load certificate for success notification failed", attrs...)
+		}
 		return
 	}
 	m.certNotifier.OnOperationSuccess(ctx, cert, op)
@@ -204,6 +310,12 @@ func (m *Manager) notifyOperationFailure(ctx context.Context, op store.Certifica
 	}
 	cert, err := m.store.GetManagedCertificate(ctx, op.ManagedCertificateID)
 	if err != nil {
+		if m.logger != nil {
+			attrs := operationLogAttrs(op)
+			attrs = append(attrs, "error_stage", "load_notification_certificate")
+			attrs = append(attrs, safeErrorAttrs(err)...)
+			m.logger.WarnContext(ctx, "load certificate for failure notification failed", attrs...)
+		}
 		return
 	}
 	m.certNotifier.OnOperationFailure(ctx, cert, op, errorSummary)
@@ -229,7 +341,24 @@ func (m *Manager) heartbeatOperationLease(ctx context.Context, opID string, done
 			return
 		case <-ticker.C:
 			now := m.clock.Now()
-			_ = m.store.RenewCertificateOperationLease(ctx, opID, m.replicaID, now.Add(operationLeaseDuration), now)
+			nextExpiry := now.Add(operationLeaseDuration)
+			if err := m.store.RenewCertificateOperationLease(ctx, opID, m.replicaID, nextExpiry, now); err != nil {
+				if m.logger != nil {
+					attrs := []any{
+						"operation_id", opID,
+						"replica_id", m.replicaID,
+						"error_stage", "renew_lease",
+					}
+					attrs = append(attrs, safeErrorAttrs(err)...)
+					m.logger.ErrorContext(ctx, "certificate operation lease renewal failed", attrs...)
+				}
+			} else if m.logger != nil {
+				m.logger.InfoContext(ctx, "certificate operation lease renewed",
+					"operation_id", opID,
+					"replica_id", m.replicaID,
+					"lease_expires_at", nextExpiry,
+				)
+			}
 		}
 	}
 }
@@ -238,21 +367,60 @@ func (m *Manager) cleanupPendingTXT(ctx context.Context, op store.CertificateOpe
 	if len(op.PendingTXTRecords) == 0 {
 		return
 	}
+	if m.logger != nil {
+		attrs := operationLogAttrs(op)
+		attrs = append(attrs, "error_stage", "cleanup_pending_txt")
+		m.logger.InfoContext(ctx, "cleanup pending DNS challenges started", attrs...)
+	}
 	dnsAccount, err := m.store.GetDNSProviderAccount(ctx, op.ConfigSnapshot.DNSProviderAccountID)
 	if err != nil {
+		if m.logger != nil {
+			attrs := operationLogAttrs(op)
+			attrs = append(attrs, "error_stage", "cleanup_resolve_dns_account")
+			attrs = append(attrs, safeErrorAttrs(err)...)
+			m.logger.ErrorContext(ctx, "resolve DNS account for pending challenge cleanup failed", attrs...)
+		}
 		return
 	}
 	if m.dnsFactory == nil {
+		if m.logger != nil {
+			attrs := operationLogAttrs(op)
+			attrs = append(attrs, "error_stage", "cleanup_create_dns_provider")
+			m.logger.ErrorContext(ctx, "DNS provider factory unavailable for pending challenge cleanup", attrs...)
+		}
 		return
 	}
 	provider, err := m.dnsFactory.NewProvider(dnsAccount)
 	if err != nil {
+		if m.logger != nil {
+			attrs := operationLogAttrs(op)
+			attrs = append(attrs, "error_stage", "cleanup_create_dns_provider")
+			attrs = append(attrs, safeErrorAttrs(err)...)
+			m.logger.ErrorContext(ctx, "create DNS provider for pending challenge cleanup failed", attrs...)
+		}
 		return
 	}
 	for _, rec := range op.PendingTXTRecords {
-		_ = provider.CleanUp(rec.Domain, rec.Token, rec.KeyAuth)
+		if err := provider.CleanUp(rec.Domain, rec.Token, rec.KeyAuth); err != nil && m.logger != nil {
+			attrs := operationLogAttrs(op)
+			attrs = append(attrs, "domain", rec.Domain, "error_stage", "cleanup_pending_txt_record")
+			attrs = append(attrs, safeErrorAttrs(err)...)
+			m.logger.WarnContext(ctx, "pending DNS challenge cleanup failed", attrs...)
+		}
 	}
-	_ = m.store.ClearCertificateOperationPendingTXT(ctx, op.ID)
+	if err := m.store.ClearCertificateOperationPendingTXT(ctx, op.ID); err != nil {
+		if m.logger != nil {
+			attrs := operationLogAttrs(op)
+			attrs = append(attrs, "error_stage", "clear_pending_txt")
+			attrs = append(attrs, safeErrorAttrs(err)...)
+			m.logger.ErrorContext(ctx, "clear pending DNS challenges failed", attrs...)
+		}
+		return
+	}
+	if m.logger != nil {
+		attrs := operationLogAttrs(op)
+		m.logger.InfoContext(ctx, "cleanup pending DNS challenges completed", attrs...)
+	}
 }
 
 func (m *Manager) handleOperationFailure(ctx context.Context, op store.CertificateOperation, runErr error) {
@@ -263,12 +431,31 @@ func (m *Manager) handleOperationFailure(ctx context.Context, op store.Certifica
 	if op.Type == store.CertOpTypeRenew {
 		metric.CertRenewFailuresTotal.Inc()
 	}
-	if isPermanentOperationError(runErr) || operationDeadlineExceeded(op, m.clock.Now()) {
-		if operationDeadlineExceeded(op, m.clock.Now()) {
+	deadlineExceeded := operationDeadlineExceeded(op, m.clock.Now())
+	if isPermanentOperationError(runErr) || deadlineExceeded {
+		if deadlineExceeded {
 			summary = store.OperationTotalTimeoutSummary
 		}
 		metric.RecordCertOperation(certOpMetricType(op.Type), "failed")
-		_ = m.store.MarkCertificateOperationFailed(ctx, op.ID, m.replicaID, summary)
+		if err := m.store.MarkCertificateOperationFailed(ctx, op.ID, m.replicaID, summary); err != nil {
+			if m.logger != nil {
+				attrs := operationLogAttrs(op)
+				attrs = append(attrs, "error_stage", "mark_operation_failed")
+				attrs = append(attrs, safeErrorAttrs(err)...)
+				m.logger.ErrorContext(ctx, "persist terminal certificate operation failure failed", attrs...)
+			}
+		} else if m.logger != nil {
+			failureKind := "permanent_error"
+			if deadlineExceeded {
+				failureKind = "deadline_exceeded"
+			}
+			attrs := operationLogAttrs(op)
+			attrs = append(attrs,
+				"final_status", store.CertOpStatusFailed,
+				"failure_kind", failureKind,
+			)
+			m.logger.WarnContext(ctx, "certificate operation marked failed", attrs...)
+		}
 		m.notifyOperationFailure(ctx, op, summary)
 		return
 	}
@@ -277,11 +464,40 @@ func (m *Manager) handleOperationFailure(ctx context.Context, op store.Certifica
 	nextAt := m.clock.Now().Add(computeRetryDelay(failures, m.jitter))
 	if op.DeadlineAt != nil && !nextAt.Before(*op.DeadlineAt) {
 		metric.RecordCertOperation(certOpMetricType(op.Type), "failed")
-		_ = m.store.MarkCertificateOperationFailed(ctx, op.ID, m.replicaID, store.OperationTotalTimeoutSummary)
+		if err := m.store.MarkCertificateOperationFailed(ctx, op.ID, m.replicaID, store.OperationTotalTimeoutSummary); err != nil {
+			if m.logger != nil {
+				attrs := operationLogAttrs(op)
+				attrs = append(attrs, "error_stage", "mark_operation_failed_deadline")
+				attrs = append(attrs, safeErrorAttrs(err)...)
+				m.logger.ErrorContext(ctx, "persist deadline certificate operation failure failed", attrs...)
+			}
+		} else if m.logger != nil {
+			attrs := operationLogAttrs(op)
+			attrs = append(attrs,
+				"final_status", store.CertOpStatusFailed,
+				"failure_kind", "retry_would_exceed_deadline",
+			)
+			m.logger.WarnContext(ctx, "certificate operation retry would exceed deadline", attrs...)
+		}
 		m.notifyOperationFailure(ctx, op, store.OperationTotalTimeoutSummary)
 		return
 	}
-	_ = m.store.ScheduleCertificateOperationRetry(ctx, op.ID, m.replicaID, nextAt, summary, failures)
+	if err := m.store.ScheduleCertificateOperationRetry(ctx, op.ID, m.replicaID, nextAt, summary, failures); err != nil {
+		if m.logger != nil {
+			attrs := operationLogAttrs(op)
+			attrs = append(attrs, "error_stage", "schedule_retry")
+			attrs = append(attrs, safeErrorAttrs(err)...)
+			m.logger.ErrorContext(ctx, "schedule certificate operation retry failed", attrs...)
+		}
+	} else if m.logger != nil {
+		attrs := operationLogAttrs(op)
+		attrs = append(attrs,
+			"next_attempt_at", nextAt,
+			"next_consecutive_failures", failures,
+			"final_status", store.CertOpStatusPending,
+		)
+		m.logger.WarnContext(ctx, "certificate operation retry scheduled", attrs...)
+	}
 	m.notifyOperationFailure(ctx, op, summary)
 }
 
@@ -308,7 +524,14 @@ func operationDeadlineExceeded(op store.CertificateOperation, now time.Time) boo
 
 func (m *Manager) failOperationDeadlineExceeded(ctx context.Context, op store.CertificateOperation) {
 	metric.RecordCertOperation(certOpMetricType(op.Type), "failed")
-	_ = m.store.MarkCertificateOperationFailed(ctx, op.ID, m.replicaID, store.OperationTotalTimeoutSummary)
+	if err := m.store.MarkCertificateOperationFailed(ctx, op.ID, m.replicaID, store.OperationTotalTimeoutSummary); err != nil {
+		if m.logger != nil {
+			attrs := operationLogAttrs(op)
+			attrs = append(attrs, "error_stage", "mark_operation_failed_deadline")
+			attrs = append(attrs, safeErrorAttrs(err)...)
+			m.logger.ErrorContext(ctx, "persist operation deadline failure failed", attrs...)
+		}
+	}
 	m.notifyOperationFailure(ctx, op, store.OperationTotalTimeoutSummary)
 }
 

@@ -118,20 +118,29 @@ func NewManagerWithACME(st Store, verifier TokenVerifier, acme ACMEClient) *Mana
 }
 
 func NewManagerWithDeps(st Store, verifier TokenVerifier, acme ACMEClient, dnsFactory DNSProviderFactory) *Manager {
-	return &Manager{
+	logger := slog.Default().With("component", "certmanager")
+	manager := &Manager{
 		store:      st,
 		verifier:   verifier,
 		acme:       acme,
 		dnsFactory: dnsFactory,
 		clock:      realClock{},
-		logger:     slog.Default().With("component", "certmanager"),
+		logger:     logger,
 	}
+	manager.SetLogger(logger)
+	return manager
 }
 
 // SetLogger configures structured certificate-manager logging.
 func (m *Manager) SetLogger(logger *slog.Logger) {
-	if m != nil && logger != nil {
-		m.logger = logger
+	if m == nil || logger == nil {
+		return
+	}
+	m.logger = logger
+	for _, component := range []any{m.verifier, m.acme} {
+		if setter, ok := component.(interface{ SetLogger(*slog.Logger) }); ok {
+			setter.SetLogger(logger)
+		}
 	}
 }
 
@@ -228,6 +237,26 @@ func (m *Manager) GetDNSProviderAccount(ctx context.Context, id string) (PublicA
 	return publicFromStore(account), nil
 }
 
+func (m *Manager) verifyDNSProviderToken(ctx context.Context, action, accountID, token string) error {
+	attrs := []any{"dns_account_action", action}
+	if accountID != "" {
+		attrs = append(attrs, "dns_provider_account_id", accountID)
+	}
+	if m.logger != nil {
+		m.logger.InfoContext(ctx, "cloudflare token verification started", attrs...)
+	}
+	if err := m.verifier.VerifyCloudflareToken(ctx, token); err != nil {
+		if m.logger != nil {
+			m.logger.ErrorContext(ctx, "cloudflare token verification failed", append(attrs, safeErrorAttrs(err)...)...)
+		}
+		return err
+	}
+	if m.logger != nil {
+		m.logger.InfoContext(ctx, "cloudflare token verification succeeded", attrs...)
+	}
+	return nil
+}
+
 func (m *Manager) CreateDNSProviderAccount(ctx context.Context, input DNSAccountInput) (PublicAccount, error) {
 	account, err := m.buildAccount(input, store.DNSProviderAccount{})
 	if err != nil {
@@ -236,7 +265,7 @@ func (m *Manager) CreateDNSProviderAccount(ctx context.Context, input DNSAccount
 	if input.APIToken == "" {
 		return PublicAccount{}, ErrTokenRequired
 	}
-	if err := m.verifier.VerifyCloudflareToken(ctx, input.APIToken); err != nil {
+	if err := m.verifyDNSProviderToken(ctx, "create", "", input.APIToken); err != nil {
 		return PublicAccount{}, err
 	}
 	now := m.clock.Now()
@@ -244,7 +273,20 @@ func (m *Manager) CreateDNSProviderAccount(ctx context.Context, input DNSAccount
 	account.TokenLastVerifiedAt = &now
 	created, err := m.store.CreateDNSProviderAccount(ctx, account)
 	if err != nil {
+		if m.logger != nil {
+			attrs := []any{"dns_account_action", "create", "error_stage", "persist_dns_provider_account"}
+			attrs = append(attrs, safeErrorAttrs(err)...)
+			m.logger.ErrorContext(ctx, "persist DNS provider account failed", attrs...)
+		}
 		return PublicAccount{}, err
+	}
+	if m.logger != nil {
+		m.logger.InfoContext(ctx, "DNS provider account created",
+			"dns_provider_account_id", created.ID,
+			"dns_provider", created.Provider,
+			"token_verified", created.TokenLastVerifiedAt != nil,
+			"propagation_timeout_seconds", created.PropagationTimeoutSeconds,
+		)
 	}
 	return publicFromStore(created), nil
 }
@@ -260,7 +302,7 @@ func (m *Manager) UpdateDNSProviderAccount(ctx context.Context, id string, input
 	}
 	rotateToken := input.APIToken != ""
 	if rotateToken {
-		if err := m.verifier.VerifyCloudflareToken(ctx, input.APIToken); err != nil {
+		if err := m.verifyDNSProviderToken(ctx, "rotate", id, input.APIToken); err != nil {
 			return PublicAccount{}, err
 		}
 		now := m.clock.Now()
@@ -272,7 +314,25 @@ func (m *Manager) UpdateDNSProviderAccount(ctx context.Context, id string, input
 	}
 	updated, err := m.store.UpdateDNSProviderAccount(ctx, id, account)
 	if err != nil {
+		if m.logger != nil {
+			attrs := []any{
+				"dns_provider_account_id", id,
+				"dns_account_action", "update",
+				"error_stage", "persist_dns_provider_account",
+			}
+			attrs = append(attrs, safeErrorAttrs(err)...)
+			m.logger.ErrorContext(ctx, "persist DNS provider account update failed", attrs...)
+		}
 		return PublicAccount{}, err
+	}
+	if m.logger != nil {
+		m.logger.InfoContext(ctx, "DNS provider account updated",
+			"dns_provider_account_id", updated.ID,
+			"dns_provider", updated.Provider,
+			"token_rotated", rotateToken,
+			"token_verified", updated.TokenLastVerifiedAt != nil,
+			"propagation_timeout_seconds", updated.PropagationTimeoutSeconds,
+		)
 	}
 	return publicFromStore(updated), nil
 }

@@ -7,6 +7,7 @@ require (
 	connectrpc.com/connect v1.20.0
 	github.com/aws/aws-sdk-go-v2 v1.41.4
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.97.1
+	github.com/cloudflare/cloudflare-go v0.115.0
 	github.com/gin-gonic/gin v1.12.0
 	github.com/go-acme/lego/v4 v4.23.1
 	github.com/google/uuid v1.6.0
@@ -15,6 +16,7 @@ require (
 	github.com/redis/go-redis/v9 v9.6.1
 	go.mongodb.org/mongo-driver/v2 v2.5.0
 	golang.org/x/crypto v0.48.0
+	golang.org/x/net v0.51.0
 	golang.org/x/sync v0.19.0
 	google.golang.org/protobuf v1.36.11
 )
@@ -44,7 +46,6 @@ require (
 	github.com/bytedance/sonic/loader v0.5.0 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
-	github.com/cloudflare/cloudflare-go v0.115.0 // indirect
 	github.com/cloudwego/base64x v0.1.6 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/fatih/color v1.17.0 // indirect
@@ -117,7 +118,6 @@ require (
 	golang.org/x/arch v0.22.0 // indirect
 	golang.org/x/exp v0.0.0-20241210194714-1829a127f884 // indirect
 	golang.org/x/mod v0.32.0 // indirect
-	golang.org/x/net v0.51.0 // indirect
 	golang.org/x/oauth2 v0.34.0 // indirect
 	golang.org/x/sys v0.41.0 // indirect
 	golang.org/x/text v0.34.0 // indirect
