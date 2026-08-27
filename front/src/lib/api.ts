@@ -39,6 +39,10 @@ import {
   type AlertChannel as PbAlertChannel,
 } from "@/gen/neoline/v1/notify_group_pb"
 import {
+  DNSProviderAccountService,
+  type DNSProviderAccount as PbDNSProviderAccount,
+} from "@/gen/neoline/v1/dns_provider_account_pb"
+import {
   type StatusGroup as PbStatusGroup,
   type StatusServer as PbStatusServer,
   type StatusMonitor as PbStatusMonitor,
@@ -60,6 +64,7 @@ import type {
   MonitorGroup,
   MonitorUptime,
   NotifyGroup,
+  DNSProviderAccount,
   Server,
   ServerEvent,
   ServerHealth,
@@ -115,6 +120,7 @@ const serverClient = createClient(ServerService, transport)
 const monitorClient = createClient(MonitorService, transport)
 const groupClient = createClient(MonitorGroupService, transport)
 const notifyClient = createClient(NotifyGroupService, transport)
+const dnsAccountClient = createClient(DNSProviderAccountService, transport)
 const mcpClient = createClient(McpTokenService, transport)
 const sshClient = createClient(SshService, transport)
 const auditClient = createClient(AuditLogService, transport)
@@ -350,6 +356,19 @@ function notifyGroupFromProto(g: PbNotifyGroup): NotifyGroup {
   }
 }
 
+function dnsProviderAccountFromProto(a: PbDNSProviderAccount): DNSProviderAccount {
+  return {
+    id: a.id,
+    name: a.name,
+    provider: a.provider,
+    propagation_timeout_seconds: a.propagationTimeoutSeconds,
+    token_configured: a.tokenConfigured,
+    token_last_verified_at: iso(a.tokenLastVerifiedAt),
+    created_at: iso(a.createdAt) ?? "",
+    updated_at: iso(a.updatedAt) ?? "",
+  }
+}
+
 function settingsFromProto(s?: PbSettings): Settings {
   return {
     site_name: s?.siteName ?? "",
@@ -518,6 +537,22 @@ function notifyGroupInit(
       target: c.target,
       extra: c.extra ?? {},
     })),
+  }
+}
+
+function dnsProviderAccountInit(
+  b: Partial<DNSProviderAccount> & { api_token?: string }
+): {
+  account: MessageInitShape<DNSProviderAccountInitSchema>
+  apiToken?: string
+} {
+  return {
+    account: {
+      name: b.name,
+      provider: b.provider ?? "cloudflare",
+      propagationTimeoutSeconds: b.propagation_timeout_seconds ?? 0,
+    },
+    apiToken: b.api_token,
   }
 }
 
@@ -779,6 +814,52 @@ export const api = {
       await notifyClient.deleteNotifyGroup({ notifyGroupId: id })
     }),
 
+  // DNS provider accounts
+  listDNSProviderAccounts: (query?: { page_token?: string; page_size?: number }) =>
+    call<ListResponse & { accounts: DNSProviderAccount[] }>(async () => {
+      const res = await dnsAccountClient.listDNSProviderAccounts({
+        pageToken: query?.page_token ?? "",
+        pageSize: query?.page_size ?? 0,
+      })
+      return {
+        accounts: res.accounts.map(dnsProviderAccountFromProto),
+        next_page_token: res.nextPageToken,
+      }
+    }),
+  getDNSProviderAccount: (id: string) =>
+    call<{ account: DNSProviderAccount }>(async () => {
+      const res = await dnsAccountClient.getDNSProviderAccount({ dnsProviderAccountId: id })
+      return { account: dnsProviderAccountFromProto(res.account!) }
+    }),
+  createDNSProviderAccount: (
+    body: Partial<DNSProviderAccount> & { api_token?: string }
+  ) =>
+    call<{ account: DNSProviderAccount }>(async () => {
+      const init = dnsProviderAccountInit(body)
+      const res = await dnsAccountClient.createDNSProviderAccount({
+        account: init.account,
+        apiToken: init.apiToken ?? "",
+      })
+      return { account: dnsProviderAccountFromProto(res.account!) }
+    }),
+  updateDNSProviderAccount: (
+    id: string,
+    body: Partial<DNSProviderAccount> & { api_token?: string }
+  ) =>
+    call<{ account: DNSProviderAccount }>(async () => {
+      const init = dnsProviderAccountInit(body)
+      const res = await dnsAccountClient.updateDNSProviderAccount({
+        dnsProviderAccountId: id,
+        account: init.account,
+        apiToken: init.apiToken ?? "",
+      })
+      return { account: dnsProviderAccountFromProto(res.account!) }
+    }),
+  deleteDNSProviderAccount: (id: string) =>
+    call<void>(async () => {
+      await dnsAccountClient.deleteDNSProviderAccount({ dnsProviderAccountId: id })
+    }),
+
   // MCP tokens
   listMcpTokens: () =>
     call<{ tokens: McpToken[] }>(async () => {
@@ -849,4 +930,5 @@ type ServerInitSchema = typeof import("@/gen/neoline/v1/server_pb").ServerSchema
 type MonitorInitSchema = typeof import("@/gen/neoline/v1/monitor_pb").MonitorSchema
 type MonitorGroupInitSchema = typeof import("@/gen/neoline/v1/monitor_group_pb").MonitorGroupSchema
 type NotifyGroupInitSchema = typeof import("@/gen/neoline/v1/notify_group_pb").NotifyGroupSchema
+type DNSProviderAccountInitSchema = typeof import("@/gen/neoline/v1/dns_provider_account_pb").DNSProviderAccountSchema
 type McpTokenPb = import("@/gen/neoline/v1/mcp_token_pb").McpToken

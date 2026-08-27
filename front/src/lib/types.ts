@@ -175,6 +175,17 @@ export interface NotifyGroup {
   updated_at: string
 }
 
+export interface DNSProviderAccount {
+  id: string
+  name: string
+  provider: string
+  propagation_timeout_seconds: number
+  token_configured: boolean
+  token_last_verified_at?: string
+  created_at: string
+  updated_at: string
+}
+
 export interface AlertPolicy {
   enabled: boolean
   notify_group_ids?: string[]

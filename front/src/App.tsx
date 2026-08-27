@@ -12,6 +12,7 @@ import { MonitorDetailPage } from "./pages/monitor-detail"
 import { MonitorGroupsPage } from "./pages/monitor-groups"
 import { MonitorGroupDetailPage } from "./pages/monitor-group-detail"
 import { NotifyGroupsPage } from "./pages/notify-groups"
+import { DNSProviderAccountsPage } from "./pages/dns-provider-accounts"
 import { SettingsPage } from "./pages/settings"
 import { McpPage } from "./pages/mcp"
 import { AuditLogsPage } from "./pages/audit-logs"
@@ -95,6 +96,14 @@ export function App() {
           element={
             <RequireAuth>
               <NotifyGroupsPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/certificates/dns-accounts"
+          element={
+            <RequireAuth>
+              <DNSProviderAccountsPage />
             </RequireAuth>
           }
         />

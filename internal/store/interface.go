@@ -39,6 +39,12 @@ type Store interface {
 	UpdateNotifyGroup(ctx context.Context, id string, group NotifyGroup) (NotifyGroup, error)
 	DeleteNotifyGroup(ctx context.Context, id string) error
 
+	ListDNSProviderAccounts(ctx context.Context, limit int64, pageToken string) ([]DNSProviderAccount, string, error)
+	CreateDNSProviderAccount(ctx context.Context, account DNSProviderAccount) (DNSProviderAccount, error)
+	GetDNSProviderAccount(ctx context.Context, id string) (DNSProviderAccount, error)
+	UpdateDNSProviderAccount(ctx context.Context, id string, account DNSProviderAccount) (DNSProviderAccount, error)
+	DeleteDNSProviderAccount(ctx context.Context, id string) error
+
 	ListCheckResults(ctx context.Context, serverID, monitorID string, limit int64, pageToken string, start, end *time.Time) ([]CheckResult, string, error)
 	// SaveCheckResult persists a probe result and returns the monitor's prior
 	// status (empty when no prior status existed).
@@ -56,6 +62,7 @@ type Store interface {
 	EnsureAuthIndexes(ctx context.Context) error
 	EnsureGroupIndexes(ctx context.Context) error
 	EnsureNotifyGroupIndexes(ctx context.Context) error
+	EnsureDNSProviderAccountIndexes(ctx context.Context) error
 	EnsureMcpTokenIndexes(ctx context.Context) error
 	EnsureResultIndexes(ctx context.Context) error
 

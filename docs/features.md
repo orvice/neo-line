@@ -989,6 +989,22 @@ archive:
 - 延迟趋势图。
 - 告警历史。
 
+## 证书管理（ACME，进行中）
+
+### DNSProviderAccount（Cloudflare）
+
+**状态：** 已实现（#14 纵向路径）
+
+Admin 可在 Web 控制台「证书 → DNS 账户」或通过 `DNSProviderAccountService` 管理可复用的 Cloudflare DNS-01 凭据：
+
+- 首版仅支持 `provider: cloudflare`。
+- 创建或轮换 Token 前调用 Cloudflare verify API；失败时不保存新 Token，轮换失败时保留旧 Token。
+- 读取接口与审计日志不返回 Token 明文；更新时空 `api_token` 保留现有 Secret。
+- `propagation_timeout_seconds` 默认 **120** 秒，范围 **30–900** 秒。
+- Cloudflare Token 需具备目标 Zone 的 **Zone:Read** 与 **DNS:Edit** 权限。
+
+详见 [证书管理 — DNS 账户](./certificate-management-dns-accounts.md) 与根目录 [CONTEXT.md](../CONTEXT.md)。
+
 ## 未来增强
 
 ### 更多探测类型

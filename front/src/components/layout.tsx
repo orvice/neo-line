@@ -12,6 +12,7 @@ import {
   Plug,
   Server,
   Settings as SettingsIcon,
+  ShieldCheck,
   Sun,
 } from "lucide-react"
 
@@ -109,6 +110,13 @@ export function Layout() {
                 >
                   <BellRing className="size-4" />
                   通知组
+                </NavLink>
+                <NavLink
+                  to="/certificates/dns-accounts"
+                  className={navClass}
+                >
+                  <ShieldCheck className="size-4" />
+                  证书
                 </NavLink>
                 <NavLink
                   to="/mcp"

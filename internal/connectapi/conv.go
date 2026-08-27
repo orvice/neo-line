@@ -3,6 +3,7 @@ package connectapi
 import (
 	"time"
 
+	"github.com/orvice/neo-line/internal/certmanager"
 	"github.com/orvice/neo-line/internal/store"
 	pb "github.com/orvice/neo-line/pkg/proto/neoline/v1"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -344,6 +345,28 @@ func notifyGroupFromProto(p *pb.NotifyGroup) store.NotifyGroup {
 		out.Channels = append(out.Channels, alertChannelFromProto(c))
 	}
 	return out
+}
+
+// --- DNS provider account ---
+
+func dnsProviderAccountToProto(a certmanager.PublicAccount) *pb.DNSProviderAccount {
+	return &pb.DNSProviderAccount{
+		Id:                        a.ID,
+		Name:                      a.Name,
+		Provider:                  a.Provider,
+		PropagationTimeoutSeconds: a.PropagationTimeoutSeconds,
+		TokenConfigured:           a.TokenConfigured,
+		TokenLastVerifiedAt:       timeToTSPtr(a.TokenLastVerifiedAt),
+		CreatedAt:                 timeToTS(a.CreatedAt),
+		UpdatedAt:                 timeToTS(a.UpdatedAt),
+	}
+}
+
+func timeToTSPtr(t *time.Time) *timestamppb.Timestamp {
+	if t == nil || t.IsZero() {
+		return nil
+	}
+	return timestamppb.New(*t)
 }
 
 // --- Settings / MCP / User ---
