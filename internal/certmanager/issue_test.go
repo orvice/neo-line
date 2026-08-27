@@ -72,7 +72,7 @@ func TestIssueStagingMarkedUntrusted(t *testing.T) {
 	if !st.certs[certID].ActiveVersion.StagingUntrusted {
 		t.Fatal("expected staging untrusted on version")
 	}
-	bundle, err := m.GetCertificateBundle(context.Background(), certID)
+	bundle, err := m.GetCertificateBundle(context.Background(), certID, VersionSlotActive)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -185,7 +185,7 @@ func TestGetCertificateBundleNoStore(t *testing.T) {
 	m := NewManagerWithDeps(st, nil, &fakeIssueACME{}, dnsFactoryFunc(func(store.DNSProviderAccount) (challenge.Provider, error) {
 		return nil, errors.New("unused")
 	}))
-	_, err := m.GetCertificateBundle(context.Background(), "missing")
+	_, err := m.GetCertificateBundle(context.Background(), "missing", VersionSlotActive)
 	if !errors.Is(err, ErrBundleNotAvailable) && !store.IsNotFound(err) {
 		// no active -> bundle not available after get succeeds with nil active
 	}

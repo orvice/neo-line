@@ -71,7 +71,8 @@ func (s *Service) SubmitIssueOperation(ctx context.Context, req *connect.Request
 }
 
 func (s *Service) GetCertificateBundle(ctx context.Context, req *connect.Request[pb.GetCertificateBundleRequest]) (*connect.Response[pb.GetCertificateBundleResponse], error) {
-	bundle, err := s.certManager.GetCertificateBundle(ctx, req.Msg.GetManagedCertificateId())
+	slot := versionSlotFromProto(req.Msg.GetVersionSlot())
+	bundle, err := s.certManager.GetCertificateBundle(ctx, req.Msg.GetManagedCertificateId(), slot)
 	if err != nil {
 		return nil, toConnectError(err)
 	}
@@ -79,7 +80,27 @@ func (s *Service) GetCertificateBundle(ctx context.Context, req *connect.Request
 		Bundle: certificateBundleToProto(bundle),
 	})
 	resp.Header().Set("Cache-Control", "no-store")
+	resp.Header().Set("X-Certificate-Version-Id", bundle.VersionID)
 	return resp, nil
+}
+
+func (s *Service) ActivatePreviousVersion(ctx context.Context, req *connect.Request[pb.ActivatePreviousVersionRequest]) (*connect.Response[pb.ActivatePreviousVersionResponse], error) {
+	cert, err := s.certManager.ActivatePreviousVersion(ctx, req.Msg.GetManagedCertificateId(), req.Msg.GetVersionId())
+	if err != nil {
+		return nil, toConnectError(err)
+	}
+	return connect.NewResponse(&pb.ActivatePreviousVersionResponse{
+		Certificate: managedCertificateToProto(cert),
+	}), nil
+}
+
+func versionSlotFromProto(slot pb.CertificateVersionSlot) string {
+	switch slot {
+	case pb.CertificateVersionSlot_CERTIFICATE_VERSION_SLOT_PREVIOUS:
+		return certmanager.VersionSlotPrevious
+	default:
+		return certmanager.VersionSlotActive
+	}
 }
 
 func managedCertificateInputFromProto(p *pb.ManagedCertificate) (certmanager.ManagedCertificateInput, error) {

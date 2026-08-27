@@ -34,6 +34,12 @@ var ErrCertificateOperationConflict = errors.New("certificate operation state co
 // ErrActiveVersionConflict is returned when activating a version would violate invariants.
 var ErrActiveVersionConflict = errors.New("active certificate version conflict")
 
+// ErrVersionNotFound is returned when the requested certificate version does not exist.
+var ErrVersionNotFound = errors.New("certificate version not found")
+
+// ErrVersionRevoked is returned when activating a revoked certificate version.
+var ErrVersionRevoked = errors.New("certificate version is revoked")
+
 // ErrInvalidServerIDs is returned when server_ids reference missing servers.
 var ErrInvalidServerIDs = errors.New("one or more server_ids do not exist")
 
@@ -211,6 +217,105 @@ func (s *MongoStore) ActivateFirstIssueVersion(ctx context.Context, managedCertI
 	}
 	if opRes.MatchedCount == 0 {
 		return ErrCertificateOperationConflict
+	}
+	return nil
+}
+
+// ActivateSubsequentIssueVersion atomically moves the current active version to
+// previous, sets the new version as active, and drops any older previous PEM.
+func (s *MongoStore) ActivateSubsequentIssueVersion(ctx context.Context, managedCertID string, version CertificateVersion, expectedActiveID, opID, warning string) error {
+	now := time.Now().UTC()
+	cert, err := s.GetManagedCertificate(ctx, managedCertID)
+	if err != nil {
+		return err
+	}
+	if cert.ActiveVersion == nil {
+		return ErrActiveVersionConflict
+	}
+	if cert.ActiveVersion.ID != expectedActiveID {
+		return ErrActiveVersionConflict
+	}
+	previous := *cert.ActiveVersion
+	res, err := s.managedCertificates().UpdateOne(ctx, bson.M{
+		"id":                managedCertID,
+		"active_version.id": expectedActiveID,
+	}, bson.M{
+		"$set": bson.M{
+			"active_version":   version,
+			"previous_version": previous,
+			"updated_at":       now,
+		},
+	})
+	if err != nil {
+		return err
+	}
+	if res.MatchedCount == 0 {
+		return ErrActiveVersionConflict
+	}
+	opSet := bson.M{
+		"status":      CertOpStatusSucceeded,
+		"finished_at": now,
+		"updated_at":  now,
+	}
+	if warning != "" {
+		opSet["warning"] = warning
+	}
+	opRes, err := s.certificateOperations().UpdateOne(ctx, bson.M{
+		"id":     opID,
+		"status": CertOpStatusRunning,
+	}, bson.M{"$set": opSet})
+	if err != nil {
+		return err
+	}
+	if opRes.MatchedCount == 0 {
+		return ErrCertificateOperationConflict
+	}
+	return nil
+}
+
+// ActivatePreviousVersion atomically swaps active and previous when the target
+// version matches previous and is not revoked. Desired config is unchanged.
+func (s *MongoStore) ActivatePreviousVersion(ctx context.Context, managedCertID, versionID string) error {
+	now := time.Now().UTC()
+	cert, err := s.GetManagedCertificate(ctx, managedCertID)
+	if err != nil {
+		return err
+	}
+	if cert.PreviousVersion == nil || cert.PreviousVersion.ID != versionID {
+		return ErrVersionNotFound
+	}
+	if cert.PreviousVersion.RevokedAt != nil {
+		return ErrVersionRevoked
+	}
+	newActive := *cert.PreviousVersion
+	var newPrevious *CertificateVersion
+	if cert.ActiveVersion != nil {
+		prev := *cert.ActiveVersion
+		newPrevious = &prev
+	}
+	set := bson.M{
+		"active_version": newActive,
+		"updated_at":     now,
+	}
+	if newPrevious != nil {
+		set["previous_version"] = newPrevious
+	} else {
+		set["previous_version"] = nil
+	}
+	filter := bson.M{
+		"id":                          managedCertID,
+		"previous_version.id":         versionID,
+		"previous_version.revoked_at": bson.M{"$exists": false},
+	}
+	res, err := s.managedCertificates().UpdateOne(ctx, filter, bson.M{"$set": set})
+	if err != nil {
+		return err
+	}
+	if res.MatchedCount == 0 {
+		if cert.PreviousVersion.RevokedAt != nil {
+			return ErrVersionRevoked
+		}
+		return ErrActiveVersionConflict
 	}
 	return nil
 }

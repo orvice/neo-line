@@ -60,7 +60,19 @@
 | `error_summary` / `warning` | 脱敏错误与告警摘要 |
 | `started_at` / `finished_at` / `next_attempt_at` | 时间戳 |
 
-## 行为（#17）
+## 行为（#17 / #21）
+
+### Desired 与 active 分离（#21）
+
+- 修改 **domains、issuer、DNS 账户、key_type** 只更新 desired config，**不会**自动创建 ACME order。
+- 管理 UI 展示 desired 与 active 签发快照的差异，并提供 **「签发新版本」** 按钮（`SubmitIssueOperation`）。
+- 显式 Issue 使用提交时的 desired 快照；Pending/Running Issue 期间继续禁止修改签发字段。
+- 新版本 **失败** 时 active 与 previous 完全不变。
+- 新版本 **成功** 后，在同一 `managed_certificates` 文档内原子将原 active 移为 previous、新版本设为 active；产生第三个成功版本时丢弃更老 previous 的本地 PEM（不向 CA 隐式吊销）。
+- Admin 可下载 **active** 或 **previous** bundle（`GetCertificateBundle.version_slot`），响应含准确 version ID 且 `Cache-Control: no-store`。
+- Admin 可将任何 **未吊销** previous 重新激活（允许过期版本；UI 需显著警告并确认）；回滚后 desired config **不变**。
+- 已吊销 previous（`revoked_at` 已设置）永远不能重新激活。
+- `active_validity` 根据当前时间计算 Missing / Valid / RenewalDue / Expired / Revoked，与 operation 状态、auto-renew 正交。
 
 ### 创建
 

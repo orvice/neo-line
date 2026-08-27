@@ -24,3 +24,9 @@ func (noopIssueStore) UpdateCertificateOperation(context.Context, string, store.
 func (noopIssueStore) ActivateFirstIssueVersion(context.Context, string, store.CertificateVersion, string, string) error {
 	return errors.New("not implemented")
 }
+func (noopIssueStore) ActivateSubsequentIssueVersion(context.Context, string, store.CertificateVersion, string, string, string) error {
+	return errors.New("not implemented")
+}
+func (noopIssueStore) ActivatePreviousVersion(context.Context, string, string) error {
+	return errors.New("not implemented")
+}

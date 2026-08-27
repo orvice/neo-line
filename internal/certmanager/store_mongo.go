@@ -123,3 +123,11 @@ func (s *mongoStore) UpdateCertificateOperation(ctx context.Context, id string, 
 func (s *mongoStore) ActivateFirstIssueVersion(ctx context.Context, managedCertID string, version store.CertificateVersion, opID, warning string) error {
 	return s.st.ActivateFirstIssueVersion(ctx, managedCertID, version, opID, warning)
 }
+
+func (s *mongoStore) ActivateSubsequentIssueVersion(ctx context.Context, managedCertID string, version store.CertificateVersion, expectedActiveID, opID, warning string) error {
+	return s.st.ActivateSubsequentIssueVersion(ctx, managedCertID, version, expectedActiveID, opID, warning)
+}
+
+func (s *mongoStore) ActivatePreviousVersion(ctx context.Context, managedCertID, versionID string) error {
+	return s.st.ActivatePreviousVersion(ctx, managedCertID, versionID)
+}

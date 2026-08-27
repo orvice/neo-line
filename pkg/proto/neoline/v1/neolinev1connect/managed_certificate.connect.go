@@ -52,6 +52,9 @@ const (
 	// ManagedCertificateServiceGetCertificateBundleProcedure is the fully-qualified name of the
 	// ManagedCertificateService's GetCertificateBundle RPC.
 	ManagedCertificateServiceGetCertificateBundleProcedure = "/neoline.v1.ManagedCertificateService/GetCertificateBundle"
+	// ManagedCertificateServiceActivatePreviousVersionProcedure is the fully-qualified name of the
+	// ManagedCertificateService's ActivatePreviousVersion RPC.
+	ManagedCertificateServiceActivatePreviousVersionProcedure = "/neoline.v1.ManagedCertificateService/ActivatePreviousVersion"
 )
 
 // ManagedCertificateServiceClient is a client for the neoline.v1.ManagedCertificateService service.
@@ -62,6 +65,7 @@ type ManagedCertificateServiceClient interface {
 	UpdateManagedCertificate(context.Context, *connect.Request[v1.UpdateManagedCertificateRequest]) (*connect.Response[v1.UpdateManagedCertificateResponse], error)
 	SubmitIssueOperation(context.Context, *connect.Request[v1.SubmitIssueOperationRequest]) (*connect.Response[v1.SubmitIssueOperationResponse], error)
 	GetCertificateBundle(context.Context, *connect.Request[v1.GetCertificateBundleRequest]) (*connect.Response[v1.GetCertificateBundleResponse], error)
+	ActivatePreviousVersion(context.Context, *connect.Request[v1.ActivatePreviousVersionRequest]) (*connect.Response[v1.ActivatePreviousVersionResponse], error)
 }
 
 // NewManagedCertificateServiceClient constructs a client for the
@@ -111,6 +115,12 @@ func NewManagedCertificateServiceClient(httpClient connect.HTTPClient, baseURL s
 			connect.WithSchema(managedCertificateServiceMethods.ByName("GetCertificateBundle")),
 			connect.WithClientOptions(opts...),
 		),
+		activatePreviousVersion: connect.NewClient[v1.ActivatePreviousVersionRequest, v1.ActivatePreviousVersionResponse](
+			httpClient,
+			baseURL+ManagedCertificateServiceActivatePreviousVersionProcedure,
+			connect.WithSchema(managedCertificateServiceMethods.ByName("ActivatePreviousVersion")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -122,6 +132,7 @@ type managedCertificateServiceClient struct {
 	updateManagedCertificate *connect.Client[v1.UpdateManagedCertificateRequest, v1.UpdateManagedCertificateResponse]
 	submitIssueOperation     *connect.Client[v1.SubmitIssueOperationRequest, v1.SubmitIssueOperationResponse]
 	getCertificateBundle     *connect.Client[v1.GetCertificateBundleRequest, v1.GetCertificateBundleResponse]
+	activatePreviousVersion  *connect.Client[v1.ActivatePreviousVersionRequest, v1.ActivatePreviousVersionResponse]
 }
 
 // ListManagedCertificates calls neoline.v1.ManagedCertificateService.ListManagedCertificates.
@@ -154,6 +165,11 @@ func (c *managedCertificateServiceClient) GetCertificateBundle(ctx context.Conte
 	return c.getCertificateBundle.CallUnary(ctx, req)
 }
 
+// ActivatePreviousVersion calls neoline.v1.ManagedCertificateService.ActivatePreviousVersion.
+func (c *managedCertificateServiceClient) ActivatePreviousVersion(ctx context.Context, req *connect.Request[v1.ActivatePreviousVersionRequest]) (*connect.Response[v1.ActivatePreviousVersionResponse], error) {
+	return c.activatePreviousVersion.CallUnary(ctx, req)
+}
+
 // ManagedCertificateServiceHandler is an implementation of the neoline.v1.ManagedCertificateService
 // service.
 type ManagedCertificateServiceHandler interface {
@@ -163,6 +179,7 @@ type ManagedCertificateServiceHandler interface {
 	UpdateManagedCertificate(context.Context, *connect.Request[v1.UpdateManagedCertificateRequest]) (*connect.Response[v1.UpdateManagedCertificateResponse], error)
 	SubmitIssueOperation(context.Context, *connect.Request[v1.SubmitIssueOperationRequest]) (*connect.Response[v1.SubmitIssueOperationResponse], error)
 	GetCertificateBundle(context.Context, *connect.Request[v1.GetCertificateBundleRequest]) (*connect.Response[v1.GetCertificateBundleResponse], error)
+	ActivatePreviousVersion(context.Context, *connect.Request[v1.ActivatePreviousVersionRequest]) (*connect.Response[v1.ActivatePreviousVersionResponse], error)
 }
 
 // NewManagedCertificateServiceHandler builds an HTTP handler from the service implementation. It
@@ -208,6 +225,12 @@ func NewManagedCertificateServiceHandler(svc ManagedCertificateServiceHandler, o
 		connect.WithSchema(managedCertificateServiceMethods.ByName("GetCertificateBundle")),
 		connect.WithHandlerOptions(opts...),
 	)
+	managedCertificateServiceActivatePreviousVersionHandler := connect.NewUnaryHandler(
+		ManagedCertificateServiceActivatePreviousVersionProcedure,
+		svc.ActivatePreviousVersion,
+		connect.WithSchema(managedCertificateServiceMethods.ByName("ActivatePreviousVersion")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/neoline.v1.ManagedCertificateService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case ManagedCertificateServiceListManagedCertificatesProcedure:
@@ -222,6 +245,8 @@ func NewManagedCertificateServiceHandler(svc ManagedCertificateServiceHandler, o
 			managedCertificateServiceSubmitIssueOperationHandler.ServeHTTP(w, r)
 		case ManagedCertificateServiceGetCertificateBundleProcedure:
 			managedCertificateServiceGetCertificateBundleHandler.ServeHTTP(w, r)
+		case ManagedCertificateServiceActivatePreviousVersionProcedure:
+			managedCertificateServiceActivatePreviousVersionHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -253,4 +278,8 @@ func (UnimplementedManagedCertificateServiceHandler) SubmitIssueOperation(contex
 
 func (UnimplementedManagedCertificateServiceHandler) GetCertificateBundle(context.Context, *connect.Request[v1.GetCertificateBundleRequest]) (*connect.Response[v1.GetCertificateBundleResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("neoline.v1.ManagedCertificateService.GetCertificateBundle is not implemented"))
+}
+
+func (UnimplementedManagedCertificateServiceHandler) ActivatePreviousVersion(context.Context, *connect.Request[v1.ActivatePreviousVersionRequest]) (*connect.Response[v1.ActivatePreviousVersionResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("neoline.v1.ManagedCertificateService.ActivatePreviousVersion is not implemented"))
 }

@@ -54,6 +54,7 @@ import {
   CertificateValidity as PbCertValidity,
   CertificateOperationType as PbCertOpType,
   CertificateOperationStatus as PbCertOpStatus,
+  CertificateVersionSlot as PbCertVersionSlot,
   type ManagedCertificate as PbManagedCertificate,
   type CertificateVersionMetadata as PbCertificateVersionMetadata,
   type CertificateBundle as PbCertificateBundle,
@@ -560,6 +561,7 @@ function certificateVersionFromProto(v: PbCertificateVersionMetadata): Certifica
     key_type: keyTypeFromProto(v.keyType),
     staging_untrusted: v.stagingUntrusted,
     created_at: iso(v.createdAt),
+    revoked_at: iso(v.revokedAt),
   }
 }
 
@@ -593,8 +595,12 @@ function managedCertificateFromProto(c: PbManagedCertificate): ManagedCertificat
     server_ids: c.serverIds.length ? [...c.serverIds] : undefined,
     active_validity: validityFromProto(c.activeValidity),
     bundle_available: c.bundleAvailable,
+    has_unpublished_desired_changes: c.hasUnpublishedDesiredChanges,
     active_version: c.activeVersion
       ? certificateVersionFromProto(c.activeVersion)
+      : undefined,
+    previous_version: c.previousVersion
+      ? certificateVersionFromProto(c.previousVersion)
       : undefined,
     latest_operation: c.latestOperation
       ? certificateOperationFromProto(c.latestOperation)
@@ -1278,12 +1284,24 @@ export const api = {
       })
       return { operation: certificateOperationFromProto(res.operation!) }
     }),
-  getCertificateBundle: (id: string) =>
+  getCertificateBundle: (id: string, versionSlot: "active" | "previous" = "active") =>
     call<{ bundle: CertificateBundle }>(async () => {
       const res = await managedCertClient.getCertificateBundle({
         managedCertificateId: id,
+        versionSlot:
+          versionSlot === "previous"
+            ? PbCertVersionSlot.PREVIOUS
+            : PbCertVersionSlot.ACTIVE,
       })
       return { bundle: certificateBundleFromProto(res.bundle!) }
+    }),
+  activatePreviousVersion: (id: string, versionId: string) =>
+    call<{ certificate: ManagedCertificate }>(async () => {
+      const res = await managedCertClient.activatePreviousVersion({
+        managedCertificateId: id,
+        versionId,
+      })
+      return { certificate: managedCertificateFromProto(res.certificate!) }
     }),
 
   // MCP tokens

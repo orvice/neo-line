@@ -41,6 +41,8 @@ type Store interface {
 	FindPendingIssueOperations(ctx context.Context, limit int64) ([]store.CertificateOperation, error)
 	UpdateCertificateOperation(ctx context.Context, id string, op store.CertificateOperation) (store.CertificateOperation, error)
 	ActivateFirstIssueVersion(ctx context.Context, managedCertID string, version store.CertificateVersion, opID, warning string) error
+	ActivateSubsequentIssueVersion(ctx context.Context, managedCertID string, version store.CertificateVersion, expectedActiveID, opID, warning string) error
+	ActivatePreviousVersion(ctx context.Context, managedCertID, versionID string) error
 }
 
 // TokenVerifier validates DNS provider API tokens before persistence.
