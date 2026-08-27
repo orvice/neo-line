@@ -88,6 +88,9 @@ func (f *fakeStore) DeleteCertificateIssuer(context.Context, string) error {
 func (f *fakeStore) ListManagedCertificates(context.Context, int64, string) ([]store.ManagedCertificate, string, error) {
 	return nil, "", nil
 }
+func (f *fakeStore) ListManagedCertificatesByServer(context.Context, string) ([]store.ManagedCertificate, error) {
+	return nil, nil
+}
 func (f *fakeStore) CreateManagedCertificate(context.Context, store.ManagedCertificate) (store.ManagedCertificate, error) {
 	return store.ManagedCertificate{}, errors.New("not implemented")
 }

@@ -62,6 +62,8 @@ type CertificateVersion struct {
 	KeyType             string              `bson:"key_type" json:"key_type"`
 	StagingUntrusted    bool                `bson:"staging_untrusted" json:"staging_untrusted"`
 	CertificateIssuerID string              `bson:"certificate_issuer_id" json:"certificate_issuer_id"`
+	RevokePending       bool                `bson:"revoke_pending,omitempty" json:"revoke_pending,omitempty"`
+	RevokedAt           *time.Time          `bson:"revoked_at,omitempty" json:"revoked_at,omitempty"`
 	CreatedAt           time.Time           `bson:"created_at" json:"created_at"`
 }
 
@@ -134,6 +136,23 @@ func (s *MongoStore) GetManagedCertificate(ctx context.Context, id string) (Mana
 	var cert ManagedCertificate
 	err := s.managedCertificates().FindOne(ctx, bson.M{"id": id}).Decode(&cert)
 	return cert, err
+}
+
+// ListManagedCertificatesByServer returns certificates assigned to serverID.
+func (s *MongoStore) ListManagedCertificatesByServer(ctx context.Context, serverID string) ([]ManagedCertificate, error) {
+	if serverID == "" {
+		return nil, ErrInvalidServerIDs
+	}
+	cursor, err := s.managedCertificates().Find(ctx, bson.M{"server_ids": serverID}, options.Find().SetSort(bson.D{{Key: "name", Value: 1}}))
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+	certs := make([]ManagedCertificate, 0)
+	if err := cursor.All(ctx, &certs); err != nil {
+		return nil, err
+	}
+	return certs, nil
 }
 
 func (s *MongoStore) UpdateManagedCertificate(ctx context.Context, id string, cert ManagedCertificate) (ManagedCertificate, error) {

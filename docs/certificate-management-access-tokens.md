@@ -19,7 +19,7 @@
 
 ## CertificateAccessToken
 
-每台 Server 可持有 **多个** token，用于后续 `ServerCertificateService` 的 Bearer 鉴权（#20 实现分发 RPC）。
+每台 Server 可持有 **多个** token，用于 `ServerCertificateService` 的 Bearer 鉴权（见 [Server 分发](./certificate-management-server-distribution.md)）。
 
 ### Connect API
 

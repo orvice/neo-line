@@ -53,6 +53,14 @@ func Register(r *gin.Engine, st store.Store, certMgr *certmanager.Manager, ssh *
 	mux.Handle(neolinev1connect.NewMcpTokenServiceHandler(svc, opts))
 	mux.Handle(neolinev1connect.NewSshServiceHandler(svc, opts))
 
+	certDistSvc := &ServerCertService{parent: svc}
+	certDistOpts := connect.WithInterceptors(
+		svc.certDistributionAuditInterceptor(),
+		svc.certDistributionAuthInterceptor(),
+		svc.certDistributionRateLimitInterceptor(),
+	)
+	mux.Handle(neolinev1connect.NewServerCertificateServiceHandler(certDistSvc, certDistOpts))
+
 	handler := http.StripPrefix(BasePath, mux)
 	r.Any(BasePath+"/*any", gin.WrapH(handler))
 }

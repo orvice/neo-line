@@ -23,6 +23,7 @@ type Store interface {
 	DeleteCertificateIssuer(ctx context.Context, id string) error
 
 	ListManagedCertificates(ctx context.Context, limit int64, pageToken string) ([]store.ManagedCertificate, string, error)
+	ListManagedCertificatesByServer(ctx context.Context, serverID string) ([]store.ManagedCertificate, error)
 	CreateManagedCertificate(ctx context.Context, cert store.ManagedCertificate) (store.ManagedCertificate, error)
 	GetManagedCertificate(ctx context.Context, id string) (store.ManagedCertificate, error)
 	UpdateManagedCertificate(ctx context.Context, id string, cert store.ManagedCertificate) (store.ManagedCertificate, error)

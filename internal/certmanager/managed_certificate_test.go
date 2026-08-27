@@ -95,6 +95,22 @@ func (f *managedCertFakeStore) ListManagedCertificates(_ context.Context, _ int6
 	return out, "", nil
 }
 
+func (f *managedCertFakeStore) ListManagedCertificatesByServer(_ context.Context, serverID string) ([]store.ManagedCertificate, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	out := make([]store.ManagedCertificate, 0)
+	for _, id := range f.certOrd {
+		c := f.certs[id]
+		for _, sid := range c.ServerIDs {
+			if sid == serverID {
+				out = append(out, c)
+				break
+			}
+		}
+	}
+	return out, nil
+}
+
 func (f *managedCertFakeStore) CreateManagedCertificate(_ context.Context, cert store.ManagedCertificate) (store.ManagedCertificate, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()

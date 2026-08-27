@@ -1052,6 +1052,21 @@ Admin 可在 Web 控制台「证书 → 托管证书」或通过 `ManagedCertifi
 
 详见 [证书管理 — 访问 Token 与 Server 分配](./certificate-management-access-tokens.md)。
 
+### ServerCertificateService（Server 分发）
+
+**状态：** 已实现（#20）
+
+- 独立 Connect 服务 `ServerCertificateService`：`ListCertificates` + `GetCertificateBundle`。
+- 仅 `Authorization: Bearer nlct_*`；Admin session 与 MCP token 拒绝。
+- Hash 查 token → Server ID；List 只返回获授权证书；Get 原子返回 active fullchain + PKCS#8 private key + metadata。
+- 不存在/未授权统一 `not_found`；已授权但无可分发 active 为 `failed_precondition`。
+- 过期未吊销 active 可下载（`Expired`）；`revoke_pending` / 已吊销阻止下载。
+- Bundle 响应 `Cache-Control: no-store`；Connect JSON bytes 为 Base64。
+- Redis 按 token **120 次/分钟**，Redis 故障 fail-open；Mongo 鉴权 fail-closed。
+- 成功 bundle 下载与全部鉴权失败写 audit；成功 List 仅 metrics/日志。
+
+详见 [证书管理 — Server 分发](./certificate-management-server-distribution.md)。
+
 ## 未来增强
 
 ### 更多探测类型

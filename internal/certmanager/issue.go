@@ -161,21 +161,10 @@ func (m *Manager) GetCertificateBundle(ctx context.Context, managedCertificateID
 	if cert.ActiveVersion == nil {
 		return CertificateBundle{}, ErrBundleNotAvailable
 	}
-	v := cert.ActiveVersion
-	validity, _ := computeValidity(cert, m.clock.Now())
-	return CertificateBundle{
-		ManagedCertificateID: cert.ID,
-		VersionID:            v.ID,
-		Domains:              append([]string(nil), snapDomains(v)...),
-		KeyType:              v.KeyType,
-		LeafFingerprint:      v.LeafFingerprint,
-		NotBefore:            v.NotBefore.Unix(),
-		NotAfter:             v.NotAfter.Unix(),
-		Validity:             validity,
-		StagingUntrusted:     v.StagingUntrusted,
-		FullchainPEM:         []byte(v.FullchainPEM),
-		PrivateKeyPEM:        []byte(v.PrivateKeyPEM),
-	}, nil
+	if !versionDistributable(cert.ActiveVersion) {
+		return CertificateBundle{}, ErrBundleNotAvailable
+	}
+	return m.bundleFromActive(cert, m.clock.Now())
 }
 
 func snapDomains(v *store.CertificateVersion) []string {

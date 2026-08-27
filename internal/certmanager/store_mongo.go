@@ -60,6 +60,10 @@ func (s *mongoStore) ListManagedCertificates(ctx context.Context, limit int64, p
 	return s.st.ListManagedCertificates(ctx, limit, pageToken)
 }
 
+func (s *mongoStore) ListManagedCertificatesByServer(ctx context.Context, serverID string) ([]store.ManagedCertificate, error) {
+	return s.st.ListManagedCertificatesByServer(ctx, serverID)
+}
+
 func (s *mongoStore) CreateManagedCertificate(ctx context.Context, cert store.ManagedCertificate) (store.ManagedCertificate, error) {
 	return s.st.CreateManagedCertificate(ctx, cert)
 }
