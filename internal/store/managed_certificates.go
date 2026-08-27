@@ -197,8 +197,19 @@ func (s *MongoStore) UpdateManagedCertificate(ctx context.Context, id string, ce
 
 // ActivateFirstIssueVersion atomically sets active_version when none exists and marks the
 // Issue operation succeeded. Used for the first successful ACME issue (#18).
-func (s *MongoStore) ActivateFirstIssueVersion(ctx context.Context, managedCertID string, version CertificateVersion, opID, warning string) error {
+func (s *MongoStore) ActivateFirstIssueVersion(ctx context.Context, managedCertID string, version CertificateVersion, opID, leaseOwner, warning string) error {
 	now := time.Now().UTC()
+	held, err := s.certificateOperations().CountDocuments(ctx, bson.M{
+		"id":          opID,
+		"status":      CertOpStatusRunning,
+		"lease_owner": leaseOwner,
+	})
+	if err != nil {
+		return err
+	}
+	if held == 0 {
+		return ErrCertificateOperationConflict
+	}
 	res, err := s.managedCertificates().UpdateOne(ctx, bson.M{
 		"id": managedCertID,
 		"$or": []bson.M{
@@ -218,16 +229,23 @@ func (s *MongoStore) ActivateFirstIssueVersion(ctx context.Context, managedCertI
 		return ErrActiveVersionConflict
 	}
 	opSet := bson.M{
-		"status":      CertOpStatusSucceeded,
-		"finished_at": now,
-		"updated_at":  now,
+		"status":               CertOpStatusSucceeded,
+		"finished_at":          now,
+		"updated_at":           now,
+		"error_summary":        "",
+		"next_attempt_at":      nil,
+		"consecutive_failures": uint32(0),
+		"lease_owner":          "",
+		"lease_expires_at":     nil,
+		"pending_txt_records":  nil,
 	}
 	if warning != "" {
 		opSet["warning"] = warning
 	}
 	opRes, err := s.certificateOperations().UpdateOne(ctx, bson.M{
-		"id":     opID,
-		"status": CertOpStatusRunning,
+		"id":          opID,
+		"status":      CertOpStatusRunning,
+		"lease_owner": leaseOwner,
 	}, bson.M{"$set": opSet})
 	if err != nil {
 		return err
@@ -240,8 +258,19 @@ func (s *MongoStore) ActivateFirstIssueVersion(ctx context.Context, managedCertI
 
 // ActivateSubsequentIssueVersion atomically moves the current active version to
 // previous, sets the new version as active, and drops any older previous PEM.
-func (s *MongoStore) ActivateSubsequentIssueVersion(ctx context.Context, managedCertID string, version CertificateVersion, expectedActiveID, opID, warning string) error {
+func (s *MongoStore) ActivateSubsequentIssueVersion(ctx context.Context, managedCertID string, version CertificateVersion, expectedActiveID, opID, leaseOwner, warning string) error {
 	now := time.Now().UTC()
+	held, err := s.certificateOperations().CountDocuments(ctx, bson.M{
+		"id":          opID,
+		"status":      CertOpStatusRunning,
+		"lease_owner": leaseOwner,
+	})
+	if err != nil {
+		return err
+	}
+	if held == 0 {
+		return ErrCertificateOperationConflict
+	}
 	cert, err := s.GetManagedCertificate(ctx, managedCertID)
 	if err != nil {
 		return err
@@ -270,16 +299,23 @@ func (s *MongoStore) ActivateSubsequentIssueVersion(ctx context.Context, managed
 		return ErrActiveVersionConflict
 	}
 	opSet := bson.M{
-		"status":      CertOpStatusSucceeded,
-		"finished_at": now,
-		"updated_at":  now,
+		"status":               CertOpStatusSucceeded,
+		"finished_at":          now,
+		"updated_at":           now,
+		"error_summary":        "",
+		"next_attempt_at":      nil,
+		"consecutive_failures": uint32(0),
+		"lease_owner":          "",
+		"lease_expires_at":     nil,
+		"pending_txt_records":  nil,
 	}
 	if warning != "" {
 		opSet["warning"] = warning
 	}
 	opRes, err := s.certificateOperations().UpdateOne(ctx, bson.M{
-		"id":     opID,
-		"status": CertOpStatusRunning,
+		"id":          opID,
+		"status":      CertOpStatusRunning,
+		"lease_owner": leaseOwner,
 	}, bson.M{"$set": opSet})
 	if err != nil {
 		return err

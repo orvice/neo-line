@@ -3,12 +3,37 @@ package certmanager
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/orvice/neo-line/internal/store"
 )
 
 type noopIssueStore struct{}
 
+func (noopIssueStore) HasRunningCertificateOperation(context.Context, string) (bool, error) {
+	return false, nil
+}
+func (noopIssueStore) FindClaimableCertificateOperations(context.Context, time.Time, int64) ([]store.CertificateOperation, error) {
+	return nil, nil
+}
+func (noopIssueStore) TryClaimCertificateOperation(context.Context, store.CertificateOperationClaimParams) (store.CertificateOperation, error) {
+	return store.CertificateOperation{}, errors.New("not implemented")
+}
+func (noopIssueStore) RenewCertificateOperationLease(context.Context, string, string, time.Time, time.Time) error {
+	return errors.New("not implemented")
+}
+func (noopIssueStore) UpdateCertificateOperationPendingTXT(context.Context, string, string, []store.DNSChallengeRecord) error {
+	return errors.New("not implemented")
+}
+func (noopIssueStore) ScheduleCertificateOperationRetry(context.Context, string, string, time.Time, string, uint32) error {
+	return errors.New("not implemented")
+}
+func (noopIssueStore) MarkCertificateOperationFailed(context.Context, string, string, string) error {
+	return errors.New("not implemented")
+}
+func (noopIssueStore) ClearCertificateOperationPendingTXT(context.Context, string) error {
+	return errors.New("not implemented")
+}
 func (noopIssueStore) ClaimPendingRenewOperation(context.Context, string) (store.CertificateOperation, error) {
 	return store.CertificateOperation{}, errors.New("not implemented")
 }
@@ -33,10 +58,10 @@ func (noopIssueStore) FindPendingIssueOperations(context.Context, int64) ([]stor
 func (noopIssueStore) UpdateCertificateOperation(context.Context, string, store.CertificateOperation) (store.CertificateOperation, error) {
 	return store.CertificateOperation{}, errors.New("not implemented")
 }
-func (noopIssueStore) ActivateFirstIssueVersion(context.Context, string, store.CertificateVersion, string, string) error {
+func (noopIssueStore) ActivateFirstIssueVersion(context.Context, string, store.CertificateVersion, string, string, string) error {
 	return errors.New("not implemented")
 }
-func (noopIssueStore) ActivateSubsequentIssueVersion(context.Context, string, store.CertificateVersion, string, string, string) error {
+func (noopIssueStore) ActivateSubsequentIssueVersion(context.Context, string, store.CertificateVersion, string, string, string, string) error {
 	return errors.New("not implemented")
 }
 func (noopIssueStore) ActivatePreviousVersion(context.Context, string, string) error {

@@ -19,23 +19,77 @@ const (
 	CertOpStatusRunning   = "Running"
 	CertOpStatusSucceeded = "Succeeded"
 	CertOpStatusFailed    = "Failed"
+
+	// DefaultOperationLeaseDuration is how long a replica holds an operation lease
+	// before another replica may take over.
+	DefaultOperationLeaseDuration = 90 * time.Second
 )
+
+// DNSChallengeRecord tracks a DNS-01 TXT record created during an attempt so a
+// takeover replica can best-effort clean up before starting a fresh order.
+type DNSChallengeRecord struct {
+	Domain  string `bson:"domain" json:"domain"`
+	Token   string `bson:"token" json:"token"`
+	KeyAuth string `bson:"key_auth" json:"key_auth"`
+}
+
+// CertificateOperationClaimParams identifies a replica claiming an operation lease.
+type CertificateOperationClaimParams struct {
+	OpID         string
+	Owner        string
+	Now          time.Time
+	LeaseExpires time.Time
+}
+
+func claimableOperationFilter(now time.Time) bson.M {
+	return bson.M{
+		"$or": []bson.M{
+			{
+				"status": CertOpStatusPending,
+				"$or": []bson.M{
+					{"next_attempt_at": nil},
+					{"next_attempt_at": bson.M{"$exists": false}},
+					{"next_attempt_at": bson.M{"$lte": now}},
+				},
+			},
+			{
+				"status": CertOpStatusRunning,
+				"$or": []bson.M{
+					{"lease_expires_at": nil},
+					{"lease_expires_at": bson.M{"$exists": false}},
+					{"lease_expires_at": bson.M{"$lte": now}},
+				},
+			},
+		},
+	}
+}
+
+func runningLeaseHeldFilter(now time.Time) bson.M {
+	return bson.M{
+		"status":           CertOpStatusRunning,
+		"lease_expires_at": bson.M{"$gt": now},
+	}
+}
 
 // CertificateOperation tracks one Issue, Renew, or Revoke business operation.
 type CertificateOperation struct {
-	ID                   string              `bson:"id" json:"id"`
-	ManagedCertificateID string              `bson:"managed_certificate_id" json:"managed_certificate_id"`
-	Type                 string              `bson:"type" json:"type"`
-	Status               string              `bson:"status" json:"status"`
-	AttemptCount         uint32              `bson:"attempt_count" json:"attempt_count"`
-	ConfigSnapshot       IssueConfigSnapshot `bson:"config_snapshot" json:"config_snapshot"`
-	ErrorSummary         string              `bson:"error_summary,omitempty" json:"error_summary,omitempty"`
-	Warning              string              `bson:"warning,omitempty" json:"warning,omitempty"`
-	StartedAt            *time.Time          `bson:"started_at,omitempty" json:"started_at,omitempty"`
-	FinishedAt           *time.Time          `bson:"finished_at,omitempty" json:"finished_at,omitempty"`
-	NextAttemptAt        *time.Time          `bson:"next_attempt_at,omitempty" json:"next_attempt_at,omitempty"`
-	CreatedAt            time.Time           `bson:"created_at" json:"created_at"`
-	UpdatedAt            time.Time           `bson:"updated_at" json:"updated_at"`
+	ID                   string               `bson:"id" json:"id"`
+	ManagedCertificateID string               `bson:"managed_certificate_id" json:"managed_certificate_id"`
+	Type                 string               `bson:"type" json:"type"`
+	Status               string               `bson:"status" json:"status"`
+	AttemptCount         uint32               `bson:"attempt_count" json:"attempt_count"`
+	ConsecutiveFailures  uint32               `bson:"consecutive_failures,omitempty" json:"consecutive_failures,omitempty"`
+	ConfigSnapshot       IssueConfigSnapshot  `bson:"config_snapshot" json:"config_snapshot"`
+	ErrorSummary         string               `bson:"error_summary,omitempty" json:"error_summary,omitempty"`
+	Warning              string               `bson:"warning,omitempty" json:"warning,omitempty"`
+	LeaseOwner           string               `bson:"lease_owner,omitempty" json:"lease_owner,omitempty"`
+	LeaseExpiresAt       *time.Time           `bson:"lease_expires_at,omitempty" json:"lease_expires_at,omitempty"`
+	PendingTXTRecords    []DNSChallengeRecord `bson:"pending_txt_records,omitempty" json:"pending_txt_records,omitempty"`
+	StartedAt            *time.Time           `bson:"started_at,omitempty" json:"started_at,omitempty"`
+	FinishedAt           *time.Time           `bson:"finished_at,omitempty" json:"finished_at,omitempty"`
+	NextAttemptAt        *time.Time           `bson:"next_attempt_at,omitempty" json:"next_attempt_at,omitempty"`
+	CreatedAt            time.Time            `bson:"created_at" json:"created_at"`
+	UpdatedAt            time.Time            `bson:"updated_at" json:"updated_at"`
 }
 
 func (s *MongoStore) certificateOperations() *mongo.Collection {
@@ -63,6 +117,27 @@ func (s *MongoStore) EnsureCertificateOperationIndexes(ctx context.Context) erro
 	if _, err := s.certificateOperations().Indexes().CreateOne(ctx, mongo.IndexModel{
 		Keys:    bson.D{{Key: "created_at", Value: -1}},
 		Options: options.Index().SetName("created_at_desc"),
+	}); err != nil {
+		return err
+	}
+	if _, err := s.certificateOperations().Indexes().CreateOne(ctx, mongo.IndexModel{
+		Keys: bson.D{{Key: "managed_certificate_id", Value: 1}},
+		Options: options.Index().
+			SetUnique(true).
+			SetName("uniq_inflight_per_cert").
+			SetPartialFilterExpression(bson.M{
+				"status": bson.M{"$in": CertOpInFlightStatuses},
+			}),
+	}); err != nil {
+		return err
+	}
+	if _, err := s.certificateOperations().Indexes().CreateOne(ctx, mongo.IndexModel{
+		Keys: bson.D{
+			{Key: "status", Value: 1},
+			{Key: "next_attempt_at", Value: 1},
+			{Key: "lease_expires_at", Value: 1},
+		},
+		Options: options.Index().SetName("claimable_ops"),
 	}); err != nil {
 		return err
 	}

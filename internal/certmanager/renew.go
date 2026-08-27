@@ -2,12 +2,9 @@ package certmanager
 
 import (
 	"context"
-	"sync"
 
 	"github.com/orvice/neo-line/internal/store"
 )
-
-var renewInflight sync.Map // opID -> struct{}
 
 // SubmitRenewOperation returns an existing running Renew operation or creates a
 // new Pending Renew using the active version issuance snapshot.
@@ -36,7 +33,14 @@ func (m *Manager) SubmitRenewOperation(ctx context.Context, managedCertificateID
 }
 
 func (m *Manager) ensureNoConflictingIssuance(ctx context.Context, managedCertificateID, selfType string) error {
-	for _, opType := range []string{store.CertOpTypeIssue, store.CertOpTypeRenew} {
+	running, err := m.store.HasRunningCertificateOperation(ctx, managedCertificateID)
+	if err != nil {
+		return err
+	}
+	if !running {
+		return nil
+	}
+	for _, opType := range []string{store.CertOpTypeIssue, store.CertOpTypeRenew, store.CertOpTypeRevoke} {
 		if opType == selfType {
 			continue
 		}
@@ -54,6 +58,11 @@ func (m *Manager) createPendingRenewOperation(ctx context.Context, cert store.Ma
 		return existing, nil
 	} else if !store.IsNotFound(err) {
 		return store.CertificateOperation{}, err
+	}
+	if running, err := m.store.HasRunningCertificateOperation(ctx, cert.ID); err != nil {
+		return store.CertificateOperation{}, err
+	} else if running {
+		return store.CertificateOperation{}, ErrIssuanceOperationInFlight
 	}
 	if cert.ActiveVersion == nil {
 		return store.CertificateOperation{}, ErrNoActiveVersion
@@ -74,26 +83,11 @@ func (m *Manager) createPendingRenewOperation(ctx context.Context, cert store.Ma
 }
 
 func (m *Manager) triggerRenewOperation(opID string) {
-	go m.runRenewOperation(context.Background(), opID)
+	m.triggerOperation(opID)
 }
 
 func (m *Manager) runRenewOperation(ctx context.Context, opID string) {
-	if _, loaded := renewInflight.LoadOrStore(opID, struct{}{}); loaded {
-		return
-	}
-	defer renewInflight.Delete(opID)
-
-	op, err := m.store.ClaimPendingRenewOperation(ctx, opID)
-	if err != nil {
-		return
-	}
-
-	warning, runErr := m.executeCertificateIssuance(ctx, op)
-	if runErr == nil {
-		return
-	}
-	_ = warning
-	_ = m.store.FailRenewOperation(ctx, opID, sanitizeIssueError(runErr))
+	m.runOperation(ctx, opID)
 }
 
 func (m *Manager) reconcileAutoRenew(ctx context.Context) {

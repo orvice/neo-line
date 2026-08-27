@@ -60,8 +60,16 @@ type Store interface {
 	CreateCertificateOperation(ctx context.Context, op CertificateOperation) (CertificateOperation, error)
 	GetCertificateOperation(ctx context.Context, id string) (CertificateOperation, error)
 	FindRunningCertificateOperation(ctx context.Context, managedCertificateID, opType string) (CertificateOperation, error)
+	HasRunningCertificateOperation(ctx context.Context, managedCertificateID string) (bool, error)
 	ListCertificateOperationsByCertificate(ctx context.Context, managedCertificateID string, limit int64) ([]CertificateOperation, error)
 	LatestCertificateOperation(ctx context.Context, managedCertificateID string) (CertificateOperation, error)
+	FindClaimableCertificateOperations(ctx context.Context, now time.Time, limit int64) ([]CertificateOperation, error)
+	TryClaimCertificateOperation(ctx context.Context, p CertificateOperationClaimParams) (CertificateOperation, error)
+	RenewCertificateOperationLease(ctx context.Context, opID, owner string, leaseExpires, now time.Time) error
+	UpdateCertificateOperationPendingTXT(ctx context.Context, opID, owner string, records []DNSChallengeRecord) error
+	ScheduleCertificateOperationRetry(ctx context.Context, opID, owner string, nextAttemptAt time.Time, errorSummary string, consecutiveFailures uint32) error
+	MarkCertificateOperationFailed(ctx context.Context, opID, owner, errorSummary string) error
+	ClearCertificateOperationPendingTXT(ctx context.Context, opID string) error
 	ClaimPendingIssueOperation(ctx context.Context, opID string) (CertificateOperation, error)
 	FailIssueOperation(ctx context.Context, opID, errorSummary string) error
 	FindPendingIssueOperations(ctx context.Context, limit int64) ([]CertificateOperation, error)
@@ -70,8 +78,8 @@ type Store interface {
 	FindPendingRenewOperations(ctx context.Context, limit int64) ([]CertificateOperation, error)
 	ListAutoRenewManagedCertificates(ctx context.Context) ([]ManagedCertificate, error)
 	UpdateCertificateOperation(ctx context.Context, id string, op CertificateOperation) (CertificateOperation, error)
-	ActivateFirstIssueVersion(ctx context.Context, managedCertID string, version CertificateVersion, opID, warning string) error
-	ActivateSubsequentIssueVersion(ctx context.Context, managedCertID string, version CertificateVersion, expectedActiveID, opID, warning string) error
+	ActivateFirstIssueVersion(ctx context.Context, managedCertID string, version CertificateVersion, opID, leaseOwner, warning string) error
+	ActivateSubsequentIssueVersion(ctx context.Context, managedCertID string, version CertificateVersion, expectedActiveID, opID, leaseOwner, warning string) error
 	ActivatePreviousVersion(ctx context.Context, managedCertID, versionID string) error
 	ValidateNotifyGroupIDs(ctx context.Context, ids []string) error
 	ValidateServerIDs(ctx context.Context, ids []string) error

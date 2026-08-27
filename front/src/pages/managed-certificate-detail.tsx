@@ -567,6 +567,24 @@ export function ManagedCertificateDetailPage() {
                         <dd className="text-amber-700">{op.warning}</dd>
                       </div>
                     )}
+                    {op.started_at && (
+                      <div>
+                        <dt className="text-muted-foreground">开始时间</dt>
+                        <dd>{formatTime(op.started_at)}</dd>
+                      </div>
+                    )}
+                    {op.finished_at && (
+                      <div>
+                        <dt className="text-muted-foreground">结束时间</dt>
+                        <dd>{formatTime(op.finished_at)}</dd>
+                      </div>
+                    )}
+                    {op.next_attempt_at && op.status === "Pending" && (
+                      <div>
+                        <dt className="text-muted-foreground">下次自动重试</dt>
+                        <dd>{formatTime(op.next_attempt_at)}</dd>
+                      </div>
+                    )}
                     <div>
                       <dt className="text-muted-foreground">创建时间</dt>
                       <dd>{formatTime(op.created_at)}</dd>
