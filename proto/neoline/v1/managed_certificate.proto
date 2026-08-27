@@ -161,6 +161,9 @@ message ManagedCertificate {
   uint32 effective_renewal_window_days = 19;
   // When auto-renew should next trigger (not_after minus effective window).
   google.protobuf.Timestamp next_renewal_at = 20;
+  // Most recent notification channel delivery warning, if any.
+  string last_notification_warning = 21;
+  google.protobuf.Timestamp last_notification_warning_at = 22;
 }
 
 message ListManagedCertificatesRequest {

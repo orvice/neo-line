@@ -116,6 +116,30 @@
 
 - 若同一 ManagedCertificate 已有 **Pending 或 Running** 的 Issue operation，再次提交返回 **同一条** operation，不创建第二条（`SubmitIssueOperation` 内部逻辑；显式 Issue RPC 在后续 ticket 暴露）。  
 
+## 证书生命周期通知
+
+ManagedCertificate 通过 `notify_group_ids` 直接引用 NotifyGroup，**不经过** MonitorGroup `AlertPolicy`。Monitor 探测告警与证书事件复用同一组 webhook/Telegram/Discord/Mastodon 传输 adapter，但 webhook JSON 与人类可读文本各自渲染，证书 payload **不包含** `monitor_id`、`group_id` 或 HealthStatus。
+
+### 事件与节流
+
+- **首次 Issue/Renew 失败**：立即发送 `certificate_operation_failed`。
+- **持续失败**：同一失败 episode 内最多每 **24 小时** 发送 `certificate_operation_failed_reminder`。
+- **恢复**：此前存在失败时，首次成功 Issue/Renew 发送一次 `certificate_operation_recovered`。
+- **7 天提醒**：active 剩余 ≤7 天且尚未被新版本替换时，每个 active version 提醒一次。
+- **过期**：active 进入 `Expired` 时，每个 active version 通知一次。
+
+### `notification_state` 字段
+
+| 字段 | 含义 |
+|------|------|
+| `had_operation_failure` | 当前失败 episode |
+| `last_fail_notified_at` | 最近失败/提醒时间（24h 节流） |
+| `seven_day_reminder_version_id` | 已发送 7 天提醒的 version |
+| `expired_notified_version_id` | 已发送过期通知的 version |
+| `last_notification_warning` | 最近通道投递失败摘要 |
+
+删除 NotifyGroup 时从证书 `notify_group_ids` 中移除引用，不删除证书。通道失败不改变 operation 或 active/previous 版本。
+
 ## 默认值摘要
 
 | 项 | 默认 |

@@ -80,7 +80,8 @@ func (s *MongoStore) UpdateNotifyGroup(ctx context.Context, id string, group Not
 }
 
 // DeleteNotifyGroup removes the group and pulls its ID from every monitor
-// group's alert_policy.notify_group_ids array.
+// group's alert_policy.notify_group_ids array and every managed certificate's
+// notify_group_ids array. Certificates themselves are not deleted.
 func (s *MongoStore) DeleteNotifyGroup(ctx context.Context, id string) error {
 	res, err := s.notifyGroups().DeleteOne(ctx, bson.M{"id": id})
 	if err != nil {
@@ -89,9 +90,15 @@ func (s *MongoStore) DeleteNotifyGroup(ctx context.Context, id string) error {
 	if res.DeletedCount == 0 {
 		return mongo.ErrNoDocuments
 	}
-	_, err = s.groups().UpdateMany(ctx,
+	if _, err := s.groups().UpdateMany(ctx,
 		bson.M{"alert_policy.notify_group_ids": id},
 		bson.M{"$pull": bson.M{"alert_policy.notify_group_ids": id}},
+	); err != nil {
+		return err
+	}
+	_, err = s.managedCertificates().UpdateMany(ctx,
+		bson.M{"notify_group_ids": id},
+		bson.M{"$pull": bson.M{"notify_group_ids": id}},
 	)
 	return err
 }

@@ -58,6 +58,8 @@ type PublicManagedCertificate struct {
 	PreviousVersion              *PublicCertificateVersion
 	HasUnpublishedDesiredChanges bool
 	LatestOperation              *PublicOperation
+	LastNotificationWarning      string
+	LastNotificationWarningAt    *time.Time
 	CreatedAt                    time.Time
 	UpdatedAt                    time.Time
 }
@@ -121,6 +123,8 @@ func publicCertFromStore(cert store.ManagedCertificate, latest *store.Certificat
 		ActiveValidity:               validity,
 		BundleAvailable:              available,
 		HasUnpublishedDesiredChanges: desiredDiffersFromActive(cert),
+		LastNotificationWarning:      notificationWarning(cert),
+		LastNotificationWarningAt:    notificationWarningAt(cert),
 		CreatedAt:                    cert.CreatedAt,
 		UpdatedAt:                    cert.UpdatedAt,
 	}
@@ -131,6 +135,20 @@ func publicCertFromStore(cert store.ManagedCertificate, latest *store.Certificat
 	out.ActiveVersion = publicVersionFromStore(cert.ActiveVersion)
 	out.PreviousVersion = publicVersionFromStore(cert.PreviousVersion)
 	return out
+}
+
+func notificationWarning(cert store.ManagedCertificate) string {
+	if cert.NotificationState == nil {
+		return ""
+	}
+	return cert.NotificationState.LastNotificationWarning
+}
+
+func notificationWarningAt(cert store.ManagedCertificate) *time.Time {
+	if cert.NotificationState == nil {
+		return nil
+	}
+	return cert.NotificationState.LastNotificationWarningAt
 }
 
 func (m *Manager) ListManagedCertificates(ctx context.Context, limit int64, pageToken string) ([]PublicManagedCertificate, string, error) {
@@ -211,6 +229,7 @@ func (m *Manager) UpdateManagedCertificate(ctx context.Context, id string, input
 
 	updated.ActiveVersion = existing.ActiveVersion
 	updated.PreviousVersion = existing.PreviousVersion
+	updated.NotificationState = existing.NotificationState
 	saved, err := m.store.UpdateManagedCertificate(ctx, id, updated)
 	if err != nil {
 		return PublicManagedCertificate{}, err

@@ -313,6 +313,8 @@ export interface ManagedCertificate {
   active_version?: CertificateVersionMetadata
   previous_version?: CertificateVersionMetadata
   latest_operation?: CertificateOperation
+  last_notification_warning?: string
+  last_notification_warning_at?: string
   created_at: string
   updated_at: string
 }

@@ -75,20 +75,21 @@ type CertificateVersion struct {
 
 // ManagedCertificate is the admin-managed desired config and version container.
 type ManagedCertificate struct {
-	ID                   string              `bson:"id" json:"id"`
-	Name                 string              `bson:"name" json:"name"`
-	Domains              []string            `bson:"domains" json:"domains"`
-	CertificateIssuerID  string              `bson:"certificate_issuer_id" json:"certificate_issuer_id"`
-	DNSProviderAccountID string              `bson:"dns_provider_account_id" json:"dns_provider_account_id"`
-	KeyType              string              `bson:"key_type" json:"key_type"`
-	AutoRenewEnabled     bool                `bson:"auto_renew_enabled" json:"auto_renew_enabled"`
-	RenewBeforeDays      uint32              `bson:"renew_before_days" json:"renew_before_days"`
-	NotifyGroupIDs       []string            `bson:"notify_group_ids,omitempty" json:"notify_group_ids,omitempty"`
-	ServerIDs            []string            `bson:"server_ids,omitempty" json:"server_ids,omitempty"`
-	ActiveVersion        *CertificateVersion `bson:"active_version,omitempty" json:"active_version,omitempty"`
-	PreviousVersion      *CertificateVersion `bson:"previous_version,omitempty" json:"previous_version,omitempty"`
-	CreatedAt            time.Time           `bson:"created_at" json:"created_at"`
-	UpdatedAt            time.Time           `bson:"updated_at" json:"updated_at"`
+	ID                   string                        `bson:"id" json:"id"`
+	Name                 string                        `bson:"name" json:"name"`
+	Domains              []string                      `bson:"domains" json:"domains"`
+	CertificateIssuerID  string                        `bson:"certificate_issuer_id" json:"certificate_issuer_id"`
+	DNSProviderAccountID string                        `bson:"dns_provider_account_id" json:"dns_provider_account_id"`
+	KeyType              string                        `bson:"key_type" json:"key_type"`
+	AutoRenewEnabled     bool                          `bson:"auto_renew_enabled" json:"auto_renew_enabled"`
+	RenewBeforeDays      uint32                        `bson:"renew_before_days" json:"renew_before_days"`
+	NotifyGroupIDs       []string                      `bson:"notify_group_ids,omitempty" json:"notify_group_ids,omitempty"`
+	ServerIDs            []string                      `bson:"server_ids,omitempty" json:"server_ids,omitempty"`
+	NotificationState    *CertificateNotificationState `bson:"notification_state,omitempty" json:"notification_state,omitempty"`
+	ActiveVersion        *CertificateVersion           `bson:"active_version,omitempty" json:"active_version,omitempty"`
+	PreviousVersion      *CertificateVersion           `bson:"previous_version,omitempty" json:"previous_version,omitempty"`
+	CreatedAt            time.Time                     `bson:"created_at" json:"created_at"`
+	UpdatedAt            time.Time                     `bson:"updated_at" json:"updated_at"`
 }
 
 func (s *MongoStore) managedCertificates() *mongo.Collection {

@@ -33,10 +33,13 @@ func (r *Reconciler) Start(ctx context.Context) {
 	}
 }
 
-// Reconcile performs one auto-renew scan. Tests call this directly with a fake clock.
+// Reconcile performs one auto-renew scan and validity notification scan.
 func (r *Reconciler) Reconcile(ctx context.Context) {
 	if r.mgr == nil {
 		return
 	}
 	r.mgr.reconcileAutoRenew(ctx)
+	if r.mgr.certNotifier != nil {
+		r.mgr.certNotifier.ScanValidityNotifications(ctx)
+	}
 }

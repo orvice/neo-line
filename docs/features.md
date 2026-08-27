@@ -822,7 +822,7 @@ AlertPolicy 字段：
 
 - 通知组存储在 MongoDB `notify_groups` collection 中，`name` 字段全局唯一。
 - 创建或更新 monitor 分组时，会校验 `alert_policy.notify_group_ids` 中的每个 ID 是否存在；不存在时返回 `400`，错误信息包含 `ErrInvalidNotifyGroupIDs`。
-- 删除通知组会从所有 monitor 分组的 `alert_policy.notify_group_ids` 中 `$pull` 掉该 ID，分组自身不会被删除。
+- 删除通知组会从所有 monitor 分组的 `alert_policy.notify_group_ids` 中 `$pull` 掉该 ID，并从所有 ManagedCertificate 的 `notify_group_ids` 中移除该 ID；分组与证书本身不会被删除。
 - 派发时，调度器解析分组引用的每个通知组，汇总它们的 `channels` 后逐个发送；无法解析的通知组仅记日志并跳过。
 
 NotifyGroup 字段：
@@ -844,6 +844,20 @@ NotifyGroup 字段：
 | `mastodon` | 实例地址 | `access_token`（必填）；`visibility`（可选，默认 `unlisted`） |
 
 `webhook` 通道发送完整 JSON payload；`telegram`、`discord`、`mastodon` 发送一条人类可读的文本消息。
+
+### Monitor 告警与证书事件的区别
+
+Monitor 告警与证书生命周期通知**复用同一组 NotifyGroup 通道 adapter**（webhook / Telegram / Discord / Mastodon），但**领域语义与 payload 完全独立**：
+
+| 维度 | Monitor 告警 | 证书事件 |
+| --- | --- | --- |
+| 触发来源 | MonitorGroup `AlertPolicy` + 探测状态变化 | ManagedCertificate `notify_group_ids` + Issue/Renew/有效性 |
+| Webhook JSON | `monitor_id`、`previous_status`、`current_status`、`group_id` 等 | `event_type`、`managed_certificate_id`、`certificate_name`、`active_validity` 等 |
+| 健康语义 | `Healthy` / `Warning` / `Critical` / `Down` | `Missing` / `Valid` / `RenewalDue` / `Expired` / `Revoked` |
+| 节流 | `(group_id, monitor_id)` + `min_interval_seconds` | 失败首次立即；持续失败每 24 小时；7 天/过期各一次；恢复不受失败节流影响 |
+| 持久化 | 进程内节流（monitor 路径） | MongoDB `managed_certificates.notification_state` |
+
+证书事件类型包括：首次 Issue/Renew 失败、持续失败 24 小时提醒、失败后恢复、active 剩余 7 天提醒、进入 Expired。通道发送失败仅写入 `last_notification_warning`，**不改变** ACME operation 状态或 active/previous 版本。
 
 通知组 API：
 
@@ -1067,6 +1081,10 @@ Admin 可在 Web 控制台「证书 → 托管证书」或通过 `ManagedCertifi
 - 成功 bundle 下载与全部鉴权失败写 audit；成功 List 仅 metrics/日志。
 
 详见 [证书管理 — Server 分发](./certificate-management-server-distribution.md)。
+
+### 证书生命周期通知（#24）
+
+ManagedCertificate 通过 `notify_group_ids` 引用 NotifyGroup；创建/更新校验 ID；删除 NotifyGroup 仅从证书引用中移除。事件包括首次失败、24 小时持续失败提醒、恢复、7 天临期与 Expired；节流状态持久化于 `notification_state`。详见 [托管证书 — 通知](./certificate-management-managed-certificates.md#证书生命周期通知)。
 
 ## 未来增强
 

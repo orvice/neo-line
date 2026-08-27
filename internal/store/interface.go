@@ -84,6 +84,14 @@ type Store interface {
 	ValidateNotifyGroupIDs(ctx context.Context, ids []string) error
 	ValidateServerIDs(ctx context.Context, ids []string) error
 
+	ListManagedCertificatesForNotifications(ctx context.Context) ([]ManagedCertificate, error)
+	TryRecordOperationFailureNotification(ctx context.Context, certID string, now time.Time) (bool, error)
+	TryRecordOperationFailureReminder(ctx context.Context, certID string, now time.Time) (bool, error)
+	TryRecordOperationRecovery(ctx context.Context, certID string, now time.Time) (bool, error)
+	TryRecordSevenDayReminder(ctx context.Context, certID, versionID string, now time.Time) (bool, error)
+	TryRecordExpiredNotification(ctx context.Context, certID, versionID string, now time.Time) (bool, error)
+	SetCertificateNotificationWarning(ctx context.Context, certID, warning string, at time.Time) error
+
 	ListCheckResults(ctx context.Context, serverID, monitorID string, limit int64, pageToken string, start, end *time.Time) ([]CheckResult, string, error)
 	// SaveCheckResult persists a probe result and returns the monitor's prior
 	// status (empty when no prior status existed).
