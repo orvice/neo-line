@@ -266,6 +266,33 @@ export interface CertificateOperation {
   updated_at: string
 }
 
+export interface CertificateVersionMetadata {
+  id: string
+  config_snapshot?: IssueConfigSnapshot
+  leaf_fingerprint: string
+  serial_number: string
+  issuer_common_name: string
+  not_before?: string
+  not_after?: string
+  key_type: CertificateKeyType
+  staging_untrusted: boolean
+  created_at?: string
+}
+
+export interface CertificateBundle {
+  managed_certificate_id: string
+  version_id: string
+  domains: string[]
+  key_type: CertificateKeyType
+  leaf_fingerprint: string
+  not_before?: string
+  not_after?: string
+  validity: CertificateValidity
+  staging_untrusted: boolean
+  fullchain_pem: Uint8Array
+  private_key_pem: Uint8Array
+}
+
 export interface ManagedCertificate {
   id: string
   name: string
@@ -279,6 +306,7 @@ export interface ManagedCertificate {
   server_ids?: string[]
   active_validity: CertificateValidity
   bundle_available: boolean
+  active_version?: CertificateVersionMetadata
   latest_operation?: CertificateOperation
   created_at: string
   updated_at: string

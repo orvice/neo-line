@@ -77,6 +77,7 @@ func main() {
 
 	var mongoStore *store.MongoStore
 	var certMgr *certmanager.Manager
+	var certRunnerCancel context.CancelFunc
 	var sshRunner *nlssh.Runner
 	var archiver archive.Archiver = archive.Noop{}
 	archiveEnabled := false
@@ -164,13 +165,18 @@ func main() {
 				if sshRunner != nil {
 					log.Println("SSH remote execution enabled")
 				}
-				certMgr = certmanager.NewManager(
+				certMgr = certmanager.NewManagerWithDeps(
 					certmanager.NewStore(mongoStore),
 					certmanager.NewCloudflareClient(nil),
+					certmanager.NewLegoACMEClient(nil),
+					certmanager.NewCloudflareDNSFactory(nil),
 				)
 				return nil
 			},
 			func() error {
+				certCtx, cancel := context.WithCancel(schedCtx)
+				certRunnerCancel = cancel
+				certMgr.StartIssueRunner(certCtx)
 				go func() {
 					archiver.Run(schedCtx)
 					close(archiveDone)
@@ -187,6 +193,9 @@ func main() {
 		TeardownFunc: []func() error{
 			func() error {
 				cancelSched()
+				if certRunnerCancel != nil {
+					certRunnerCancel()
+				}
 				// Wait for in-flight probes to finish before closing the store
 				// so no probe writes to a closed MongoDB client.
 				select {

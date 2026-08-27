@@ -46,6 +46,12 @@ const (
 	// ManagedCertificateServiceUpdateManagedCertificateProcedure is the fully-qualified name of the
 	// ManagedCertificateService's UpdateManagedCertificate RPC.
 	ManagedCertificateServiceUpdateManagedCertificateProcedure = "/neoline.v1.ManagedCertificateService/UpdateManagedCertificate"
+	// ManagedCertificateServiceSubmitIssueOperationProcedure is the fully-qualified name of the
+	// ManagedCertificateService's SubmitIssueOperation RPC.
+	ManagedCertificateServiceSubmitIssueOperationProcedure = "/neoline.v1.ManagedCertificateService/SubmitIssueOperation"
+	// ManagedCertificateServiceGetCertificateBundleProcedure is the fully-qualified name of the
+	// ManagedCertificateService's GetCertificateBundle RPC.
+	ManagedCertificateServiceGetCertificateBundleProcedure = "/neoline.v1.ManagedCertificateService/GetCertificateBundle"
 )
 
 // ManagedCertificateServiceClient is a client for the neoline.v1.ManagedCertificateService service.
@@ -54,6 +60,8 @@ type ManagedCertificateServiceClient interface {
 	CreateManagedCertificate(context.Context, *connect.Request[v1.CreateManagedCertificateRequest]) (*connect.Response[v1.CreateManagedCertificateResponse], error)
 	GetManagedCertificate(context.Context, *connect.Request[v1.GetManagedCertificateRequest]) (*connect.Response[v1.GetManagedCertificateResponse], error)
 	UpdateManagedCertificate(context.Context, *connect.Request[v1.UpdateManagedCertificateRequest]) (*connect.Response[v1.UpdateManagedCertificateResponse], error)
+	SubmitIssueOperation(context.Context, *connect.Request[v1.SubmitIssueOperationRequest]) (*connect.Response[v1.SubmitIssueOperationResponse], error)
+	GetCertificateBundle(context.Context, *connect.Request[v1.GetCertificateBundleRequest]) (*connect.Response[v1.GetCertificateBundleResponse], error)
 }
 
 // NewManagedCertificateServiceClient constructs a client for the
@@ -91,6 +99,18 @@ func NewManagedCertificateServiceClient(httpClient connect.HTTPClient, baseURL s
 			connect.WithSchema(managedCertificateServiceMethods.ByName("UpdateManagedCertificate")),
 			connect.WithClientOptions(opts...),
 		),
+		submitIssueOperation: connect.NewClient[v1.SubmitIssueOperationRequest, v1.SubmitIssueOperationResponse](
+			httpClient,
+			baseURL+ManagedCertificateServiceSubmitIssueOperationProcedure,
+			connect.WithSchema(managedCertificateServiceMethods.ByName("SubmitIssueOperation")),
+			connect.WithClientOptions(opts...),
+		),
+		getCertificateBundle: connect.NewClient[v1.GetCertificateBundleRequest, v1.GetCertificateBundleResponse](
+			httpClient,
+			baseURL+ManagedCertificateServiceGetCertificateBundleProcedure,
+			connect.WithSchema(managedCertificateServiceMethods.ByName("GetCertificateBundle")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -100,6 +120,8 @@ type managedCertificateServiceClient struct {
 	createManagedCertificate *connect.Client[v1.CreateManagedCertificateRequest, v1.CreateManagedCertificateResponse]
 	getManagedCertificate    *connect.Client[v1.GetManagedCertificateRequest, v1.GetManagedCertificateResponse]
 	updateManagedCertificate *connect.Client[v1.UpdateManagedCertificateRequest, v1.UpdateManagedCertificateResponse]
+	submitIssueOperation     *connect.Client[v1.SubmitIssueOperationRequest, v1.SubmitIssueOperationResponse]
+	getCertificateBundle     *connect.Client[v1.GetCertificateBundleRequest, v1.GetCertificateBundleResponse]
 }
 
 // ListManagedCertificates calls neoline.v1.ManagedCertificateService.ListManagedCertificates.
@@ -122,6 +144,16 @@ func (c *managedCertificateServiceClient) UpdateManagedCertificate(ctx context.C
 	return c.updateManagedCertificate.CallUnary(ctx, req)
 }
 
+// SubmitIssueOperation calls neoline.v1.ManagedCertificateService.SubmitIssueOperation.
+func (c *managedCertificateServiceClient) SubmitIssueOperation(ctx context.Context, req *connect.Request[v1.SubmitIssueOperationRequest]) (*connect.Response[v1.SubmitIssueOperationResponse], error) {
+	return c.submitIssueOperation.CallUnary(ctx, req)
+}
+
+// GetCertificateBundle calls neoline.v1.ManagedCertificateService.GetCertificateBundle.
+func (c *managedCertificateServiceClient) GetCertificateBundle(ctx context.Context, req *connect.Request[v1.GetCertificateBundleRequest]) (*connect.Response[v1.GetCertificateBundleResponse], error) {
+	return c.getCertificateBundle.CallUnary(ctx, req)
+}
+
 // ManagedCertificateServiceHandler is an implementation of the neoline.v1.ManagedCertificateService
 // service.
 type ManagedCertificateServiceHandler interface {
@@ -129,6 +161,8 @@ type ManagedCertificateServiceHandler interface {
 	CreateManagedCertificate(context.Context, *connect.Request[v1.CreateManagedCertificateRequest]) (*connect.Response[v1.CreateManagedCertificateResponse], error)
 	GetManagedCertificate(context.Context, *connect.Request[v1.GetManagedCertificateRequest]) (*connect.Response[v1.GetManagedCertificateResponse], error)
 	UpdateManagedCertificate(context.Context, *connect.Request[v1.UpdateManagedCertificateRequest]) (*connect.Response[v1.UpdateManagedCertificateResponse], error)
+	SubmitIssueOperation(context.Context, *connect.Request[v1.SubmitIssueOperationRequest]) (*connect.Response[v1.SubmitIssueOperationResponse], error)
+	GetCertificateBundle(context.Context, *connect.Request[v1.GetCertificateBundleRequest]) (*connect.Response[v1.GetCertificateBundleResponse], error)
 }
 
 // NewManagedCertificateServiceHandler builds an HTTP handler from the service implementation. It
@@ -162,6 +196,18 @@ func NewManagedCertificateServiceHandler(svc ManagedCertificateServiceHandler, o
 		connect.WithSchema(managedCertificateServiceMethods.ByName("UpdateManagedCertificate")),
 		connect.WithHandlerOptions(opts...),
 	)
+	managedCertificateServiceSubmitIssueOperationHandler := connect.NewUnaryHandler(
+		ManagedCertificateServiceSubmitIssueOperationProcedure,
+		svc.SubmitIssueOperation,
+		connect.WithSchema(managedCertificateServiceMethods.ByName("SubmitIssueOperation")),
+		connect.WithHandlerOptions(opts...),
+	)
+	managedCertificateServiceGetCertificateBundleHandler := connect.NewUnaryHandler(
+		ManagedCertificateServiceGetCertificateBundleProcedure,
+		svc.GetCertificateBundle,
+		connect.WithSchema(managedCertificateServiceMethods.ByName("GetCertificateBundle")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/neoline.v1.ManagedCertificateService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case ManagedCertificateServiceListManagedCertificatesProcedure:
@@ -172,6 +218,10 @@ func NewManagedCertificateServiceHandler(svc ManagedCertificateServiceHandler, o
 			managedCertificateServiceGetManagedCertificateHandler.ServeHTTP(w, r)
 		case ManagedCertificateServiceUpdateManagedCertificateProcedure:
 			managedCertificateServiceUpdateManagedCertificateHandler.ServeHTTP(w, r)
+		case ManagedCertificateServiceSubmitIssueOperationProcedure:
+			managedCertificateServiceSubmitIssueOperationHandler.ServeHTTP(w, r)
+		case ManagedCertificateServiceGetCertificateBundleProcedure:
+			managedCertificateServiceGetCertificateBundleHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -195,4 +245,12 @@ func (UnimplementedManagedCertificateServiceHandler) GetManagedCertificate(conte
 
 func (UnimplementedManagedCertificateServiceHandler) UpdateManagedCertificate(context.Context, *connect.Request[v1.UpdateManagedCertificateRequest]) (*connect.Response[v1.UpdateManagedCertificateResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("neoline.v1.ManagedCertificateService.UpdateManagedCertificate is not implemented"))
+}
+
+func (UnimplementedManagedCertificateServiceHandler) SubmitIssueOperation(context.Context, *connect.Request[v1.SubmitIssueOperationRequest]) (*connect.Response[v1.SubmitIssueOperationResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("neoline.v1.ManagedCertificateService.SubmitIssueOperation is not implemented"))
+}
+
+func (UnimplementedManagedCertificateServiceHandler) GetCertificateBundle(context.Context, *connect.Request[v1.GetCertificateBundleRequest]) (*connect.Response[v1.GetCertificateBundleResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("neoline.v1.ManagedCertificateService.GetCertificateBundle is not implemented"))
 }

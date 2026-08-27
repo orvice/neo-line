@@ -55,6 +55,8 @@ import {
   CertificateOperationType as PbCertOpType,
   CertificateOperationStatus as PbCertOpStatus,
   type ManagedCertificate as PbManagedCertificate,
+  type CertificateVersionMetadata as PbCertificateVersionMetadata,
+  type CertificateBundle as PbCertificateBundle,
   type CertificateOperation as PbCertificateOperation,
   type IssueConfigSnapshot as PbIssueConfigSnapshot,
 } from "@/gen/neoline/v1/managed_certificate_pb"
@@ -89,6 +91,8 @@ import type {
   CertificateOperationStatus,
   CertificateOperationType,
   CertificateValidity,
+  CertificateVersionMetadata,
+  CertificateBundle,
   ManagedCertificate,
   IssueConfigSnapshot,
   Server,
@@ -535,6 +539,39 @@ function certificateOperationFromProto(op: PbCertificateOperation): CertificateO
   }
 }
 
+function certificateVersionFromProto(v: PbCertificateVersionMetadata): CertificateVersionMetadata {
+  return {
+    id: v.id,
+    config_snapshot: v.configSnapshot
+      ? issueSnapshotFromProto(v.configSnapshot)
+      : undefined,
+    leaf_fingerprint: v.leafFingerprint,
+    serial_number: v.serialNumber,
+    issuer_common_name: v.issuerCommonName,
+    not_before: iso(v.notBefore),
+    not_after: iso(v.notAfter),
+    key_type: keyTypeFromProto(v.keyType),
+    staging_untrusted: v.stagingUntrusted,
+    created_at: iso(v.createdAt),
+  }
+}
+
+function certificateBundleFromProto(b: PbCertificateBundle): CertificateBundle {
+  return {
+    managed_certificate_id: b.managedCertificateId,
+    version_id: b.versionId,
+    domains: [...b.domains],
+    key_type: keyTypeFromProto(b.keyType),
+    leaf_fingerprint: b.leafFingerprint,
+    not_before: iso(b.notBefore),
+    not_after: iso(b.notAfter),
+    validity: validityFromProto(b.validity),
+    staging_untrusted: b.stagingUntrusted,
+    fullchain_pem: b.fullchainPem,
+    private_key_pem: b.privateKeyPem,
+  }
+}
+
 function managedCertificateFromProto(c: PbManagedCertificate): ManagedCertificate {
   return {
     id: c.id,
@@ -549,6 +586,9 @@ function managedCertificateFromProto(c: PbManagedCertificate): ManagedCertificat
     server_ids: c.serverIds.length ? [...c.serverIds] : undefined,
     active_validity: validityFromProto(c.activeValidity),
     bundle_available: c.bundleAvailable,
+    active_version: c.activeVersion
+      ? certificateVersionFromProto(c.activeVersion)
+      : undefined,
     latest_operation: c.latestOperation
       ? certificateOperationFromProto(c.latestOperation)
       : undefined,
@@ -1208,6 +1248,20 @@ export const api = {
         certificate: managedCertificateToProto(body),
       })
       return { certificate: managedCertificateFromProto(res.certificate!) }
+    }),
+  submitIssueOperation: (id: string) =>
+    call<{ operation: CertificateOperation }>(async () => {
+      const res = await managedCertClient.submitIssueOperation({
+        managedCertificateId: id,
+      })
+      return { operation: certificateOperationFromProto(res.operation!) }
+    }),
+  getCertificateBundle: (id: string) =>
+    call<{ bundle: CertificateBundle }>(async () => {
+      const res = await managedCertClient.getCertificateBundle({
+        managedCertificateId: id,
+      })
+      return { bundle: certificateBundleFromProto(res.bundle!) }
     }),
 
   // MCP tokens

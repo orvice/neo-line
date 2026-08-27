@@ -34,6 +34,12 @@ type Store interface {
 	LatestCertificateOperation(ctx context.Context, managedCertificateID string) (store.CertificateOperation, error)
 	ValidateNotifyGroupIDs(ctx context.Context, ids []string) error
 	ValidateServerIDs(ctx context.Context, ids []string) error
+
+	ClaimPendingIssueOperation(ctx context.Context, opID string) (store.CertificateOperation, error)
+	FailIssueOperation(ctx context.Context, opID, errorSummary string) error
+	FindPendingIssueOperations(ctx context.Context, limit int64) ([]store.CertificateOperation, error)
+	UpdateCertificateOperation(ctx context.Context, id string, op store.CertificateOperation) (store.CertificateOperation, error)
+	ActivateFirstIssueVersion(ctx context.Context, managedCertID string, version store.CertificateVersion, opID, warning string) error
 }
 
 // TokenVerifier validates DNS provider API tokens before persistence.
@@ -53,10 +59,11 @@ func (realClock) Now() time.Time { return time.Now().UTC() }
 // Manager owns certificate-management business rules. Connect handlers stay
 // thin and delegate here.
 type Manager struct {
-	store    Store
-	verifier TokenVerifier
-	acme     ACMEClient
-	clock    Clock
+	store      Store
+	verifier   TokenVerifier
+	acme       ACMEClient
+	dnsFactory DNSProviderFactory
+	clock      Clock
 }
 
 func NewManager(st Store, verifier TokenVerifier) *Manager {
@@ -64,7 +71,11 @@ func NewManager(st Store, verifier TokenVerifier) *Manager {
 }
 
 func NewManagerWithACME(st Store, verifier TokenVerifier, acme ACMEClient) *Manager {
-	return &Manager{store: st, verifier: verifier, acme: acme, clock: realClock{}}
+	return NewManagerWithDeps(st, verifier, acme, NewCloudflareDNSFactory(nil))
+}
+
+func NewManagerWithDeps(st Store, verifier TokenVerifier, acme ACMEClient, dnsFactory DNSProviderFactory) *Manager {
+	return &Manager{store: st, verifier: verifier, acme: acme, dnsFactory: dnsFactory, clock: realClock{}}
 }
 
 // DNSAccountInput is the mutable DNS provider account fields supplied by API

@@ -419,6 +419,14 @@ func certificateValidityToProto(validity string) pb.CertificateValidity {
 	switch validity {
 	case store.CertValidityMissing:
 		return pb.CertificateValidity_CERTIFICATE_VALIDITY_MISSING
+	case store.CertValidityValid:
+		return pb.CertificateValidity_CERTIFICATE_VALIDITY_VALID
+	case store.CertValidityRenewalDue:
+		return pb.CertificateValidity_CERTIFICATE_VALIDITY_RENEWAL_DUE
+	case store.CertValidityExpired:
+		return pb.CertificateValidity_CERTIFICATE_VALIDITY_EXPIRED
+	case store.CertValidityRevoked:
+		return pb.CertificateValidity_CERTIFICATE_VALIDITY_REVOKED
 	default:
 		return pb.CertificateValidity_CERTIFICATE_VALIDITY_UNSPECIFIED
 	}
@@ -479,6 +487,47 @@ func certificateOperationToProto(op certmanager.PublicOperation) *pb.Certificate
 	}
 }
 
+func certificateVersionToProto(v *certmanager.PublicCertificateVersion) *pb.CertificateVersionMetadata {
+	if v == nil {
+		return nil
+	}
+	return &pb.CertificateVersionMetadata{
+		Id:               v.ID,
+		ConfigSnapshot:   issueConfigSnapshotToProto(v.ConfigSnapshot),
+		LeafFingerprint:  v.LeafFingerprint,
+		SerialNumber:     v.SerialNumber,
+		IssuerCommonName: v.IssuerCommonName,
+		NotBefore:        unixToTS(v.NotBefore),
+		NotAfter:         unixToTS(v.NotAfter),
+		KeyType:          certificateKeyTypeToProto(v.KeyType),
+		StagingUntrusted: v.StagingUntrusted,
+		CreatedAt:        unixToTS(v.CreatedAt),
+	}
+}
+
+func certificateBundleToProto(b certmanager.CertificateBundle) *pb.CertificateBundle {
+	return &pb.CertificateBundle{
+		ManagedCertificateId: b.ManagedCertificateID,
+		VersionId:            b.VersionID,
+		Domains:              append([]string(nil), b.Domains...),
+		KeyType:              certificateKeyTypeToProto(b.KeyType),
+		LeafFingerprint:      b.LeafFingerprint,
+		NotBefore:            unixToTS(b.NotBefore),
+		NotAfter:             unixToTS(b.NotAfter),
+		Validity:             certificateValidityToProto(b.Validity),
+		StagingUntrusted:     b.StagingUntrusted,
+		FullchainPem:         b.FullchainPEM,
+		PrivateKeyPem:        b.PrivateKeyPEM,
+	}
+}
+
+func unixToTS(sec int64) *timestamppb.Timestamp {
+	if sec == 0 {
+		return nil
+	}
+	return timestamppb.New(time.Unix(sec, 0).UTC())
+}
+
 func managedCertificateToProto(c certmanager.PublicManagedCertificate) *pb.ManagedCertificate {
 	out := &pb.ManagedCertificate{
 		Id:                   c.ID,
@@ -499,6 +548,9 @@ func managedCertificateToProto(c certmanager.PublicManagedCertificate) *pb.Manag
 	out.AutoRenewEnabled = &auto
 	if c.LatestOperation != nil {
 		out.LatestOperation = certificateOperationToProto(*c.LatestOperation)
+	}
+	if c.ActiveVersion != nil {
+		out.ActiveVersion = certificateVersionToProto(c.ActiveVersion)
 	}
 	return out
 }

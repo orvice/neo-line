@@ -203,6 +203,7 @@ func auditResourceID(msg any) string {
 	type notifyGroupID interface{ GetNotifyGroupId() string }
 	type dnsProviderAccountID interface{ GetDnsProviderAccountId() string }
 	type certificateIssuerID interface{ GetCertificateIssuerId() string }
+	type managedCertificateID interface{ GetManagedCertificateId() string }
 	type serverID interface{ GetServerId() string }
 	type tokenID interface{ GetTokenId() string }
 
@@ -226,6 +227,9 @@ func auditResourceID(msg any) string {
 	}
 	if m, ok := msg.(certificateIssuerID); ok && m.GetCertificateIssuerId() != "" {
 		return m.GetCertificateIssuerId()
+	}
+	if m, ok := msg.(managedCertificateID); ok && m.GetManagedCertificateId() != "" {
+		return m.GetManagedCertificateId()
 	}
 	if m, ok := msg.(tokenID); ok && m.GetTokenId() != "" {
 		return m.GetTokenId()

@@ -13,6 +13,7 @@ import (
 )
 
 type managedCertFakeStore struct {
+	noopIssueStore
 	mu      sync.Mutex
 	certs   map[string]store.ManagedCertificate
 	certOrd []string
@@ -225,6 +226,86 @@ func (f *managedCertFakeStore) ValidateServerIDs(_ context.Context, ids []string
 			return store.ErrInvalidServerIDs
 		}
 	}
+	return nil
+}
+
+func (f *managedCertFakeStore) ClaimPendingIssueOperation(_ context.Context, opID string) (store.CertificateOperation, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	op, ok := f.ops[opID]
+	if !ok || op.Status != store.CertOpStatusPending || op.Type != store.CertOpTypeIssue {
+		return store.CertificateOperation{}, errors.New("not claimable")
+	}
+	now := time.Now().UTC()
+	op.Status = store.CertOpStatusRunning
+	op.AttemptCount++
+	op.StartedAt = &now
+	op.UpdatedAt = now
+	f.ops[opID] = op
+	return op, nil
+}
+
+func (f *managedCertFakeStore) FailIssueOperation(_ context.Context, opID, summary string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	op, ok := f.ops[opID]
+	if !ok {
+		return errors.New("not found")
+	}
+	now := time.Now().UTC()
+	op.Status = store.CertOpStatusFailed
+	op.ErrorSummary = summary
+	op.FinishedAt = &now
+	op.UpdatedAt = now
+	f.ops[opID] = op
+	return nil
+}
+
+func (f *managedCertFakeStore) FindPendingIssueOperations(_ context.Context, _ int64) ([]store.CertificateOperation, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	var out []store.CertificateOperation
+	for _, id := range f.opOrd {
+		op := f.ops[id]
+		if op.Status == store.CertOpStatusPending && op.Type == store.CertOpTypeIssue {
+			out = append(out, op)
+		}
+	}
+	return out, nil
+}
+
+func (f *managedCertFakeStore) UpdateCertificateOperation(_ context.Context, id string, op store.CertificateOperation) (store.CertificateOperation, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if _, ok := f.ops[id]; !ok {
+		return store.CertificateOperation{}, errors.New("not found")
+	}
+	op.ID = id
+	op.UpdatedAt = time.Now().UTC()
+	f.ops[id] = op
+	return op, nil
+}
+
+func (f *managedCertFakeStore) ActivateFirstIssueVersion(_ context.Context, managedCertID string, version store.CertificateVersion, opID, warning string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	cert, ok := f.certs[managedCertID]
+	if !ok || cert.ActiveVersion != nil {
+		return store.ErrActiveVersionConflict
+	}
+	cert.ActiveVersion = &version
+	cert.UpdatedAt = time.Now().UTC()
+	f.certs[managedCertID] = cert
+	op, ok := f.ops[opID]
+	if !ok || op.Status != store.CertOpStatusRunning {
+		return store.ErrCertificateOperationConflict
+	}
+	now := time.Now().UTC()
+	op.Status = store.CertOpStatusSucceeded
+	op.FinishedAt = &now
+	op.Warning = warning
+	op.UpdatedAt = now
+	f.ops[opID] = op
 	return nil
 }
 

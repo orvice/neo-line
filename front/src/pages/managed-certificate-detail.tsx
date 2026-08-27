@@ -1,7 +1,8 @@
 import { useState } from "react"
 import { Link, useParams } from "react-router-dom"
-import { useQuery } from "@tanstack/react-query"
-import { ChevronLeft, Pencil, RefreshCw } from "lucide-react"
+import { useMutation, useQuery } from "@tanstack/react-query"
+import { ChevronLeft, Download, Pencil, RefreshCw } from "lucide-react"
+import { toast } from "sonner"
 
 import { api, ApiError } from "@/lib/api"
 import type { CertificateKeyType } from "@/lib/types"
@@ -16,6 +17,25 @@ const KEY_LABELS: Record<CertificateKeyType, string> = {
   ec_p256: "EC P-256",
   rsa_2048: "RSA-2048",
   unspecified: "—",
+}
+
+const VALIDITY_LABELS: Record<string, string> = {
+  Missing: "Missing",
+  Valid: "Valid",
+  RenewalDue: "RenewalDue",
+  Expired: "Expired",
+  Revoked: "Revoked",
+  Unspecified: "—",
+}
+
+function downloadBytes(filename: string, bytes: Uint8Array) {
+  const blob = new Blob([bytes], { type: "application/x-pem-file" })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement("a")
+  a.href = url
+  a.download = filename
+  a.click()
+  URL.revokeObjectURL(url)
 }
 
 export function ManagedCertificateDetailPage() {
@@ -70,6 +90,24 @@ export function ManagedCertificateDetailPage() {
     cert?.dns_provider_account_id
 
   const op = cert?.latest_operation
+  const active = cert?.active_version
+
+  const downloadBundle = useMutation({
+    mutationFn: () => api.getCertificateBundle(id),
+    onSuccess: ({ bundle }) => {
+      const prefix = cert?.name.replace(/[^\w.-]+/g, "_") ?? "cert"
+      downloadBytes(`${prefix}-fullchain.pem`, bundle.fullchain_pem)
+      downloadBytes(`${prefix}-private_key.pem`, bundle.private_key_pem)
+      if (bundle.staging_untrusted) {
+        toast.warning("已下载 staging 证书（不受公共信任）")
+      } else {
+        toast.success("证书 bundle 已下载")
+      }
+    },
+    onError: (err: unknown) => {
+      toast.error(err instanceof ApiError ? err.message : "下载失败")
+    },
+  })
 
   return (
     <div className="animate-enter flex flex-col gap-6">
@@ -189,7 +227,15 @@ export function ManagedCertificateDetailPage() {
               <CardContent className="flex flex-col gap-2 pt-6 text-sm">
                 <h2 className="font-semibold">Active 有效性</h2>
                 <p>
-                  状态：<span className="font-medium">{cert.active_validity}</span>
+                  状态：
+                  <span className="font-medium">
+                    {VALIDITY_LABELS[cert.active_validity] ?? cert.active_validity}
+                  </span>
+                  {active?.staging_untrusted ? (
+                    <span className="ml-2 inline-flex rounded-full bg-amber-500/15 px-2 py-0.5 text-xs text-amber-800">
+                      staging / 不受信任
+                    </span>
+                  ) : null}
                 </p>
                 <p>
                   Bundle 可下载：
@@ -199,9 +245,49 @@ export function ManagedCertificateDetailPage() {
                     <span className="text-muted-foreground">否（尚无 active version）</span>
                   )}
                 </p>
-                {cert.active_validity === "Missing" && (
+                {active && (
+                  <dl className="mt-2 grid gap-2 border-t pt-2">
+                    <div>
+                      <dt className="text-muted-foreground">版本 ID</dt>
+                      <dd className="font-mono text-xs">{active.id}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-muted-foreground">指纹 (SHA-256)</dt>
+                      <dd className="font-mono text-xs break-all">{active.leaf_fingerprint}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-muted-foreground">Serial</dt>
+                      <dd className="font-mono text-xs">{active.serial_number}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-muted-foreground">Issuer CN</dt>
+                      <dd>{active.issuer_common_name}</dd>
+                    </div>
+                    {active.not_before && active.not_after && (
+                      <div>
+                        <dt className="text-muted-foreground">有效期</dt>
+                        <dd>
+                          {formatTime(active.not_before)} — {formatTime(active.not_after)}
+                        </dd>
+                      </div>
+                    )}
+                  </dl>
+                )}
+                {cert.bundle_available && user ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-2 w-fit"
+                    disabled={downloadBundle.isPending}
+                    onClick={() => downloadBundle.mutate()}
+                  >
+                    <Download className="size-4" />
+                    下载 PEM bundle
+                  </Button>
+                ) : null}
+                {cert.active_validity === "Missing" && !cert.bundle_available && (
                   <p className="text-muted-foreground text-xs">
-                    首次签发尚未完成；active version 将在 #18 ACME 执行成功后激活。
+                    首次签发尚未完成；Pending Issue operation 由后台 runner 执行。
                   </p>
                 )}
               </CardContent>
@@ -246,6 +332,12 @@ export function ManagedCertificateDetailPage() {
                       <div>
                         <dt className="text-muted-foreground">错误摘要</dt>
                         <dd className="text-destructive">{op.error_summary}</dd>
+                      </div>
+                    )}
+                    {op.warning && (
+                      <div>
+                        <dt className="text-muted-foreground">告警</dt>
+                        <dd className="text-amber-700">{op.warning}</dd>
                       </div>
                     )}
                     <div>

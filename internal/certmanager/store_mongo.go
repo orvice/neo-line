@@ -99,3 +99,23 @@ func (s *mongoStore) ValidateNotifyGroupIDs(ctx context.Context, ids []string) e
 func (s *mongoStore) ValidateServerIDs(ctx context.Context, ids []string) error {
 	return s.st.ValidateServerIDs(ctx, ids)
 }
+
+func (s *mongoStore) ClaimPendingIssueOperation(ctx context.Context, opID string) (store.CertificateOperation, error) {
+	return s.st.ClaimPendingIssueOperation(ctx, opID)
+}
+
+func (s *mongoStore) FailIssueOperation(ctx context.Context, opID, errorSummary string) error {
+	return s.st.FailIssueOperation(ctx, opID, errorSummary)
+}
+
+func (s *mongoStore) FindPendingIssueOperations(ctx context.Context, limit int64) ([]store.CertificateOperation, error) {
+	return s.st.FindPendingIssueOperations(ctx, limit)
+}
+
+func (s *mongoStore) UpdateCertificateOperation(ctx context.Context, id string, op store.CertificateOperation) (store.CertificateOperation, error) {
+	return s.st.UpdateCertificateOperation(ctx, id, op)
+}
+
+func (s *mongoStore) ActivateFirstIssueVersion(ctx context.Context, managedCertID string, version store.CertificateVersion, opID, warning string) error {
+	return s.st.ActivateFirstIssueVersion(ctx, managedCertID, version, opID, warning)
+}

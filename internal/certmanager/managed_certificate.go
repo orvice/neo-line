@@ -52,6 +52,7 @@ type PublicManagedCertificate struct {
 	ServerIDs            []string
 	ActiveValidity       string
 	BundleAvailable      bool
+	ActiveVersion        *PublicCertificateVersion
 	LatestOperation      *PublicOperation
 	CreatedAt            time.Time
 	UpdatedAt            time.Time
@@ -75,16 +76,20 @@ func publicOperationFromStore(op store.CertificateOperation) PublicOperation {
 	}
 }
 
-func computeValidity(cert store.ManagedCertificate) (validity string, bundleAvailable bool) {
+func computeValidity(cert store.ManagedCertificate, now time.Time) (validity string, bundleAvailable bool) {
 	if cert.ActiveVersion == nil {
 		return store.CertValidityMissing, false
 	}
-	// Full validity computation arrives in later tickets.
-	return store.CertValidityMissing, false
+	bundleAvailable = true
+	v := cert.ActiveVersion
+	if now.After(v.NotAfter) {
+		return store.CertValidityExpired, bundleAvailable
+	}
+	return store.CertValidityValid, bundleAvailable
 }
 
-func publicCertFromStore(cert store.ManagedCertificate, latest *store.CertificateOperation) PublicManagedCertificate {
-	validity, available := computeValidity(cert)
+func publicCertFromStore(cert store.ManagedCertificate, latest *store.CertificateOperation, now time.Time) PublicManagedCertificate {
+	validity, available := computeValidity(cert, now)
 	out := PublicManagedCertificate{
 		ID:                   cert.ID,
 		Name:                 cert.Name,
@@ -105,6 +110,7 @@ func publicCertFromStore(cert store.ManagedCertificate, latest *store.Certificat
 		op := publicOperationFromStore(*latest)
 		out.LatestOperation = &op
 	}
+	out.ActiveVersion = publicVersionFromStore(cert.ActiveVersion)
 	return out
 }
 
@@ -115,7 +121,7 @@ func (m *Manager) ListManagedCertificates(ctx context.Context, limit int64, page
 	}
 	out := make([]PublicManagedCertificate, 0, len(certs))
 	for _, cert := range certs {
-		out = append(out, publicCertFromStore(cert, nil))
+		out = append(out, publicCertFromStore(cert, nil, m.clock.Now()))
 	}
 	return out, next, nil
 }
@@ -133,7 +139,7 @@ func (m *Manager) GetManagedCertificate(ctx context.Context, id string) (PublicM
 	if err == nil {
 		latestPtr = &latest
 	}
-	return publicCertFromStore(cert, latestPtr), nil
+	return publicCertFromStore(cert, latestPtr, m.clock.Now()), nil
 }
 
 func (m *Manager) CreateManagedCertificate(ctx context.Context, input ManagedCertificateInput) (PublicManagedCertificate, error) {
@@ -152,7 +158,8 @@ func (m *Manager) CreateManagedCertificate(ctx context.Context, input ManagedCer
 	if err != nil {
 		return PublicManagedCertificate{}, err
 	}
-	return publicCertFromStore(created, &op), nil
+	m.triggerIssueOperation(op.ID)
+	return publicCertFromStore(created, &op, m.clock.Now()), nil
 }
 
 func (m *Manager) UpdateManagedCertificate(ctx context.Context, id string, input ManagedCertificateInput) (PublicManagedCertificate, error) {
@@ -190,7 +197,7 @@ func (m *Manager) UpdateManagedCertificate(ctx context.Context, id string, input
 	if err == nil {
 		latestPtr = &latest
 	}
-	return publicCertFromStore(saved, latestPtr), nil
+	return publicCertFromStore(saved, latestPtr, m.clock.Now()), nil
 }
 
 // SubmitIssueOperation returns an existing running Issue operation or creates a
@@ -209,6 +216,7 @@ func (m *Manager) SubmitIssueOperation(ctx context.Context, managedCertificateID
 	if err != nil {
 		return PublicOperation{}, err
 	}
+	m.triggerIssueOperation(op.ID)
 	return publicOperationFromStore(op), nil
 }
 

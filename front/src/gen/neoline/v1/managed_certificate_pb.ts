@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file neoline/v1/managed_certificate.proto.
  */
 export const file_neoline_v1_managed_certificate: GenFile = /*@__PURE__*/
-  fileDesc("CiRuZW9saW5lL3YxL21hbmFnZWRfY2VydGlmaWNhdGUucHJvdG8SCm5lb2xpbmUudjEimAEKE0lzc3VlQ29uZmlnU25hcHNob3QSDwoHZG9tYWlucxgBIAMoCRIdChVjZXJ0aWZpY2F0ZV9pc3N1ZXJfaWQYAiABKAkSHwoXZG5zX3Byb3ZpZGVyX2FjY291bnRfaWQYAyABKAkSMAoIa2V5X3R5cGUYBCABKA4yHi5uZW9saW5lLnYxLkNlcnRpZmljYXRlS2V5VHlwZSKdBAoUQ2VydGlmaWNhdGVPcGVyYXRpb24SCgoCaWQYASABKAkSHgoWbWFuYWdlZF9jZXJ0aWZpY2F0ZV9pZBgCIAEoCRIyCgR0eXBlGAMgASgOMiQubmVvbGluZS52MS5DZXJ0aWZpY2F0ZU9wZXJhdGlvblR5cGUSNgoGc3RhdHVzGAQgASgOMiYubmVvbGluZS52MS5DZXJ0aWZpY2F0ZU9wZXJhdGlvblN0YXR1cxIVCg1hdHRlbXB0X2NvdW50GAUgASgNEjgKD2NvbmZpZ19zbmFwc2hvdBgGIAEoCzIfLm5lb2xpbmUudjEuSXNzdWVDb25maWdTbmFwc2hvdBIVCg1lcnJvcl9zdW1tYXJ5GAcgASgJEg8KB3dhcm5pbmcYCCABKAkSLgoKc3RhcnRlZF9hdBgJIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLwoLZmluaXNoZWRfYXQYCiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEjMKD25leHRfYXR0ZW1wdF9hdBgLIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLgoKY3JlYXRlZF9hdBgMIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLgoKdXBkYXRlZF9hdBgNIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAiogQKEk1hbmFnZWRDZXJ0aWZpY2F0ZRIKCgJpZBgBIAEoCRIMCgRuYW1lGAIgASgJEg8KB2RvbWFpbnMYAyADKAkSHQoVY2VydGlmaWNhdGVfaXNzdWVyX2lkGAQgASgJEh8KF2Ruc19wcm92aWRlcl9hY2NvdW50X2lkGAUgASgJEjAKCGtleV90eXBlGAYgASgOMh4ubmVvbGluZS52MS5DZXJ0aWZpY2F0ZUtleVR5cGUSHwoSYXV0b19yZW5ld19lbmFibGVkGAcgASgISACIAQESGQoRcmVuZXdfYmVmb3JlX2RheXMYCCABKA0SGAoQbm90aWZ5X2dyb3VwX2lkcxgJIAMoCRISCgpzZXJ2ZXJfaWRzGAogAygJEjgKD2FjdGl2ZV92YWxpZGl0eRgLIAEoDjIfLm5lb2xpbmUudjEuQ2VydGlmaWNhdGVWYWxpZGl0eRIYChBidW5kbGVfYXZhaWxhYmxlGAwgASgIEjoKEGxhdGVzdF9vcGVyYXRpb24YDSABKAsyIC5uZW9saW5lLnYxLkNlcnRpZmljYXRlT3BlcmF0aW9uEi4KCmNyZWF0ZWRfYXQYDiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi4KCnVwZGF0ZWRfYXQYDyABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQhUKE19hdXRvX3JlbmV3X2VuYWJsZWQiRwoeTGlzdE1hbmFnZWRDZXJ0aWZpY2F0ZXNSZXF1ZXN0EhEKCXBhZ2Vfc2l6ZRgBIAEoDRISCgpwYWdlX3Rva2VuGAIgASgJInAKH0xpc3RNYW5hZ2VkQ2VydGlmaWNhdGVzUmVzcG9uc2USNAoMY2VydGlmaWNhdGVzGAEgAygLMh4ubmVvbGluZS52MS5NYW5hZ2VkQ2VydGlmaWNhdGUSFwoPbmV4dF9wYWdlX3Rva2VuGAIgASgJIlYKH0NyZWF0ZU1hbmFnZWRDZXJ0aWZpY2F0ZVJlcXVlc3QSMwoLY2VydGlmaWNhdGUYASABKAsyHi5uZW9saW5lLnYxLk1hbmFnZWRDZXJ0aWZpY2F0ZSJXCiBDcmVhdGVNYW5hZ2VkQ2VydGlmaWNhdGVSZXNwb25zZRIzCgtjZXJ0aWZpY2F0ZRgBIAEoCzIeLm5lb2xpbmUudjEuTWFuYWdlZENlcnRpZmljYXRlIj4KHEdldE1hbmFnZWRDZXJ0aWZpY2F0ZVJlcXVlc3QSHgoWbWFuYWdlZF9jZXJ0aWZpY2F0ZV9pZBgBIAEoCSJUCh1HZXRNYW5hZ2VkQ2VydGlmaWNhdGVSZXNwb25zZRIzCgtjZXJ0aWZpY2F0ZRgBIAEoCzIeLm5lb2xpbmUudjEuTWFuYWdlZENlcnRpZmljYXRlInYKH1VwZGF0ZU1hbmFnZWRDZXJ0aWZpY2F0ZVJlcXVlc3QSHgoWbWFuYWdlZF9jZXJ0aWZpY2F0ZV9pZBgBIAEoCRIzCgtjZXJ0aWZpY2F0ZRgCIAEoCzIeLm5lb2xpbmUudjEuTWFuYWdlZENlcnRpZmljYXRlIlcKIFVwZGF0ZU1hbmFnZWRDZXJ0aWZpY2F0ZVJlc3BvbnNlEjMKC2NlcnRpZmljYXRlGAEgASgLMh4ubmVvbGluZS52MS5NYW5hZ2VkQ2VydGlmaWNhdGUqfwoSQ2VydGlmaWNhdGVLZXlUeXBlEiQKIENFUlRJRklDQVRFX0tFWV9UWVBFX1VOU1BFQ0lGSUVEEAASIAocQ0VSVElGSUNBVEVfS0VZX1RZUEVfRUNfUDI1NhABEiEKHUNFUlRJRklDQVRFX0tFWV9UWVBFX1JTQV8yMDQ4EAIq5wEKE0NlcnRpZmljYXRlVmFsaWRpdHkSJAogQ0VSVElGSUNBVEVfVkFMSURJVFlfVU5TUEVDSUZJRUQQABIgChxDRVJUSUZJQ0FURV9WQUxJRElUWV9NSVNTSU5HEAESHgoaQ0VSVElGSUNBVEVfVkFMSURJVFlfVkFMSUQQAhIkCiBDRVJUSUZJQ0FURV9WQUxJRElUWV9SRU5FV0FMX0RVRRADEiAKHENFUlRJRklDQVRFX1ZBTElESVRZX0VYUElSRUQQBBIgChxDRVJUSUZJQ0FURV9WQUxJRElUWV9SRVZPS0VEEAUquQEKGENlcnRpZmljYXRlT3BlcmF0aW9uVHlwZRIqCiZDRVJUSUZJQ0FURV9PUEVSQVRJT05fVFlQRV9VTlNQRUNJRklFRBAAEiQKIENFUlRJRklDQVRFX09QRVJBVElPTl9UWVBFX0lTU1VFEAESJAogQ0VSVElGSUNBVEVfT1BFUkFUSU9OX1RZUEVfUkVORVcQAhIlCiFDRVJUSUZJQ0FURV9PUEVSQVRJT05fVFlQRV9SRVZPS0UQAyrzAQoaQ2VydGlmaWNhdGVPcGVyYXRpb25TdGF0dXMSLAooQ0VSVElGSUNBVEVfT1BFUkFUSU9OX1NUQVRVU19VTlNQRUNJRklFRBAAEigKJENFUlRJRklDQVRFX09QRVJBVElPTl9TVEFUVVNfUEVORElORxABEigKJENFUlRJRklDQVRFX09QRVJBVElPTl9TVEFUVVNfUlVOTklORxACEioKJkNFUlRJRklDQVRFX09QRVJBVElPTl9TVEFUVVNfU1VDQ0VFREVEEAMSJwojQ0VSVElGSUNBVEVfT1BFUkFUSU9OX1NUQVRVU19GQUlMRUQQBDLzAwoZTWFuYWdlZENlcnRpZmljYXRlU2VydmljZRJ0ChdMaXN0TWFuYWdlZENlcnRpZmljYXRlcxIqLm5lb2xpbmUudjEuTGlzdE1hbmFnZWRDZXJ0aWZpY2F0ZXNSZXF1ZXN0GisubmVvbGluZS52MS5MaXN0TWFuYWdlZENlcnRpZmljYXRlc1Jlc3BvbnNlIgASdwoYQ3JlYXRlTWFuYWdlZENlcnRpZmljYXRlEisubmVvbGluZS52MS5DcmVhdGVNYW5hZ2VkQ2VydGlmaWNhdGVSZXF1ZXN0GiwubmVvbGluZS52MS5DcmVhdGVNYW5hZ2VkQ2VydGlmaWNhdGVSZXNwb25zZSIAEm4KFUdldE1hbmFnZWRDZXJ0aWZpY2F0ZRIoLm5lb2xpbmUudjEuR2V0TWFuYWdlZENlcnRpZmljYXRlUmVxdWVzdBopLm5lb2xpbmUudjEuR2V0TWFuYWdlZENlcnRpZmljYXRlUmVzcG9uc2UiABJ3ChhVcGRhdGVNYW5hZ2VkQ2VydGlmaWNhdGUSKy5uZW9saW5lLnYxLlVwZGF0ZU1hbmFnZWRDZXJ0aWZpY2F0ZVJlcXVlc3QaLC5uZW9saW5lLnYxLlVwZGF0ZU1hbmFnZWRDZXJ0aWZpY2F0ZVJlc3BvbnNlIgBCO1o5Z2l0aHViLmNvbS9vcnZpY2UvbmVvLWxpbmUvcGtnL3Byb3RvL25lb2xpbmUvdjE7bmVvbGluZXYxYgZwcm90bzM", [file_google_protobuf_timestamp]);
+  fileDesc("CiRuZW9saW5lL3YxL21hbmFnZWRfY2VydGlmaWNhdGUucHJvdG8SCm5lb2xpbmUudjEimAEKE0lzc3VlQ29uZmlnU25hcHNob3QSDwoHZG9tYWlucxgBIAMoCRIdChVjZXJ0aWZpY2F0ZV9pc3N1ZXJfaWQYAiABKAkSHwoXZG5zX3Byb3ZpZGVyX2FjY291bnRfaWQYAyABKAkSMAoIa2V5X3R5cGUYBCABKA4yHi5uZW9saW5lLnYxLkNlcnRpZmljYXRlS2V5VHlwZSKdBAoUQ2VydGlmaWNhdGVPcGVyYXRpb24SCgoCaWQYASABKAkSHgoWbWFuYWdlZF9jZXJ0aWZpY2F0ZV9pZBgCIAEoCRIyCgR0eXBlGAMgASgOMiQubmVvbGluZS52MS5DZXJ0aWZpY2F0ZU9wZXJhdGlvblR5cGUSNgoGc3RhdHVzGAQgASgOMiYubmVvbGluZS52MS5DZXJ0aWZpY2F0ZU9wZXJhdGlvblN0YXR1cxIVCg1hdHRlbXB0X2NvdW50GAUgASgNEjgKD2NvbmZpZ19zbmFwc2hvdBgGIAEoCzIfLm5lb2xpbmUudjEuSXNzdWVDb25maWdTbmFwc2hvdBIVCg1lcnJvcl9zdW1tYXJ5GAcgASgJEg8KB3dhcm5pbmcYCCABKAkSLgoKc3RhcnRlZF9hdBgJIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLwoLZmluaXNoZWRfYXQYCiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEjMKD25leHRfYXR0ZW1wdF9hdBgLIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLgoKY3JlYXRlZF9hdBgMIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLgoKdXBkYXRlZF9hdBgNIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAiiwMKGkNlcnRpZmljYXRlVmVyc2lvbk1ldGFkYXRhEgoKAmlkGAEgASgJEjgKD2NvbmZpZ19zbmFwc2hvdBgCIAEoCzIfLm5lb2xpbmUudjEuSXNzdWVDb25maWdTbmFwc2hvdBIYChBsZWFmX2ZpbmdlcnByaW50GAMgASgJEhUKDXNlcmlhbF9udW1iZXIYBCABKAkSGgoSaXNzdWVyX2NvbW1vbl9uYW1lGAUgASgJEi4KCm5vdF9iZWZvcmUYBiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi0KCW5vdF9hZnRlchgHIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASMAoIa2V5X3R5cGUYCCABKA4yHi5uZW9saW5lLnYxLkNlcnRpZmljYXRlS2V5VHlwZRIZChFzdGFnaW5nX3VudHJ1c3RlZBgJIAEoCBIuCgpjcmVhdGVkX2F0GAogASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCKBAwoRQ2VydGlmaWNhdGVCdW5kbGUSHgoWbWFuYWdlZF9jZXJ0aWZpY2F0ZV9pZBgBIAEoCRISCgp2ZXJzaW9uX2lkGAIgASgJEg8KB2RvbWFpbnMYAyADKAkSMAoIa2V5X3R5cGUYBCABKA4yHi5uZW9saW5lLnYxLkNlcnRpZmljYXRlS2V5VHlwZRIYChBsZWFmX2ZpbmdlcnByaW50GAUgASgJEi4KCm5vdF9iZWZvcmUYBiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi0KCW5vdF9hZnRlchgHIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASMQoIdmFsaWRpdHkYCCABKA4yHy5uZW9saW5lLnYxLkNlcnRpZmljYXRlVmFsaWRpdHkSGQoRc3RhZ2luZ191bnRydXN0ZWQYCSABKAgSFQoNZnVsbGNoYWluX3BlbRgKIAEoDBIXCg9wcml2YXRlX2tleV9wZW0YCyABKAwiPQobR2V0Q2VydGlmaWNhdGVCdW5kbGVSZXF1ZXN0Eh4KFm1hbmFnZWRfY2VydGlmaWNhdGVfaWQYASABKAkiTQocR2V0Q2VydGlmaWNhdGVCdW5kbGVSZXNwb25zZRItCgZidW5kbGUYASABKAsyHS5uZW9saW5lLnYxLkNlcnRpZmljYXRlQnVuZGxlIj0KG1N1Ym1pdElzc3VlT3BlcmF0aW9uUmVxdWVzdBIeChZtYW5hZ2VkX2NlcnRpZmljYXRlX2lkGAEgASgJIlMKHFN1Ym1pdElzc3VlT3BlcmF0aW9uUmVzcG9uc2USMwoJb3BlcmF0aW9uGAEgASgLMiAubmVvbGluZS52MS5DZXJ0aWZpY2F0ZU9wZXJhdGlvbiLiBAoSTWFuYWdlZENlcnRpZmljYXRlEgoKAmlkGAEgASgJEgwKBG5hbWUYAiABKAkSDwoHZG9tYWlucxgDIAMoCRIdChVjZXJ0aWZpY2F0ZV9pc3N1ZXJfaWQYBCABKAkSHwoXZG5zX3Byb3ZpZGVyX2FjY291bnRfaWQYBSABKAkSMAoIa2V5X3R5cGUYBiABKA4yHi5uZW9saW5lLnYxLkNlcnRpZmljYXRlS2V5VHlwZRIfChJhdXRvX3JlbmV3X2VuYWJsZWQYByABKAhIAIgBARIZChFyZW5ld19iZWZvcmVfZGF5cxgIIAEoDRIYChBub3RpZnlfZ3JvdXBfaWRzGAkgAygJEhIKCnNlcnZlcl9pZHMYCiADKAkSOAoPYWN0aXZlX3ZhbGlkaXR5GAsgASgOMh8ubmVvbGluZS52MS5DZXJ0aWZpY2F0ZVZhbGlkaXR5EhgKEGJ1bmRsZV9hdmFpbGFibGUYDCABKAgSOgoQbGF0ZXN0X29wZXJhdGlvbhgNIAEoCzIgLm5lb2xpbmUudjEuQ2VydGlmaWNhdGVPcGVyYXRpb24SLgoKY3JlYXRlZF9hdBgOIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLgoKdXBkYXRlZF9hdBgPIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASPgoOYWN0aXZlX3ZlcnNpb24YECABKAsyJi5uZW9saW5lLnYxLkNlcnRpZmljYXRlVmVyc2lvbk1ldGFkYXRhQhUKE19hdXRvX3JlbmV3X2VuYWJsZWQiRwoeTGlzdE1hbmFnZWRDZXJ0aWZpY2F0ZXNSZXF1ZXN0EhEKCXBhZ2Vfc2l6ZRgBIAEoDRISCgpwYWdlX3Rva2VuGAIgASgJInAKH0xpc3RNYW5hZ2VkQ2VydGlmaWNhdGVzUmVzcG9uc2USNAoMY2VydGlmaWNhdGVzGAEgAygLMh4ubmVvbGluZS52MS5NYW5hZ2VkQ2VydGlmaWNhdGUSFwoPbmV4dF9wYWdlX3Rva2VuGAIgASgJIlYKH0NyZWF0ZU1hbmFnZWRDZXJ0aWZpY2F0ZVJlcXVlc3QSMwoLY2VydGlmaWNhdGUYASABKAsyHi5uZW9saW5lLnYxLk1hbmFnZWRDZXJ0aWZpY2F0ZSJXCiBDcmVhdGVNYW5hZ2VkQ2VydGlmaWNhdGVSZXNwb25zZRIzCgtjZXJ0aWZpY2F0ZRgBIAEoCzIeLm5lb2xpbmUudjEuTWFuYWdlZENlcnRpZmljYXRlIj4KHEdldE1hbmFnZWRDZXJ0aWZpY2F0ZVJlcXVlc3QSHgoWbWFuYWdlZF9jZXJ0aWZpY2F0ZV9pZBgBIAEoCSJUCh1HZXRNYW5hZ2VkQ2VydGlmaWNhdGVSZXNwb25zZRIzCgtjZXJ0aWZpY2F0ZRgBIAEoCzIeLm5lb2xpbmUudjEuTWFuYWdlZENlcnRpZmljYXRlInYKH1VwZGF0ZU1hbmFnZWRDZXJ0aWZpY2F0ZVJlcXVlc3QSHgoWbWFuYWdlZF9jZXJ0aWZpY2F0ZV9pZBgBIAEoCRIzCgtjZXJ0aWZpY2F0ZRgCIAEoCzIeLm5lb2xpbmUudjEuTWFuYWdlZENlcnRpZmljYXRlIlcKIFVwZGF0ZU1hbmFnZWRDZXJ0aWZpY2F0ZVJlc3BvbnNlEjMKC2NlcnRpZmljYXRlGAEgASgLMh4ubmVvbGluZS52MS5NYW5hZ2VkQ2VydGlmaWNhdGUqfwoSQ2VydGlmaWNhdGVLZXlUeXBlEiQKIENFUlRJRklDQVRFX0tFWV9UWVBFX1VOU1BFQ0lGSUVEEAASIAocQ0VSVElGSUNBVEVfS0VZX1RZUEVfRUNfUDI1NhABEiEKHUNFUlRJRklDQVRFX0tFWV9UWVBFX1JTQV8yMDQ4EAIq5wEKE0NlcnRpZmljYXRlVmFsaWRpdHkSJAogQ0VSVElGSUNBVEVfVkFMSURJVFlfVU5TUEVDSUZJRUQQABIgChxDRVJUSUZJQ0FURV9WQUxJRElUWV9NSVNTSU5HEAESHgoaQ0VSVElGSUNBVEVfVkFMSURJVFlfVkFMSUQQAhIkCiBDRVJUSUZJQ0FURV9WQUxJRElUWV9SRU5FV0FMX0RVRRADEiAKHENFUlRJRklDQVRFX1ZBTElESVRZX0VYUElSRUQQBBIgChxDRVJUSUZJQ0FURV9WQUxJRElUWV9SRVZPS0VEEAUquQEKGENlcnRpZmljYXRlT3BlcmF0aW9uVHlwZRIqCiZDRVJUSUZJQ0FURV9PUEVSQVRJT05fVFlQRV9VTlNQRUNJRklFRBAAEiQKIENFUlRJRklDQVRFX09QRVJBVElPTl9UWVBFX0lTU1VFEAESJAogQ0VSVElGSUNBVEVfT1BFUkFUSU9OX1RZUEVfUkVORVcQAhIlCiFDRVJUSUZJQ0FURV9PUEVSQVRJT05fVFlQRV9SRVZPS0UQAyrzAQoaQ2VydGlmaWNhdGVPcGVyYXRpb25TdGF0dXMSLAooQ0VSVElGSUNBVEVfT1BFUkFUSU9OX1NUQVRVU19VTlNQRUNJRklFRBAAEigKJENFUlRJRklDQVRFX09QRVJBVElPTl9TVEFUVVNfUEVORElORxABEigKJENFUlRJRklDQVRFX09QRVJBVElPTl9TVEFUVVNfUlVOTklORxACEioKJkNFUlRJRklDQVRFX09QRVJBVElPTl9TVEFUVVNfU1VDQ0VFREVEEAMSJwojQ0VSVElGSUNBVEVfT1BFUkFUSU9OX1NUQVRVU19GQUlMRUQQBDLNBQoZTWFuYWdlZENlcnRpZmljYXRlU2VydmljZRJ0ChdMaXN0TWFuYWdlZENlcnRpZmljYXRlcxIqLm5lb2xpbmUudjEuTGlzdE1hbmFnZWRDZXJ0aWZpY2F0ZXNSZXF1ZXN0GisubmVvbGluZS52MS5MaXN0TWFuYWdlZENlcnRpZmljYXRlc1Jlc3BvbnNlIgASdwoYQ3JlYXRlTWFuYWdlZENlcnRpZmljYXRlEisubmVvbGluZS52MS5DcmVhdGVNYW5hZ2VkQ2VydGlmaWNhdGVSZXF1ZXN0GiwubmVvbGluZS52MS5DcmVhdGVNYW5hZ2VkQ2VydGlmaWNhdGVSZXNwb25zZSIAEm4KFUdldE1hbmFnZWRDZXJ0aWZpY2F0ZRIoLm5lb2xpbmUudjEuR2V0TWFuYWdlZENlcnRpZmljYXRlUmVxdWVzdBopLm5lb2xpbmUudjEuR2V0TWFuYWdlZENlcnRpZmljYXRlUmVzcG9uc2UiABJ3ChhVcGRhdGVNYW5hZ2VkQ2VydGlmaWNhdGUSKy5uZW9saW5lLnYxLlVwZGF0ZU1hbmFnZWRDZXJ0aWZpY2F0ZVJlcXVlc3QaLC5uZW9saW5lLnYxLlVwZGF0ZU1hbmFnZWRDZXJ0aWZpY2F0ZVJlc3BvbnNlIgASawoUU3VibWl0SXNzdWVPcGVyYXRpb24SJy5uZW9saW5lLnYxLlN1Ym1pdElzc3VlT3BlcmF0aW9uUmVxdWVzdBooLm5lb2xpbmUudjEuU3VibWl0SXNzdWVPcGVyYXRpb25SZXNwb25zZSIAEmsKFEdldENlcnRpZmljYXRlQnVuZGxlEicubmVvbGluZS52MS5HZXRDZXJ0aWZpY2F0ZUJ1bmRsZVJlcXVlc3QaKC5uZW9saW5lLnYxLkdldENlcnRpZmljYXRlQnVuZGxlUmVzcG9uc2UiAEI7WjlnaXRodWIuY29tL29ydmljZS9uZW8tbGluZS9wa2cvcHJvdG8vbmVvbGluZS92MTtuZW9saW5ldjFiBnByb3RvMw", [file_google_protobuf_timestamp]);
 
 /**
  * IssueConfigSnapshot captures issuance parameters frozen at operation creation.
@@ -126,6 +126,205 @@ export const CertificateOperationSchema: GenMessage<CertificateOperation> = /*@_
   messageDesc(file_neoline_v1_managed_certificate, 1);
 
 /**
+ * CertificateVersionMetadata exposes active/previous version facts without PEM secrets.
+ *
+ * @generated from message neoline.v1.CertificateVersionMetadata
+ */
+export type CertificateVersionMetadata = Message<"neoline.v1.CertificateVersionMetadata"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: neoline.v1.IssueConfigSnapshot config_snapshot = 2;
+   */
+  configSnapshot?: IssueConfigSnapshot | undefined;
+
+  /**
+   * @generated from field: string leaf_fingerprint = 3;
+   */
+  leafFingerprint: string;
+
+  /**
+   * @generated from field: string serial_number = 4;
+   */
+  serialNumber: string;
+
+  /**
+   * @generated from field: string issuer_common_name = 5;
+   */
+  issuerCommonName: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp not_before = 6;
+   */
+  notBefore?: Timestamp | undefined;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp not_after = 7;
+   */
+  notAfter?: Timestamp | undefined;
+
+  /**
+   * @generated from field: neoline.v1.CertificateKeyType key_type = 8;
+   */
+  keyType: CertificateKeyType;
+
+  /**
+   * @generated from field: bool staging_untrusted = 9;
+   */
+  stagingUntrusted: boolean;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp created_at = 10;
+   */
+  createdAt?: Timestamp | undefined;
+};
+
+/**
+ * Describes the message neoline.v1.CertificateVersionMetadata.
+ * Use `create(CertificateVersionMetadataSchema)` to create a new message.
+ */
+export const CertificateVersionMetadataSchema: GenMessage<CertificateVersionMetadata> = /*@__PURE__*/
+  messageDesc(file_neoline_v1_managed_certificate, 2);
+
+/**
+ * @generated from message neoline.v1.CertificateBundle
+ */
+export type CertificateBundle = Message<"neoline.v1.CertificateBundle"> & {
+  /**
+   * @generated from field: string managed_certificate_id = 1;
+   */
+  managedCertificateId: string;
+
+  /**
+   * @generated from field: string version_id = 2;
+   */
+  versionId: string;
+
+  /**
+   * @generated from field: repeated string domains = 3;
+   */
+  domains: string[];
+
+  /**
+   * @generated from field: neoline.v1.CertificateKeyType key_type = 4;
+   */
+  keyType: CertificateKeyType;
+
+  /**
+   * @generated from field: string leaf_fingerprint = 5;
+   */
+  leafFingerprint: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp not_before = 6;
+   */
+  notBefore?: Timestamp | undefined;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp not_after = 7;
+   */
+  notAfter?: Timestamp | undefined;
+
+  /**
+   * @generated from field: neoline.v1.CertificateValidity validity = 8;
+   */
+  validity: CertificateValidity;
+
+  /**
+   * @generated from field: bool staging_untrusted = 9;
+   */
+  stagingUntrusted: boolean;
+
+  /**
+   * @generated from field: bytes fullchain_pem = 10;
+   */
+  fullchainPem: Uint8Array;
+
+  /**
+   * @generated from field: bytes private_key_pem = 11;
+   */
+  privateKeyPem: Uint8Array;
+};
+
+/**
+ * Describes the message neoline.v1.CertificateBundle.
+ * Use `create(CertificateBundleSchema)` to create a new message.
+ */
+export const CertificateBundleSchema: GenMessage<CertificateBundle> = /*@__PURE__*/
+  messageDesc(file_neoline_v1_managed_certificate, 3);
+
+/**
+ * @generated from message neoline.v1.GetCertificateBundleRequest
+ */
+export type GetCertificateBundleRequest = Message<"neoline.v1.GetCertificateBundleRequest"> & {
+  /**
+   * @generated from field: string managed_certificate_id = 1;
+   */
+  managedCertificateId: string;
+};
+
+/**
+ * Describes the message neoline.v1.GetCertificateBundleRequest.
+ * Use `create(GetCertificateBundleRequestSchema)` to create a new message.
+ */
+export const GetCertificateBundleRequestSchema: GenMessage<GetCertificateBundleRequest> = /*@__PURE__*/
+  messageDesc(file_neoline_v1_managed_certificate, 4);
+
+/**
+ * @generated from message neoline.v1.GetCertificateBundleResponse
+ */
+export type GetCertificateBundleResponse = Message<"neoline.v1.GetCertificateBundleResponse"> & {
+  /**
+   * @generated from field: neoline.v1.CertificateBundle bundle = 1;
+   */
+  bundle?: CertificateBundle | undefined;
+};
+
+/**
+ * Describes the message neoline.v1.GetCertificateBundleResponse.
+ * Use `create(GetCertificateBundleResponseSchema)` to create a new message.
+ */
+export const GetCertificateBundleResponseSchema: GenMessage<GetCertificateBundleResponse> = /*@__PURE__*/
+  messageDesc(file_neoline_v1_managed_certificate, 5);
+
+/**
+ * @generated from message neoline.v1.SubmitIssueOperationRequest
+ */
+export type SubmitIssueOperationRequest = Message<"neoline.v1.SubmitIssueOperationRequest"> & {
+  /**
+   * @generated from field: string managed_certificate_id = 1;
+   */
+  managedCertificateId: string;
+};
+
+/**
+ * Describes the message neoline.v1.SubmitIssueOperationRequest.
+ * Use `create(SubmitIssueOperationRequestSchema)` to create a new message.
+ */
+export const SubmitIssueOperationRequestSchema: GenMessage<SubmitIssueOperationRequest> = /*@__PURE__*/
+  messageDesc(file_neoline_v1_managed_certificate, 6);
+
+/**
+ * @generated from message neoline.v1.SubmitIssueOperationResponse
+ */
+export type SubmitIssueOperationResponse = Message<"neoline.v1.SubmitIssueOperationResponse"> & {
+  /**
+   * @generated from field: neoline.v1.CertificateOperation operation = 1;
+   */
+  operation?: CertificateOperation | undefined;
+};
+
+/**
+ * Describes the message neoline.v1.SubmitIssueOperationResponse.
+ * Use `create(SubmitIssueOperationResponseSchema)` to create a new message.
+ */
+export const SubmitIssueOperationResponseSchema: GenMessage<SubmitIssueOperationResponse> = /*@__PURE__*/
+  messageDesc(file_neoline_v1_managed_certificate, 7);
+
+/**
  * ManagedCertificate holds desired config, assignments, and version container.
  * Secrets are never returned on read.
  *
@@ -210,6 +409,11 @@ export type ManagedCertificate = Message<"neoline.v1.ManagedCertificate"> & {
    * @generated from field: google.protobuf.Timestamp updated_at = 15;
    */
   updatedAt?: Timestamp | undefined;
+
+  /**
+   * @generated from field: neoline.v1.CertificateVersionMetadata active_version = 16;
+   */
+  activeVersion?: CertificateVersionMetadata | undefined;
 };
 
 /**
@@ -217,7 +421,7 @@ export type ManagedCertificate = Message<"neoline.v1.ManagedCertificate"> & {
  * Use `create(ManagedCertificateSchema)` to create a new message.
  */
 export const ManagedCertificateSchema: GenMessage<ManagedCertificate> = /*@__PURE__*/
-  messageDesc(file_neoline_v1_managed_certificate, 2);
+  messageDesc(file_neoline_v1_managed_certificate, 8);
 
 /**
  * @generated from message neoline.v1.ListManagedCertificatesRequest
@@ -239,7 +443,7 @@ export type ListManagedCertificatesRequest = Message<"neoline.v1.ListManagedCert
  * Use `create(ListManagedCertificatesRequestSchema)` to create a new message.
  */
 export const ListManagedCertificatesRequestSchema: GenMessage<ListManagedCertificatesRequest> = /*@__PURE__*/
-  messageDesc(file_neoline_v1_managed_certificate, 3);
+  messageDesc(file_neoline_v1_managed_certificate, 9);
 
 /**
  * @generated from message neoline.v1.ListManagedCertificatesResponse
@@ -261,7 +465,7 @@ export type ListManagedCertificatesResponse = Message<"neoline.v1.ListManagedCer
  * Use `create(ListManagedCertificatesResponseSchema)` to create a new message.
  */
 export const ListManagedCertificatesResponseSchema: GenMessage<ListManagedCertificatesResponse> = /*@__PURE__*/
-  messageDesc(file_neoline_v1_managed_certificate, 4);
+  messageDesc(file_neoline_v1_managed_certificate, 10);
 
 /**
  * @generated from message neoline.v1.CreateManagedCertificateRequest
@@ -278,7 +482,7 @@ export type CreateManagedCertificateRequest = Message<"neoline.v1.CreateManagedC
  * Use `create(CreateManagedCertificateRequestSchema)` to create a new message.
  */
 export const CreateManagedCertificateRequestSchema: GenMessage<CreateManagedCertificateRequest> = /*@__PURE__*/
-  messageDesc(file_neoline_v1_managed_certificate, 5);
+  messageDesc(file_neoline_v1_managed_certificate, 11);
 
 /**
  * @generated from message neoline.v1.CreateManagedCertificateResponse
@@ -295,7 +499,7 @@ export type CreateManagedCertificateResponse = Message<"neoline.v1.CreateManaged
  * Use `create(CreateManagedCertificateResponseSchema)` to create a new message.
  */
 export const CreateManagedCertificateResponseSchema: GenMessage<CreateManagedCertificateResponse> = /*@__PURE__*/
-  messageDesc(file_neoline_v1_managed_certificate, 6);
+  messageDesc(file_neoline_v1_managed_certificate, 12);
 
 /**
  * @generated from message neoline.v1.GetManagedCertificateRequest
@@ -312,7 +516,7 @@ export type GetManagedCertificateRequest = Message<"neoline.v1.GetManagedCertifi
  * Use `create(GetManagedCertificateRequestSchema)` to create a new message.
  */
 export const GetManagedCertificateRequestSchema: GenMessage<GetManagedCertificateRequest> = /*@__PURE__*/
-  messageDesc(file_neoline_v1_managed_certificate, 7);
+  messageDesc(file_neoline_v1_managed_certificate, 13);
 
 /**
  * @generated from message neoline.v1.GetManagedCertificateResponse
@@ -329,7 +533,7 @@ export type GetManagedCertificateResponse = Message<"neoline.v1.GetManagedCertif
  * Use `create(GetManagedCertificateResponseSchema)` to create a new message.
  */
 export const GetManagedCertificateResponseSchema: GenMessage<GetManagedCertificateResponse> = /*@__PURE__*/
-  messageDesc(file_neoline_v1_managed_certificate, 8);
+  messageDesc(file_neoline_v1_managed_certificate, 14);
 
 /**
  * @generated from message neoline.v1.UpdateManagedCertificateRequest
@@ -351,7 +555,7 @@ export type UpdateManagedCertificateRequest = Message<"neoline.v1.UpdateManagedC
  * Use `create(UpdateManagedCertificateRequestSchema)` to create a new message.
  */
 export const UpdateManagedCertificateRequestSchema: GenMessage<UpdateManagedCertificateRequest> = /*@__PURE__*/
-  messageDesc(file_neoline_v1_managed_certificate, 9);
+  messageDesc(file_neoline_v1_managed_certificate, 15);
 
 /**
  * @generated from message neoline.v1.UpdateManagedCertificateResponse
@@ -368,7 +572,7 @@ export type UpdateManagedCertificateResponse = Message<"neoline.v1.UpdateManaged
  * Use `create(UpdateManagedCertificateResponseSchema)` to create a new message.
  */
 export const UpdateManagedCertificateResponseSchema: GenMessage<UpdateManagedCertificateResponse> = /*@__PURE__*/
-  messageDesc(file_neoline_v1_managed_certificate, 10);
+  messageDesc(file_neoline_v1_managed_certificate, 16);
 
 /**
  * CertificateKeyType selects the private key algorithm for issuance.
@@ -545,6 +749,22 @@ export const ManagedCertificateService: GenService<{
     methodKind: "unary";
     input: typeof UpdateManagedCertificateRequestSchema;
     output: typeof UpdateManagedCertificateResponseSchema;
+  },
+  /**
+   * @generated from rpc neoline.v1.ManagedCertificateService.SubmitIssueOperation
+   */
+  submitIssueOperation: {
+    methodKind: "unary";
+    input: typeof SubmitIssueOperationRequestSchema;
+    output: typeof SubmitIssueOperationResponseSchema;
+  },
+  /**
+   * @generated from rpc neoline.v1.ManagedCertificateService.GetCertificateBundle
+   */
+  getCertificateBundle: {
+    methodKind: "unary";
+    input: typeof GetCertificateBundleRequestSchema;
+    output: typeof GetCertificateBundleResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_neoline_v1_managed_certificate, 0);
