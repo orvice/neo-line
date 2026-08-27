@@ -97,17 +97,15 @@ func (s *MongoStore) RenewCertificateOperationLease(ctx context.Context, opID, o
 	return nil
 }
 
-// UpdateCertificateOperationPendingTXT stores DNS records for takeover cleanup.
-func (s *MongoStore) UpdateCertificateOperationPendingTXT(ctx context.Context, opID, owner string, records []DNSChallengeRecord) error {
+// RecordCertificateOperationPendingTXT persists one presented DNS record for takeover cleanup.
+func (s *MongoStore) RecordCertificateOperationPendingTXT(ctx context.Context, opID, owner string, record DNSChallengeRecord) error {
 	res, err := s.certificateOperations().UpdateOne(ctx, bson.M{
 		"id":          opID,
 		"status":      CertOpStatusRunning,
 		"lease_owner": owner,
 	}, bson.M{
-		"$set": bson.M{
-			"pending_txt_records": records,
-			"updated_at":          time.Now().UTC(),
-		},
+		"$addToSet": bson.M{"pending_txt_records": record},
+		"$set":      bson.M{"updated_at": time.Now().UTC()},
 	})
 	if err != nil {
 		return err

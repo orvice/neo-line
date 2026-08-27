@@ -104,6 +104,20 @@ type ManagedCertificate struct {
 	UpdatedAt            time.Time                     `bson:"updated_at" json:"updated_at"`
 }
 
+// ManagedCertificateUpdate contains only admin-editable fields. Runtime-owned
+// version and notification state cannot be overwritten through this contract.
+type ManagedCertificateUpdate struct {
+	Name                 string
+	Domains              []string
+	CertificateIssuerID  string
+	DNSProviderAccountID string
+	KeyType              string
+	AutoRenewEnabled     bool
+	RenewBeforeDays      uint32
+	NotifyGroupIDs       []string
+	ServerIDs            []string
+}
+
 func (s *MongoStore) managedCertificates() *mongo.Collection {
 	return s.database.Collection("managed_certificates")
 }
@@ -191,15 +205,44 @@ func (s *MongoStore) ListAutoRenewManagedCertificates(ctx context.Context) ([]Ma
 	return certs, nil
 }
 
-func (s *MongoStore) UpdateManagedCertificate(ctx context.Context, id string, cert ManagedCertificate) (ManagedCertificate, error) {
-	existing, err := s.GetManagedCertificate(ctx, id)
-	if err != nil {
-		return ManagedCertificate{}, err
+func managedCertificateUpdateDocument(update ManagedCertificateUpdate, now time.Time) bson.M {
+	set := bson.M{
+		"name":                    update.Name,
+		"domains":                 update.Domains,
+		"certificate_issuer_id":   update.CertificateIssuerID,
+		"dns_provider_account_id": update.DNSProviderAccountID,
+		"key_type":                update.KeyType,
+		"auto_renew_enabled":      update.AutoRenewEnabled,
+		"renew_before_days":       update.RenewBeforeDays,
+		"updated_at":              now,
 	}
-	cert.ID = id
-	cert.CreatedAt = existing.CreatedAt
-	cert.UpdatedAt = time.Now().UTC()
-	if _, err := s.managedCertificates().ReplaceOne(ctx, bson.M{"id": id}, cert); err != nil {
+	unset := bson.M{}
+	if len(update.NotifyGroupIDs) == 0 {
+		unset["notify_group_ids"] = ""
+	} else {
+		set["notify_group_ids"] = update.NotifyGroupIDs
+	}
+	if len(update.ServerIDs) == 0 {
+		unset["server_ids"] = ""
+	} else {
+		set["server_ids"] = update.ServerIDs
+	}
+	change := bson.M{"$set": set}
+	if len(unset) > 0 {
+		change["$unset"] = unset
+	}
+	return change
+}
+
+func (s *MongoStore) UpdateManagedCertificate(ctx context.Context, id string, update ManagedCertificateUpdate) (ManagedCertificate, error) {
+	var cert ManagedCertificate
+	err := s.managedCertificates().FindOneAndUpdate(
+		ctx,
+		bson.M{"id": id},
+		managedCertificateUpdateDocument(update, time.Now().UTC()),
+		options.FindOneAndUpdate().SetReturnDocument(options.After),
+	).Decode(&cert)
+	if err != nil {
 		if mongo.IsDuplicateKeyError(err) {
 			return ManagedCertificate{}, ErrManagedCertificateNameTaken
 		}

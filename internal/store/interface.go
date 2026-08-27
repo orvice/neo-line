@@ -55,7 +55,7 @@ type Store interface {
 	ListManagedCertificatesByServer(ctx context.Context, serverID string) ([]ManagedCertificate, error)
 	CreateManagedCertificate(ctx context.Context, cert ManagedCertificate) (ManagedCertificate, error)
 	GetManagedCertificate(ctx context.Context, id string) (ManagedCertificate, error)
-	UpdateManagedCertificate(ctx context.Context, id string, cert ManagedCertificate) (ManagedCertificate, error)
+	UpdateManagedCertificate(ctx context.Context, id string, update ManagedCertificateUpdate) (ManagedCertificate, error)
 	DeleteManagedCertificate(ctx context.Context, id string) error
 	MarkVersionRevokePending(ctx context.Context, managedCertID, versionID string) error
 	ClearVersionRevokePending(ctx context.Context, managedCertID, versionID string) error
@@ -72,19 +72,12 @@ type Store interface {
 	FindClaimableCertificateOperations(ctx context.Context, now time.Time, limit int64) ([]CertificateOperation, error)
 	TryClaimCertificateOperation(ctx context.Context, p CertificateOperationClaimParams) (CertificateOperation, error)
 	RenewCertificateOperationLease(ctx context.Context, opID, owner string, leaseExpires, now time.Time) error
-	UpdateCertificateOperationPendingTXT(ctx context.Context, opID, owner string, records []DNSChallengeRecord) error
+	RecordCertificateOperationPendingTXT(ctx context.Context, opID, owner string, record DNSChallengeRecord) error
 	ScheduleCertificateOperationRetry(ctx context.Context, opID, owner string, nextAttemptAt time.Time, errorSummary string, consecutiveFailures uint32) error
 	MarkCertificateOperationFailed(ctx context.Context, opID, owner, errorSummary string) error
 	FailExpiredCertificateOperations(ctx context.Context, now time.Time) (int64, error)
 	ClearCertificateOperationPendingTXT(ctx context.Context, opID string) error
-	ClaimPendingIssueOperation(ctx context.Context, opID string) (CertificateOperation, error)
-	FailIssueOperation(ctx context.Context, opID, errorSummary string) error
-	FindPendingIssueOperations(ctx context.Context, limit int64) ([]CertificateOperation, error)
-	ClaimPendingRenewOperation(ctx context.Context, opID string) (CertificateOperation, error)
-	FailRenewOperation(ctx context.Context, opID, errorSummary string) error
-	FindPendingRenewOperations(ctx context.Context, limit int64) ([]CertificateOperation, error)
 	ListAutoRenewManagedCertificates(ctx context.Context) ([]ManagedCertificate, error)
-	UpdateCertificateOperation(ctx context.Context, id string, op CertificateOperation) (CertificateOperation, error)
 	ActivateFirstIssueVersion(ctx context.Context, managedCertID string, version CertificateVersion, opID, leaseOwner, warning string) error
 	ActivateSubsequentIssueVersion(ctx context.Context, managedCertID string, version CertificateVersion, expectedActiveID, opID, leaseOwner, warning string) error
 	ActivatePreviousVersion(ctx context.Context, managedCertID, versionID string) error

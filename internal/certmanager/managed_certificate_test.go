@@ -20,6 +20,10 @@ type managedCertFakeStore struct {
 	ops     map[string]store.CertificateOperation
 	opOrd   []string
 
+	beforeManagedCertificateUpdate func(id string)
+	recordPendingTXTErr            error
+	listAutoRenewErr               error
+
 	issuers map[string]store.CertificateIssuer
 	dns     map[string]store.DNSProviderAccount
 	notify  map[string]store.NotifyGroup
@@ -140,18 +144,30 @@ func (f *managedCertFakeStore) GetManagedCertificate(_ context.Context, id strin
 	return c, nil
 }
 
-func (f *managedCertFakeStore) UpdateManagedCertificate(_ context.Context, id string, cert store.ManagedCertificate) (store.ManagedCertificate, error) {
+func (f *managedCertFakeStore) UpdateManagedCertificate(_ context.Context, id string, update store.ManagedCertificateUpdate) (store.ManagedCertificate, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	if _, ok := f.certs[id]; !ok {
 		return store.ManagedCertificate{}, mongo.ErrNoDocuments
 	}
+	if f.beforeManagedCertificateUpdate != nil {
+		f.beforeManagedCertificateUpdate(id)
+	}
 	for otherID, c := range f.certs {
-		if otherID != id && c.Name == cert.Name {
+		if otherID != id && c.Name == update.Name {
 			return store.ManagedCertificate{}, store.ErrManagedCertificateNameTaken
 		}
 	}
-	cert.ID = id
+	cert := f.certs[id]
+	cert.Name = update.Name
+	cert.Domains = append([]string(nil), update.Domains...)
+	cert.CertificateIssuerID = update.CertificateIssuerID
+	cert.DNSProviderAccountID = update.DNSProviderAccountID
+	cert.KeyType = update.KeyType
+	cert.AutoRenewEnabled = update.AutoRenewEnabled
+	cert.RenewBeforeDays = update.RenewBeforeDays
+	cert.NotifyGroupIDs = append([]string(nil), update.NotifyGroupIDs...)
+	cert.ServerIDs = append([]string(nil), update.ServerIDs...)
 	cert.UpdatedAt = time.Now().UTC()
 	f.certs[id] = cert
 	return cert, nil
@@ -385,87 +401,12 @@ func (f *managedCertFakeStore) SetCertificateNotificationWarning(_ context.Conte
 	return nil
 }
 
-func (f *managedCertFakeStore) ClaimPendingIssueOperation(ctx context.Context, opID string) (store.CertificateOperation, error) {
-	now := time.Now().UTC()
-	return f.TryClaimCertificateOperation(ctx, store.CertificateOperationClaimParams{
-		OpID:         opID,
-		Owner:        "test-replica",
-		Now:          now,
-		LeaseExpires: now.Add(store.DefaultOperationLeaseDuration),
-	})
-}
-
-func (f *managedCertFakeStore) FailIssueOperation(_ context.Context, opID, summary string) error {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	op, ok := f.ops[opID]
-	if !ok {
-		return errors.New("not found")
-	}
-	now := time.Now().UTC()
-	op.Status = store.CertOpStatusFailed
-	op.ErrorSummary = summary
-	op.FinishedAt = &now
-	op.UpdatedAt = now
-	f.ops[opID] = op
-	return nil
-}
-
-func (f *managedCertFakeStore) FindPendingIssueOperations(_ context.Context, _ int64) ([]store.CertificateOperation, error) {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	var out []store.CertificateOperation
-	for _, id := range f.opOrd {
-		op := f.ops[id]
-		if op.Status == store.CertOpStatusPending && op.Type == store.CertOpTypeIssue {
-			out = append(out, op)
-		}
-	}
-	return out, nil
-}
-
-func (f *managedCertFakeStore) ClaimPendingRenewOperation(ctx context.Context, opID string) (store.CertificateOperation, error) {
-	now := time.Now().UTC()
-	return f.TryClaimCertificateOperation(ctx, store.CertificateOperationClaimParams{
-		OpID:         opID,
-		Owner:        "test-replica",
-		Now:          now,
-		LeaseExpires: now.Add(store.DefaultOperationLeaseDuration),
-	})
-}
-
-func (f *managedCertFakeStore) FailRenewOperation(_ context.Context, opID, summary string) error {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	op, ok := f.ops[opID]
-	if !ok {
-		return errors.New("not found")
-	}
-	now := time.Now().UTC()
-	op.Status = store.CertOpStatusFailed
-	op.ErrorSummary = summary
-	op.FinishedAt = &now
-	op.UpdatedAt = now
-	f.ops[opID] = op
-	return nil
-}
-
-func (f *managedCertFakeStore) FindPendingRenewOperations(_ context.Context, _ int64) ([]store.CertificateOperation, error) {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	var out []store.CertificateOperation
-	for _, id := range f.opOrd {
-		op := f.ops[id]
-		if op.Status == store.CertOpStatusPending && op.Type == store.CertOpTypeRenew {
-			out = append(out, op)
-		}
-	}
-	return out, nil
-}
-
 func (f *managedCertFakeStore) ListAutoRenewManagedCertificates(_ context.Context) ([]store.ManagedCertificate, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
+	if f.listAutoRenewErr != nil {
+		return nil, f.listAutoRenewErr
+	}
 	out := make([]store.ManagedCertificate, 0)
 	for _, id := range f.certOrd {
 		c := f.certs[id]
@@ -474,18 +415,6 @@ func (f *managedCertFakeStore) ListAutoRenewManagedCertificates(_ context.Contex
 		}
 	}
 	return out, nil
-}
-
-func (f *managedCertFakeStore) UpdateCertificateOperation(_ context.Context, id string, op store.CertificateOperation) (store.CertificateOperation, error) {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	if _, ok := f.ops[id]; !ok {
-		return store.CertificateOperation{}, errors.New("not found")
-	}
-	op.ID = id
-	op.UpdatedAt = time.Now().UTC()
-	f.ops[id] = op
-	return op, nil
 }
 
 func (f *managedCertFakeStore) ActivateFirstIssueVersion(_ context.Context, managedCertID string, version store.CertificateVersion, opID, leaseOwner, warning string) error {

@@ -97,7 +97,7 @@ func (f *fakeStore) CreateManagedCertificate(context.Context, store.ManagedCerti
 func (f *fakeStore) GetManagedCertificate(context.Context, string) (store.ManagedCertificate, error) {
 	return store.ManagedCertificate{}, errors.New("not implemented")
 }
-func (f *fakeStore) UpdateManagedCertificate(context.Context, string, store.ManagedCertificate) (store.ManagedCertificate, error) {
+func (f *fakeStore) UpdateManagedCertificate(context.Context, string, store.ManagedCertificateUpdate) (store.ManagedCertificate, error) {
 	return store.ManagedCertificate{}, errors.New("not implemented")
 }
 func (f *fakeStore) CreateCertificateOperation(context.Context, store.CertificateOperation) (store.CertificateOperation, error) {

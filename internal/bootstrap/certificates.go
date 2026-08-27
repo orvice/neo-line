@@ -44,7 +44,7 @@ type CertificateRuntime struct {
 // InitCertificates constructs the certificate manager and notification dispatcher.
 func InitCertificates(mongoStore *store.MongoStore, logger *slog.Logger) *CertificateRuntime {
 	if logger == nil {
-		logger = slog.Default().With("component", "certmanager")
+		logger = slog.Default()
 	}
 	certMgr := certmanager.NewManagerWithDeps(
 		certmanager.NewStore(mongoStore),
@@ -52,7 +52,8 @@ func InitCertificates(mongoStore *store.MongoStore, logger *slog.Logger) *Certif
 		certmanager.NewLegoACMEClient(nil),
 		certmanager.NewCloudflareDNSFactory(nil),
 	)
-	certNotifier := certnotify.New(mongoStore, slog.Default().With("component", "certnotify"))
+	certMgr.SetLogger(logger.With("component", "certmanager"))
+	certNotifier := certnotify.New(mongoStore, logger.With("component", "certnotify"))
 	certMgr.SetCertNotifier(certNotifier)
 	return &CertificateRuntime{Manager: certMgr}
 }

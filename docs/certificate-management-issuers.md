@@ -12,7 +12,7 @@ CertificateIssuer 数据保存在 MongoDB `certificate_issuers` collection。ACM
 | `Ready` | 注册成功，可被 ManagedCertificate 引用并用于签发 |
 | `Failed` | 注册失败，`registration_error` 提供脱敏摘要；可修正身份字段后重试 |
 
-创建 Issuer 后 Connect 请求立即返回 `Pending`，注册在 goroutine 中异步完成。只有 `Ready` Issuer 可用于后续证书签发（#17 及以后）。
+创建 Issuer 后 Connect 请求立即返回 `Pending`，注册在受 certificate manager 生命周期管理的后台任务中异步完成。只有 `Ready` Issuer 可用于后续证书签发（#17 及以后）。应用优雅关闭会取消并等待注册任务；被关闭中断的注册写入脱敏 `Failed` 摘要，Admin 可在下次启动后重试。
 
 删除 Issuer **仅删除本地 MongoDB 文档**，不会调用 ACME 远端 account deactivation。
 

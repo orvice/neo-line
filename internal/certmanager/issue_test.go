@@ -119,6 +119,56 @@ func TestIssueDNSFailure(t *testing.T) {
 	}
 }
 
+func TestIssuePersistsTXTImmediatelyAfterPresent(t *testing.T) {
+	st := newManagedCertFakeStore()
+	dns := NewFakeDNSProvider(&fakeDNSZone{name: "example.com"})
+	_, opID := seedIssueTestStore(st, []string{"example.com"}, store.CertKeyTypeECP256, false)
+	persistedDuringIssue := false
+	acme := &fakeIssueACME{issueFn: func(ctx context.Context, req IssueRequest) (IssueResult, error) {
+		if err := req.DNS.Present("example.com", "tok", "key-auth"); err != nil {
+			return IssueResult{}, err
+		}
+		op, err := st.GetCertificateOperation(ctx, opID)
+		if err != nil {
+			return IssueResult{}, err
+		}
+		persistedDuringIssue = len(op.PendingTXTRecords) == 1
+		return IssueResult{}, errors.New("stop after present")
+	}}
+	m := newIssueTestManager(t, st, acme, dns)
+
+	m.runIssueOperation(context.Background(), opID)
+
+	if !persistedDuringIssue {
+		t.Fatal("pending TXT record was not persisted before IssueCertificate returned")
+	}
+}
+
+func TestIssueStopsAndCleansTXTWhenPersistenceFails(t *testing.T) {
+	st := newManagedCertFakeStore()
+	st.recordPendingTXTErr = errors.New("mongo unavailable")
+	dns := NewFakeDNSProvider(&fakeDNSZone{name: "example.com"})
+	_, opID := seedIssueTestStore(st, []string{"example.com"}, store.CertKeyTypeECP256, false)
+	var presentErr error
+	acme := &fakeIssueACME{issueFn: func(_ context.Context, req IssueRequest) (IssueResult, error) {
+		presentErr = req.DNS.Present("example.com", "tok", "key-auth")
+		return IssueResult{}, presentErr
+	}}
+	m := newIssueTestManager(t, st, acme, dns)
+
+	m.runIssueOperation(context.Background(), opID)
+
+	if presentErr == nil {
+		t.Fatal("Present succeeded without persisting takeover state")
+	}
+	if values := dns.TXTValues("_acme-challenge.example.com"); len(values) != 0 {
+		t.Fatalf("TXT values after persistence failure = %v, want none", values)
+	}
+	if records := st.ops[opID].PendingTXTRecords; len(records) != 0 {
+		t.Fatalf("pending TXT records = %v, want none", records)
+	}
+}
+
 func TestIssueCleanupWarningDoesNotFailOperation(t *testing.T) {
 	st := newManagedCertFakeStore()
 	zone := &fakeDNSZone{name: "example.com", cleanupFail: true}
@@ -215,20 +265,4 @@ func TestAssembleFullchainStripsRoot(t *testing.T) {
 		t.Fatalf("expected leaf+intermediate, got %d", len(certs))
 	}
 	_ = caKey
-}
-
-func TestClaimPendingIssueIsAtomic(t *testing.T) {
-	st := newManagedCertFakeStore()
-	_, opID := seedIssueTestStore(st, []string{"example.com"}, store.CertKeyTypeECP256, false)
-	op1, err := st.ClaimPendingIssueOperation(context.Background(), opID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if op1.Status != store.CertOpStatusRunning {
-		t.Fatalf("status = %q", op1.Status)
-	}
-	_, err = st.ClaimPendingIssueOperation(context.Background(), opID)
-	if err == nil {
-		t.Fatal("expected second claim to fail")
-	}
 }

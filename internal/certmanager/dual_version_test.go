@@ -73,6 +73,42 @@ func TestUpdateDesiredDoesNotPublish(t *testing.T) {
 	}
 }
 
+func TestUpdateManagedCertificatePreservesConcurrentRuntimeState(t *testing.T) {
+	st := newManagedCertFakeStore()
+	certID, _ := seedActiveCert(st, []string{"example.com"}, store.CertKeyTypeECP256)
+	st.beforeManagedCertificateUpdate = func(id string) {
+		cert := st.certs[id]
+		concurrentVersion := *cert.ActiveVersion
+		concurrentVersion.ID = "cver_concurrent"
+		cert.ActiveVersion = &concurrentVersion
+		cert.NotificationState = &store.CertificateNotificationState{
+			HadOperationFailure:     true,
+			LastNotificationWarning: "concurrent notification warning",
+		}
+		st.certs[id] = cert
+	}
+
+	m := NewManager(st, nil)
+	_, err := m.UpdateManagedCertificate(context.Background(), certID, ManagedCertificateInput{
+		Name:                 "renamed",
+		Domains:              []string{"example.com"},
+		CertificateIssuerID:  "iss_1",
+		DNSProviderAccountID: "dns_1",
+		KeyType:              store.CertKeyTypeECP256,
+	})
+	if err != nil {
+		t.Fatalf("update: %v", err)
+	}
+
+	cert := st.certs[certID]
+	if cert.ActiveVersion == nil || cert.ActiveVersion.ID != "cver_concurrent" {
+		t.Fatalf("concurrent active version was overwritten: %+v", cert.ActiveVersion)
+	}
+	if cert.NotificationState == nil || cert.NotificationState.LastNotificationWarning != "concurrent notification warning" {
+		t.Fatalf("concurrent notification state was overwritten: %+v", cert.NotificationState)
+	}
+}
+
 func setFakeCert(st *managedCertFakeStore, certID string, fn func(*store.ManagedCertificate)) {
 	st.mu.Lock()
 	defer st.mu.Unlock()

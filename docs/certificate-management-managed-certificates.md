@@ -68,7 +68,7 @@
 
 ### Desired 与 active 分离（#21）
 
-- 修改 **domains、issuer、DNS 账户、key_type** 只更新 desired config，**不会**自动创建 ACME order。
+- 修改 **domains、issuer、DNS 账户、key_type** 只以字段级原子更新写入 desired config，**不会**自动创建 ACME order，也不会覆盖并发变化的 active/previous 或通知状态。
 - 管理 UI 展示 desired 与 active 签发快照的差异，并提供 **「签发新版本」** 按钮（`SubmitIssueOperation`）。
 - 显式 Issue 使用提交时的 desired 快照；Pending/Running Issue 期间继续禁止修改签发字段。
 - 新版本 **失败** 时 active 与 previous 完全不变。

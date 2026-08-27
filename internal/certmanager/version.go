@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/orvice/neo-line/internal/certstate"
 	"github.com/orvice/neo-line/internal/store"
 )
 
@@ -13,25 +14,11 @@ const (
 )
 
 func effectiveRenewalWindow(notBefore, notAfter time.Time, renewBeforeDays uint32) time.Duration {
-	cfg := time.Duration(renewBeforeDays) * 24 * time.Hour
-	lifetime := notAfter.Sub(notBefore)
-	if lifetime <= 0 {
-		return cfg
-	}
-	third := lifetime / 3
-	if third < cfg {
-		return third
-	}
-	return cfg
+	return certstate.EffectiveRenewalWindow(notBefore, notAfter, renewBeforeDays)
 }
 
 func effectiveRenewalWindowDays(notBefore, notAfter time.Time, renewBeforeDays uint32) uint32 {
-	window := effectiveRenewalWindow(notBefore, notAfter, renewBeforeDays)
-	days := window / (24 * time.Hour)
-	if days == 0 && window > 0 {
-		return 1
-	}
-	return uint32(days)
+	return certstate.EffectiveRenewalWindowDays(notBefore, notAfter, renewBeforeDays)
 }
 
 func nextRenewalAt(v *store.CertificateVersion, renewBeforeDays uint32) *time.Time {
@@ -57,27 +44,11 @@ func renewalMetadata(cert store.ManagedCertificate, now time.Time) (effectiveDay
 }
 
 func computeVersionValidity(v *store.CertificateVersion, renewBeforeDays uint32, now time.Time) (validity string, bundleAvailable bool) {
-	if v == nil {
-		return store.CertValidityMissing, false
-	}
-	if !versionDistributable(v) {
-		return store.CertValidityRevoked, false
-	}
-	bundleAvailable = true
-	if now.After(v.NotAfter) {
-		return store.CertValidityExpired, bundleAvailable
-	}
-	if !now.Before(v.NotBefore) {
-		window := effectiveRenewalWindow(v.NotBefore, v.NotAfter, renewBeforeDays)
-		if !now.Before(v.NotAfter.Add(-window)) {
-			return store.CertValidityRenewalDue, bundleAvailable
-		}
-	}
-	return store.CertValidityValid, bundleAvailable
+	return certstate.ComputeVersionValidity(v, renewBeforeDays, now)
 }
 
 func computeValidity(cert store.ManagedCertificate, now time.Time) (validity string, bundleAvailable bool) {
-	return computeVersionValidity(cert.ActiveVersion, cert.RenewBeforeDays, now)
+	return certstate.ComputeValidity(cert, now)
 }
 
 func desiredDiffersFromActive(cert store.ManagedCertificate) bool {

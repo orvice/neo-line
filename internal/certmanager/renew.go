@@ -2,6 +2,7 @@ package certmanager
 
 import (
 	"context"
+	"errors"
 
 	"github.com/orvice/neo-line/internal/store"
 )
@@ -93,6 +94,7 @@ func (m *Manager) runRenewOperation(ctx context.Context, opID string) {
 func (m *Manager) reconcileAutoRenew(ctx context.Context) {
 	certs, err := m.store.ListAutoRenewManagedCertificates(ctx)
 	if err != nil {
+		m.logger.WarnContext(ctx, "list auto-renew certificates", "error", err)
 		return
 	}
 	now := m.clock.Now()
@@ -107,13 +109,18 @@ func (m *Manager) reconcileAutoRenew(ctx context.Context) {
 		if _, err := m.store.FindRunningCertificateOperation(ctx, cert.ID, store.CertOpTypeRenew); err == nil {
 			continue
 		} else if !store.IsNotFound(err) {
+			m.logger.WarnContext(ctx, "find running renew operation", "certificate_id", cert.ID, "error", err)
 			continue
 		}
 		if err := m.ensureNoConflictingIssuance(ctx, cert.ID, store.CertOpTypeRenew); err != nil {
+			if !errors.Is(err, ErrIssuanceOperationInFlight) {
+				m.logger.WarnContext(ctx, "check conflicting certificate operation", "certificate_id", cert.ID, "error", err)
+			}
 			continue
 		}
 		op, err := m.createPendingRenewOperation(ctx, cert)
 		if err != nil {
+			m.logger.WarnContext(ctx, "create pending renew operation", "certificate_id", cert.ID, "error", err)
 			continue
 		}
 		m.triggerRenewOperation(op.ID)

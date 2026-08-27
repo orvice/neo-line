@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
+	"sync"
 	"time"
 
 	"github.com/go-acme/lego/v4/challenge"
@@ -74,7 +74,12 @@ func (m *Manager) executeCertificateIssuance(ctx context.Context, op store.Certi
 	if err != nil {
 		return "", err
 	}
-	trackedDNS := &cleanupTrackingProvider{Provider: baseDNS}
+	trackedDNS := &cleanupTrackingProvider{
+		Provider: baseDNS,
+		recordPresented: func(record store.DNSChallengeRecord) error {
+			return m.store.RecordCertificateOperationPendingTXT(ctx, op.ID, leaseOwner, record)
+		},
+	}
 
 	issueResult, issueErr := m.acme.IssueCertificate(ctx, IssueRequest{
 		Issuer:  issuer,
@@ -82,12 +87,11 @@ func (m *Manager) executeCertificateIssuance(ctx context.Context, op store.Certi
 		KeyType: snap.KeyType,
 		DNS:     trackedDNS,
 	})
-	m.persistPendingTXT(ctx, op.ID, leaseOwner, trackedDNS.presented)
 	if issueErr != nil {
 		return "", issueErr
 	}
-	if trackedDNS.cleanupWarning != "" {
-		warning = trackedDNS.cleanupWarning
+	if cleanupWarning := trackedDNS.warning(); cleanupWarning != "" {
+		warning = cleanupWarning
 	}
 
 	now := m.clock.Now()
@@ -126,24 +130,6 @@ func (m *Manager) executeCertificateIssuance(ctx context.Context, op store.Certi
 	}
 	_ = m.store.ClearCertificateOperationPendingTXT(ctx, op.ID)
 	return warning, nil
-}
-
-func sanitizeIssueError(err error) string {
-	if err == nil {
-		return ""
-	}
-	msg := err.Error()
-	lower := strings.ToLower(msg)
-	secretMarkers := []string{"token", "pem", "eab", "hmac", "api key", "private key", "account key", "authorization:", "order url", "acme-staging", "directory"}
-	for _, marker := range secretMarkers {
-		if strings.Contains(lower, marker) {
-			return "certificate issuance failed"
-		}
-	}
-	if len(msg) > 500 {
-		msg = msg[:500]
-	}
-	return msg
 }
 
 func (m *Manager) GetCertificateBundle(ctx context.Context, managedCertificateID, versionSlot string) (CertificateBundle, error) {
@@ -186,29 +172,50 @@ func snapDomains(v *store.CertificateVersion) []string {
 
 type cleanupTrackingProvider struct {
 	challenge.Provider
+	recordPresented func(store.DNSChallengeRecord) error
+
+	mu             sync.Mutex
 	cleanupWarning string
-	presented      []store.DNSChallengeRecord
 }
 
 func (p *cleanupTrackingProvider) Present(domain, token, keyAuth string) error {
-	err := p.Provider.Present(domain, token, keyAuth)
-	if err == nil {
-		p.presented = append(p.presented, store.DNSChallengeRecord{
-			Domain:  domain,
-			Token:   token,
-			KeyAuth: keyAuth,
-		})
+	if err := p.Provider.Present(domain, token, keyAuth); err != nil {
+		return err
 	}
-	return err
+	record := store.DNSChallengeRecord{
+		Domain:  domain,
+		Token:   token,
+		KeyAuth: keyAuth,
+	}
+	if p.recordPresented == nil {
+		return nil
+	}
+	if err := p.recordPresented(record); err != nil {
+		if cleanupErr := p.Provider.CleanUp(domain, token, keyAuth); cleanupErr != nil {
+			p.setCleanupWarning(cleanupErr)
+		}
+		return fmt.Errorf("persist DNS challenge record: %w", err)
+	}
+	return nil
 }
 
 func (p *cleanupTrackingProvider) CleanUp(domain, token, keyAuth string) error {
-	err := p.Provider.CleanUp(domain, token, keyAuth)
-	if err != nil {
-		p.cleanupWarning = "dns txt cleanup failed: " + sanitizeIssueError(err)
-		return nil
+	if err := p.Provider.CleanUp(domain, token, keyAuth); err != nil {
+		p.setCleanupWarning(err)
 	}
 	return nil
+}
+
+func (p *cleanupTrackingProvider) setCleanupWarning(err error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.cleanupWarning = "dns txt cleanup failed: " + sanitizeIssueError(err)
+}
+
+func (p *cleanupTrackingProvider) warning() string {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.cleanupWarning
 }
 
 func (p *cleanupTrackingProvider) Timeout() (time.Duration, time.Duration) {

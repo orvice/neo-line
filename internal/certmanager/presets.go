@@ -22,6 +22,9 @@ const (
 	letsEncryptStagingDirectory    = "https://acme-staging-v02.api.letsencrypt.org/directory"
 	zeroSSLDirectory               = "https://acme.zerossl.com/v2/DV90"
 	googlePublicCADirectory        = "https://dv.acme-v02.api.pki.goog/directory"
+
+	issuerRegistrationFinalizeTimeout = 2 * time.Second
+	issuerRegistrationInterrupted     = "certificate issuer registration interrupted"
 )
 
 // DirectoryPreview describes a resolved ACME directory for UI ToS agreement.
@@ -228,6 +231,7 @@ func (m *Manager) UpdateCertificateIssuer(ctx context.Context, id string, input 
 	if err != nil {
 		return PublicIssuer{}, err
 	}
+	shouldStartRegistration := false
 	switch existing.RegistrationStatus {
 	case store.IssuerRegistrationReady:
 		if identityChanged(existing, input) {
@@ -240,6 +244,7 @@ func (m *Manager) UpdateCertificateIssuer(ctx context.Context, id string, input 
 			return PublicIssuer{}, err
 		}
 		existing = updated
+		shouldStartRegistration = true
 	case store.IssuerRegistrationPending:
 		return PublicIssuer{}, ErrIssuerRegistrationPending
 	default:
@@ -249,7 +254,7 @@ func (m *Manager) UpdateCertificateIssuer(ctx context.Context, id string, input 
 	if err != nil {
 		return PublicIssuer{}, err
 	}
-	if existing.RegistrationStatus == store.IssuerRegistrationPending && existing.RegistrationError == "" {
+	if shouldStartRegistration {
 		m.startRegistration(id)
 	}
 	return publicFromIssuer(saved), nil
@@ -350,11 +355,23 @@ func (m *Manager) DeleteCertificateIssuer(ctx context.Context, id string) error 
 }
 
 func (m *Manager) startRegistration(id string) {
-	go m.runRegistration(id)
+	if _, loaded := m.registrationInflight.LoadOrStore(id, struct{}{}); loaded {
+		return
+	}
+	ctx := m.backgroundContext()
+	if !m.launchBackgroundTask(func() {
+		defer m.registrationInflight.Delete(id)
+		m.runRegistration(ctx, id)
+	}) {
+		m.registrationInflight.Delete(id)
+	}
 }
 
-func (m *Manager) runRegistration(id string) {
-	ctx := context.Background()
+func (m *Manager) runRegistration(ctx context.Context, id string) {
+	if ctx.Err() != nil {
+		m.failInterruptedRegistration(ctx, id)
+		return
+	}
 	issuer, err := m.store.GetCertificateIssuer(ctx, id)
 	if err != nil {
 		return
@@ -363,13 +380,17 @@ func (m *Manager) runRegistration(id string) {
 		return
 	}
 	regErr := m.acme.RegisterAccount(ctx, issuer)
+	if ctx.Err() != nil {
+		m.failInterruptedRegistration(ctx, id)
+		return
+	}
 	issuer, err = m.store.GetCertificateIssuer(ctx, id)
 	if err != nil {
 		return
 	}
 	if regErr != nil {
 		issuer.RegistrationStatus = store.IssuerRegistrationFailed
-		issuer.RegistrationError = sanitizeRegistrationError(regErr)
+		issuer.RegistrationError = sanitizeRegistrationError(regErr, issuer.EABKid, issuer.EABHMAC, issuer.AccountKeyPEM)
 	} else {
 		issuer.RegistrationStatus = store.IssuerRegistrationReady
 		issuer.RegistrationError = ""
@@ -377,13 +398,16 @@ func (m *Manager) runRegistration(id string) {
 	_, _ = m.store.UpdateCertificateIssuer(ctx, id, issuer)
 }
 
-func sanitizeRegistrationError(err error) string {
-	if err == nil {
-		return ""
+func (m *Manager) failInterruptedRegistration(ctx context.Context, id string) {
+	finalizeCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), issuerRegistrationFinalizeTimeout)
+	defer cancel()
+	issuer, err := m.store.GetCertificateIssuer(finalizeCtx, id)
+	if err != nil || issuer.RegistrationStatus != store.IssuerRegistrationPending {
+		return
 	}
-	msg := err.Error()
-	if len(msg) > 500 {
-		msg = msg[:500]
+	issuer.RegistrationStatus = store.IssuerRegistrationFailed
+	issuer.RegistrationError = issuerRegistrationInterrupted
+	if _, err := m.store.UpdateCertificateIssuer(finalizeCtx, id, issuer); err != nil {
+		m.logger.WarnContext(finalizeCtx, "finalize interrupted issuer registration", "issuer_id", id, "error", err)
 	}
-	return msg
 }

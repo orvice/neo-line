@@ -27,6 +27,43 @@ type fakeIssuerStore struct {
 	order   []string
 }
 
+type blockingRegistrationACME struct {
+	started  chan struct{}
+	finished chan struct{}
+	release  chan struct{}
+}
+
+func newBlockingRegistrationACME() *blockingRegistrationACME {
+	return &blockingRegistrationACME{
+		started:  make(chan struct{}),
+		finished: make(chan struct{}),
+		release:  make(chan struct{}),
+	}
+}
+
+func (c *blockingRegistrationACME) FetchDirectory(context.Context, string) (DirectoryMeta, error) {
+	return DirectoryMeta{}, nil
+}
+
+func (c *blockingRegistrationACME) RegisterAccount(ctx context.Context, _ store.CertificateIssuer) error {
+	close(c.started)
+	defer close(c.finished)
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-c.release:
+		return nil
+	}
+}
+
+func (c *blockingRegistrationACME) IssueCertificate(context.Context, IssueRequest) (IssueResult, error) {
+	return IssueResult{}, errors.New("not implemented")
+}
+
+func (c *blockingRegistrationACME) RevokeCertificate(context.Context, store.CertificateIssuer, []byte, *uint) error {
+	return errors.New("not implemented")
+}
+
 func newFakeIssuerStore() *fakeIssuerStore {
 	return &fakeIssuerStore{issuers: make(map[string]store.CertificateIssuer)}
 }
@@ -116,7 +153,7 @@ func (f *fakeIssuerStore) CreateManagedCertificate(context.Context, store.Manage
 func (f *fakeIssuerStore) GetManagedCertificate(context.Context, string) (store.ManagedCertificate, error) {
 	return store.ManagedCertificate{}, errors.New("not implemented")
 }
-func (f *fakeIssuerStore) UpdateManagedCertificate(context.Context, string, store.ManagedCertificate) (store.ManagedCertificate, error) {
+func (f *fakeIssuerStore) UpdateManagedCertificate(context.Context, string, store.ManagedCertificateUpdate) (store.ManagedCertificate, error) {
 	return store.ManagedCertificate{}, errors.New("not implemented")
 }
 func (f *fakeIssuerStore) CreateCertificateOperation(context.Context, store.CertificateOperation) (store.CertificateOperation, error) {
@@ -275,6 +312,72 @@ func TestIssuerRegistrationFailureAndRetry(t *testing.T) {
 		t.Fatalf("retry status = %q", retried.RegistrationStatus)
 	}
 	waitForIssuerStatus(t, st, got.ID, store.IssuerRegistrationReady)
+}
+
+func TestIssuerRegistrationStopsWithManagerContext(t *testing.T) {
+	st := newFakeIssuerStore()
+	acme := newBlockingRegistrationACME()
+	defer close(acme.release)
+	m := NewManagerWithACME(st, nil, acme)
+	runnerCtx, cancelRunner := context.WithCancel(context.Background())
+	m.StartOperationRunner(runnerCtx)
+
+	_, err := m.CreateCertificateIssuer(context.Background(), IssuerInput{
+		Name:                 "shutdown-test",
+		CAType:               store.CATypeLetsEncryptProduction,
+		Email:                "admin@example.com",
+		TermsOfServiceAgreed: true,
+	})
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	select {
+	case <-acme.started:
+	case <-time.After(time.Second):
+		t.Fatal("registration did not start")
+	}
+
+	cancelRunner()
+	waitCtx, cancelWait := context.WithTimeout(context.Background(), time.Second)
+	defer cancelWait()
+	m.WaitForInflightOperations(waitCtx)
+	select {
+	case <-acme.finished:
+	case <-time.After(100 * time.Millisecond):
+		t.Fatal("registration was not canceled and tracked during manager shutdown")
+	}
+	issuer, err := st.GetCertificateIssuer(context.Background(), "iss_test")
+	if err != nil {
+		t.Fatalf("get issuer: %v", err)
+	}
+	if issuer.RegistrationStatus != store.IssuerRegistrationFailed || issuer.RegistrationError != issuerRegistrationInterrupted {
+		t.Fatalf("issuer after shutdown = status %q error %q", issuer.RegistrationStatus, issuer.RegistrationError)
+	}
+}
+
+func TestSanitizeRegistrationErrorMasksSensitiveDetails(t *testing.T) {
+	for _, test := range []struct {
+		name    string
+		err     error
+		secrets []string
+	}{
+		{
+			name: "markers",
+			err:  errors.New("EAB hmac-secret rejected; order URL https://ca.example/acme/order/123"),
+		},
+		{
+			name:    "bare configured secret",
+			err:     errors.New("registration credential kid-value-123 was rejected"),
+			secrets: []string{"kid-value-123"},
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			got := sanitizeRegistrationError(test.err, test.secrets...)
+			if got != "certificate issuer registration failed" {
+				t.Fatalf("sanitized error = %q", got)
+			}
+		})
+	}
 }
 
 func TestIssuerReadyOnlyAllowsNameUpdate(t *testing.T) {

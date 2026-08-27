@@ -13,7 +13,7 @@ ManagedCertificate 需要支持回滚与续期，同时限制本地私钥累积�
 - 每个 ManagedCertificate 在 **单个** `managed_certificates` 文档内嵌套 `active_version` 与 `previous_version` 两个完整 **CertificateVersion**（含 PEM）。
 - 新版本激活时：原 active → previous；更老 previous 的 PEM **本地删除**，不向 CA 隐式吊销。
 - Admin 可手动激活未吊销 previous（含已过期）；Server **永远** 只获取 active。
-- 版本切换与 CAS 使用 **单文档** 原子更新（`ReplaceOne` / 条件字段），不拆独立 `certificate_versions` collection。
+- 版本切换与 CAS 使用带 active/version 条件的 **单文档字段级原子更新**；desired config 更新同样只写可编辑字段，不做整文档替换，也不拆独立 `certificate_versions` collection。
 
 ## 后果
 

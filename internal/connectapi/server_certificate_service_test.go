@@ -251,20 +251,24 @@ func TestServerCertificateRateLimitFailOpen(t *testing.T) {
 	}
 }
 
-func TestServerCertificateRateLimitExceeded(t *testing.T) {
+func TestServerCertificateRateLimitSharedAcrossListAndBundle(t *testing.T) {
 	st := newServerCertFakeStore()
 	secret := "nlct_" + strings.Repeat("e", 64)
 	st.addToken("srv_1", "cat_1", "nlct_eeeeeeee", secret)
 	r := serverCertRouter(st)
 	auth := "Bearer " + secret
 
-	var lastCode int
-	for i := 0; i < 121; i++ {
+	for i := 0; i < certDistributionRateLimit; i++ {
 		w := connectPost(t, r, "/neoline.v1.ServerCertificateService/ListCertificates", map[string]any{}, auth)
-		lastCode = w.Code
+		if w.Code == http.StatusTooManyRequests {
+			t.Fatalf("list request %d was limited before the shared budget was exhausted", i+1)
+		}
 	}
-	if lastCode != http.StatusTooManyRequests {
-		t.Fatalf("expected 429 on 121st request, got %d", lastCode)
+	w := connectPost(t, r, "/neoline.v1.ServerCertificateService/GetCertificateBundle", map[string]any{
+		"managedCertificateId": "mcert_1",
+	}, auth)
+	if w.Code != http.StatusTooManyRequests {
+		t.Fatalf("expected bundle request to share the exhausted List budget, got %d", w.Code)
 	}
 	if code := connect.CodeOf(connect.NewError(connect.CodeResourceExhausted, nil)); code != connect.CodeResourceExhausted {
 		t.Fatalf("unexpected code mapping")

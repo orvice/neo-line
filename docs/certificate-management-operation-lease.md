@@ -25,7 +25,7 @@
 | `consecutive_failures` | 连续失败次数，用于退避；成功后清零 |
 | `next_attempt_at` | 自动重试最早执行时间（Pending 且等待退避时） |
 | `deadline_at` | operation 总超时截止时间；过期后终态 Failed，不再自动重试 |
-| `pending_txt_records` | 本次 attempt 已创建的 DNS-01 TXT，供接管副本清理 |
+| `pending_txt_records` | 本次 attempt 每次 `Present` 成功后立即原子追加的 DNS-01 TXT，供接管副本清理 |
 | `started_at` / `finished_at` | operation 首次开始与终态/成功结束时间 |
 | `config_snapshot` | 创建时冻结的签发参数 |
 | `error_summary` / `warning` | 脱敏错误与告警（不含 token、PEM、ACME order URL） |
@@ -34,9 +34,10 @@
 
 1. **领取**：operation runner 轮询可 claim 的 operation（Pending 且 `next_attempt_at` 已到，或 Running 且 lease 已过期），通过 CAS 设为 `Running`、写入 `lease_owner` / `lease_expires_at`、递增 `attempt_count`。
 2. **续租**：执行 attempt 期间每 **30 秒**（lease 时长的 1/3）续租一次；默认 lease **90 秒**。
-3. **成功提交**：仅当仍持有 lease 时方可激活 active/previous 并将 operation 标为 `Succeeded`。
-4. **失去 lease**：若续租失败或 lease 已被接管，**不得**提交 active/previous 或终态结果。
-5. **接管**：lease 过期后，其他副本 claim 同一 operation，先 **best-effort** 清理 `pending_txt_records`，再发起新的 ACME order（不尝试恢复旧 order 状态）。
+3. **记录 TXT**：每次 DNS Provider `Present` 成功后，在进入传播等待前按当前 `lease_owner` 原子追加记录；持久化失败会中止 attempt，并 best-effort 清理刚创建的 TXT。
+4. **成功提交**：仅当仍持有 lease 时方可激活 active/previous 并将 operation 标为 `Succeeded`。
+5. **失去 lease**：若续租失败或 lease 已被接管，**不得**提交 active/previous 或终态结果。
+6. **接管**：lease 过期后，其他副本 claim 同一 operation，先 **best-effort** 清理 `pending_txt_records`，再发起新的 ACME order（不尝试恢复旧 order 状态）。
 
 ## 自动退避
 

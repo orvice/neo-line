@@ -2,6 +2,7 @@ package certmanager
 
 import (
 	"context"
+	"log/slog"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -29,7 +30,7 @@ type Store interface {
 	ListManagedCertificatesByServer(ctx context.Context, serverID string) ([]store.ManagedCertificate, error)
 	CreateManagedCertificate(ctx context.Context, cert store.ManagedCertificate) (store.ManagedCertificate, error)
 	GetManagedCertificate(ctx context.Context, id string) (store.ManagedCertificate, error)
-	UpdateManagedCertificate(ctx context.Context, id string, cert store.ManagedCertificate) (store.ManagedCertificate, error)
+	UpdateManagedCertificate(ctx context.Context, id string, update store.ManagedCertificateUpdate) (store.ManagedCertificate, error)
 	DeleteManagedCertificate(ctx context.Context, id string) error
 
 	CreateCertificateOperation(ctx context.Context, op store.CertificateOperation) (store.CertificateOperation, error)
@@ -43,21 +44,14 @@ type Store interface {
 	FindClaimableCertificateOperations(ctx context.Context, now time.Time, limit int64) ([]store.CertificateOperation, error)
 	TryClaimCertificateOperation(ctx context.Context, p store.CertificateOperationClaimParams) (store.CertificateOperation, error)
 	RenewCertificateOperationLease(ctx context.Context, opID, owner string, leaseExpires, now time.Time) error
-	UpdateCertificateOperationPendingTXT(ctx context.Context, opID, owner string, records []store.DNSChallengeRecord) error
+	RecordCertificateOperationPendingTXT(ctx context.Context, opID, owner string, record store.DNSChallengeRecord) error
 	ScheduleCertificateOperationRetry(ctx context.Context, opID, owner string, nextAttemptAt time.Time, errorSummary string, consecutiveFailures uint32) error
 	MarkCertificateOperationFailed(ctx context.Context, opID, owner, errorSummary string) error
 	FailExpiredCertificateOperations(ctx context.Context, now time.Time) (int64, error)
 	ClearCertificateOperationPendingTXT(ctx context.Context, opID string) error
 	HasRunningCertificateOperation(ctx context.Context, managedCertificateID string) (bool, error)
 
-	ClaimPendingIssueOperation(ctx context.Context, opID string) (store.CertificateOperation, error)
-	FailIssueOperation(ctx context.Context, opID, errorSummary string) error
-	FindPendingIssueOperations(ctx context.Context, limit int64) ([]store.CertificateOperation, error)
-	ClaimPendingRenewOperation(ctx context.Context, opID string) (store.CertificateOperation, error)
-	FailRenewOperation(ctx context.Context, opID, errorSummary string) error
-	FindPendingRenewOperations(ctx context.Context, limit int64) ([]store.CertificateOperation, error)
 	ListAutoRenewManagedCertificates(ctx context.Context) ([]store.ManagedCertificate, error)
-	UpdateCertificateOperation(ctx context.Context, id string, op store.CertificateOperation) (store.CertificateOperation, error)
 	ActivateFirstIssueVersion(ctx context.Context, managedCertID string, version store.CertificateVersion, opID, leaseOwner, warning string) error
 	ActivateSubsequentIssueVersion(ctx context.Context, managedCertID string, version store.CertificateVersion, expectedActiveID, opID, leaseOwner, warning string) error
 	ActivatePreviousVersion(ctx context.Context, managedCertID, versionID string) error
@@ -95,19 +89,24 @@ func (realClock) Now() time.Time { return time.Now().UTC() }
 // Manager owns certificate-management business rules. Connect handlers stay
 // thin and delegate here.
 type Manager struct {
-	store          Store
-	verifier       TokenVerifier
-	acme           ACMEClient
-	dnsFactory     DNSProviderFactory
-	clock          Clock
-	replicaID      string
-	jitter         JitterFunc
-	certNotifier   *certnotify.Dispatcher
-	claimingLeases atomic.Bool
-	runnerCtx      context.Context
-	runnerCtxMu    sync.RWMutex
-	opInflight     sync.Map
-	opInflightWG   sync.WaitGroup
+	store        Store
+	verifier     TokenVerifier
+	acme         ACMEClient
+	dnsFactory   DNSProviderFactory
+	clock        Clock
+	logger       *slog.Logger
+	replicaID    string
+	jitter       JitterFunc
+	certNotifier *certnotify.Dispatcher
+
+	claimingLeases       atomic.Bool
+	runnerCtx            context.Context
+	runnerCtxMu          sync.RWMutex
+	opInflight           sync.Map
+	registrationInflight sync.Map
+	taskMu               sync.Mutex
+	tasksClosed          bool
+	taskWG               sync.WaitGroup
 }
 
 func NewManager(st Store, verifier TokenVerifier) *Manager {
@@ -119,7 +118,53 @@ func NewManagerWithACME(st Store, verifier TokenVerifier, acme ACMEClient) *Mana
 }
 
 func NewManagerWithDeps(st Store, verifier TokenVerifier, acme ACMEClient, dnsFactory DNSProviderFactory) *Manager {
-	return &Manager{store: st, verifier: verifier, acme: acme, dnsFactory: dnsFactory, clock: realClock{}}
+	return &Manager{
+		store:      st,
+		verifier:   verifier,
+		acme:       acme,
+		dnsFactory: dnsFactory,
+		clock:      realClock{},
+		logger:     slog.Default().With("component", "certmanager"),
+	}
+}
+
+// SetLogger configures structured certificate-manager logging.
+func (m *Manager) SetLogger(logger *slog.Logger) {
+	if m != nil && logger != nil {
+		m.logger = logger
+	}
+}
+
+func (m *Manager) runnerContext() (context.Context, bool) {
+	m.runnerCtxMu.RLock()
+	defer m.runnerCtxMu.RUnlock()
+	if m.runnerCtx == nil || m.runnerCtx.Err() != nil {
+		return nil, false
+	}
+	return m.runnerCtx, true
+}
+
+func (m *Manager) backgroundContext() context.Context {
+	m.runnerCtxMu.RLock()
+	defer m.runnerCtxMu.RUnlock()
+	if m.runnerCtx != nil {
+		return m.runnerCtx
+	}
+	return context.Background()
+}
+
+func (m *Manager) launchBackgroundTask(run func()) bool {
+	m.taskMu.Lock()
+	defer m.taskMu.Unlock()
+	if m.tasksClosed {
+		return false
+	}
+	m.taskWG.Add(1)
+	go func() {
+		defer m.taskWG.Done()
+		run()
+	}()
+	return true
 }
 
 // SetCertNotifier wires certificate lifecycle notifications (optional in tests).

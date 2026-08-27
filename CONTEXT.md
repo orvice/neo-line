@@ -26,6 +26,7 @@ MongoDB collection：`certificate_issuers`。Secret（account key、EAB）以明
 
 - 运行中 operation 冻结签发字段快照；终态失败可手动重试创建 **新** operation。
 - 首版不提供 Cancel；进程中断后 lease 到期由其他副本接管并增加 attempt。
+- 每次 DNS-01 `Present` 成功后立即持久化 `pending_txt_records`，使传播等待期间中断也能由接管副本精确清理。
 - Admin API 不返回 lease 字段与 `pending_txt_records`。
 
 ## CertificateVersion

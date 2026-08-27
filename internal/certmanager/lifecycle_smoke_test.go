@@ -183,6 +183,7 @@ func TestCertificateLifecycleSmoke(t *testing.T) {
 	// --- Operation retry after failure; notification failure does not block ---
 	m.acme = failIssueACME("transient acme error")
 	m.runRenewOperation(ctx, renewOp.ID)
+	notifier.Wait()
 	if st.ops[renewOp.ID].Status != store.CertOpStatusPending {
 		t.Fatalf("renew retry status = %q", st.ops[renewOp.ID].Status)
 	}

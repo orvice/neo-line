@@ -22,8 +22,6 @@ const (
 	operationRetryMax           = 12 * time.Hour
 )
 
-var operationAttemptGracePeriod = OperationAttemptGracePeriod
-
 // JitterFunc adds bounded jitter to retry delays; tests inject deterministic values.
 type JitterFunc func(base time.Duration) time.Duration
 
@@ -84,12 +82,9 @@ func (m *Manager) StartOperationRunner(ctx context.Context) {
 	m.runnerCtx = ctx
 	m.runnerCtxMu.Unlock()
 	m.claimingLeases.Store(true)
-	go m.runOperationPollLoop(ctx)
-}
-
-// StartIssueRunner is deprecated; use StartOperationRunner.
-func (m *Manager) StartIssueRunner(ctx context.Context) {
-	m.StartOperationRunner(ctx)
+	if !m.launchBackgroundTask(func() { m.runOperationPollLoop(ctx) }) {
+		m.claimingLeases.Store(false)
+	}
 }
 
 func (m *Manager) runOperationPollLoop(ctx context.Context) {
@@ -110,10 +105,16 @@ func (m *Manager) runOperationPollLoop(ctx context.Context) {
 }
 
 func (m *Manager) pollClaimableOperations(ctx context.Context) {
+	if !m.claimingLeases.Load() {
+		return
+	}
 	now := m.clock.Now()
-	_, _ = m.store.FailExpiredCertificateOperations(ctx, now)
+	if _, err := m.store.FailExpiredCertificateOperations(ctx, now); err != nil {
+		m.logger.WarnContext(ctx, "fail expired certificate operations", "error", err)
+	}
 	ops, err := m.store.FindClaimableCertificateOperations(ctx, now, 20)
 	if err != nil {
+		m.logger.WarnContext(ctx, "find claimable certificate operations", "error", err)
 		return
 	}
 	for _, op := range ops {
@@ -125,25 +126,25 @@ func (m *Manager) pollClaimableOperations(ctx context.Context) {
 }
 
 func (m *Manager) triggerOperation(opID string) {
-	m.runnerCtxMu.RLock()
-	ctx := m.runnerCtx
-	m.runnerCtxMu.RUnlock()
-	if ctx == nil {
-		ctx = context.Background()
+	if !m.claimingLeases.Load() {
+		return
 	}
-	go m.runOperation(ctx, opID)
-}
-
-func (m *Manager) runOperation(ctx context.Context, opID string) {
+	ctx, ok := m.runnerContext()
+	if !ok {
+		return
+	}
 	if _, loaded := m.opInflight.LoadOrStore(opID, struct{}{}); loaded {
 		return
 	}
-	m.opInflightWG.Add(1)
-	defer func() {
+	if !m.launchBackgroundTask(func() {
+		defer m.opInflight.Delete(opID)
+		m.runOperation(ctx, opID)
+	}) {
 		m.opInflight.Delete(opID)
-		m.opInflightWG.Done()
-	}()
+	}
+}
 
+func (m *Manager) runOperation(ctx context.Context, opID string) {
 	now := m.clock.Now()
 	op, err := m.store.TryClaimCertificateOperation(ctx, store.CertificateOperationClaimParams{
 		OpID:         opID,
@@ -168,7 +169,7 @@ func (m *Manager) runOperation(ctx context.Context, opID string) {
 	defer cancelAttempt()
 	if !m.claimingLeases.Load() {
 		var graceCancel context.CancelFunc
-		attemptCtx, graceCancel = context.WithTimeout(attemptCtx, operationAttemptGracePeriod)
+		attemptCtx, graceCancel = context.WithTimeout(attemptCtx, OperationAttemptGracePeriod)
 		defer graceCancel()
 	}
 
@@ -311,25 +312,22 @@ func (m *Manager) failOperationDeadlineExceeded(ctx context.Context, op store.Ce
 	m.notifyOperationFailure(ctx, op, store.OperationTotalTimeoutSummary)
 }
 
-// WaitForInflightOperations blocks until all operation goroutines finish or ctx
-// expires. Used during graceful shutdown before closing MongoDB.
+// WaitForInflightOperations stops task admission and waits for operation,
+// poll-loop, and issuer-registration goroutines before MongoDB is closed.
 func (m *Manager) WaitForInflightOperations(ctx context.Context) {
+	m.taskMu.Lock()
+	m.tasksClosed = true
+	m.taskMu.Unlock()
+
 	done := make(chan struct{})
 	go func() {
-		m.opInflightWG.Wait()
+		m.taskWG.Wait()
 		close(done)
 	}()
 	select {
 	case <-done:
 	case <-ctx.Done():
 	}
-}
-
-func (m *Manager) persistPendingTXT(ctx context.Context, opID, owner string, records []store.DNSChallengeRecord) {
-	if len(records) == 0 {
-		return
-	}
-	_ = m.store.UpdateCertificateOperationPendingTXT(ctx, opID, owner, records)
 }
 
 // SetReplicaID configures the replica identity used for lease ownership (tests).

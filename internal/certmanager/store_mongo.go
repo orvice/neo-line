@@ -73,8 +73,8 @@ func (s *mongoStore) GetManagedCertificate(ctx context.Context, id string) (stor
 	return s.st.GetManagedCertificate(ctx, id)
 }
 
-func (s *mongoStore) UpdateManagedCertificate(ctx context.Context, id string, cert store.ManagedCertificate) (store.ManagedCertificate, error) {
-	return s.st.UpdateManagedCertificate(ctx, id, cert)
+func (s *mongoStore) UpdateManagedCertificate(ctx context.Context, id string, update store.ManagedCertificateUpdate) (store.ManagedCertificate, error) {
+	return s.st.UpdateManagedCertificate(ctx, id, update)
 }
 
 func (s *mongoStore) DeleteManagedCertificate(ctx context.Context, id string) error {
@@ -145,8 +145,8 @@ func (s *mongoStore) RenewCertificateOperationLease(ctx context.Context, opID, o
 	return s.st.RenewCertificateOperationLease(ctx, opID, owner, leaseExpires, now)
 }
 
-func (s *mongoStore) UpdateCertificateOperationPendingTXT(ctx context.Context, opID, owner string, records []store.DNSChallengeRecord) error {
-	return s.st.UpdateCertificateOperationPendingTXT(ctx, opID, owner, records)
+func (s *mongoStore) RecordCertificateOperationPendingTXT(ctx context.Context, opID, owner string, record store.DNSChallengeRecord) error {
+	return s.st.RecordCertificateOperationPendingTXT(ctx, opID, owner, record)
 }
 
 func (s *mongoStore) ScheduleCertificateOperationRetry(ctx context.Context, opID, owner string, nextAttemptAt time.Time, errorSummary string, consecutiveFailures uint32) error {
@@ -165,36 +165,8 @@ func (s *mongoStore) ClearCertificateOperationPendingTXT(ctx context.Context, op
 	return s.st.ClearCertificateOperationPendingTXT(ctx, opID)
 }
 
-func (s *mongoStore) ClaimPendingIssueOperation(ctx context.Context, opID string) (store.CertificateOperation, error) {
-	return s.st.ClaimPendingIssueOperation(ctx, opID)
-}
-
-func (s *mongoStore) FailIssueOperation(ctx context.Context, opID, errorSummary string) error {
-	return s.st.FailIssueOperation(ctx, opID, errorSummary)
-}
-
-func (s *mongoStore) FindPendingIssueOperations(ctx context.Context, limit int64) ([]store.CertificateOperation, error) {
-	return s.st.FindPendingIssueOperations(ctx, limit)
-}
-
-func (s *mongoStore) ClaimPendingRenewOperation(ctx context.Context, opID string) (store.CertificateOperation, error) {
-	return s.st.ClaimPendingRenewOperation(ctx, opID)
-}
-
-func (s *mongoStore) FailRenewOperation(ctx context.Context, opID, errorSummary string) error {
-	return s.st.FailRenewOperation(ctx, opID, errorSummary)
-}
-
-func (s *mongoStore) FindPendingRenewOperations(ctx context.Context, limit int64) ([]store.CertificateOperation, error) {
-	return s.st.FindPendingRenewOperations(ctx, limit)
-}
-
 func (s *mongoStore) ListAutoRenewManagedCertificates(ctx context.Context) ([]store.ManagedCertificate, error) {
 	return s.st.ListAutoRenewManagedCertificates(ctx)
-}
-
-func (s *mongoStore) UpdateCertificateOperation(ctx context.Context, id string, op store.CertificateOperation) (store.CertificateOperation, error) {
-	return s.st.UpdateCertificateOperation(ctx, id, op)
 }
 
 func (s *mongoStore) ActivateFirstIssueVersion(ctx context.Context, managedCertID string, version store.CertificateVersion, opID, leaseOwner, warning string) error {

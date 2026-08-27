@@ -102,14 +102,22 @@ func (f *managedCertFakeStore) RenewCertificateOperationLease(_ context.Context,
 	return nil
 }
 
-func (f *managedCertFakeStore) UpdateCertificateOperationPendingTXT(_ context.Context, opID, owner string, records []store.DNSChallengeRecord) error {
+func (f *managedCertFakeStore) RecordCertificateOperationPendingTXT(_ context.Context, opID, owner string, record store.DNSChallengeRecord) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	op, ok := f.ops[opID]
 	if !ok || op.Status != store.CertOpStatusRunning || op.LeaseOwner != owner {
 		return store.ErrCertificateOperationConflict
 	}
-	op.PendingTXTRecords = append([]store.DNSChallengeRecord(nil), records...)
+	if f.recordPendingTXTErr != nil {
+		return f.recordPendingTXTErr
+	}
+	for _, existing := range op.PendingTXTRecords {
+		if existing == record {
+			return nil
+		}
+	}
+	op.PendingTXTRecords = append(op.PendingTXTRecords, record)
 	f.ops[opID] = op
 	return nil
 }

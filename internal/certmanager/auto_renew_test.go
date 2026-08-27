@@ -1,8 +1,11 @@
 package certmanager
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"log/slog"
+	"strings"
 	"testing"
 	"time"
 
@@ -86,6 +89,20 @@ func TestAutoRenewDisabledReconcilerSkips(t *testing.T) {
 
 	if len(st.ops) != 0 {
 		t.Fatalf("expected no renew op when auto-renew disabled, got %d ops", len(st.ops))
+	}
+}
+
+func TestReconcilerLogsStoreFailures(t *testing.T) {
+	st := newManagedCertFakeStore()
+	st.listAutoRenewErr = errors.New("mongo unavailable")
+	var logs bytes.Buffer
+	m := NewManager(st, nil)
+	m.SetLogger(slog.New(slog.NewTextHandler(&logs, nil)))
+
+	NewReconciler(m).Reconcile(context.Background())
+
+	if got := logs.String(); !strings.Contains(got, "list auto-renew certificates") || !strings.Contains(got, "mongo unavailable") {
+		t.Fatalf("reconcile log = %q", got)
 	}
 }
 

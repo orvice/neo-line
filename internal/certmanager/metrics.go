@@ -14,6 +14,7 @@ func (m *Manager) refreshValidityMetrics(ctx context.Context) {
 	for {
 		certs, next, err := m.store.ListManagedCertificates(ctx, pageSize, token)
 		if err != nil {
+			m.logger.WarnContext(ctx, "list certificates for validity metrics", "error", err)
 			return
 		}
 		for _, cert := range certs {

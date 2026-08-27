@@ -216,17 +216,17 @@ func (m *Manager) UpdateManagedCertificate(ctx context.Context, id string, input
 	if err := m.validateManagedCertificateRefs(ctx, updated); err != nil {
 		return PublicManagedCertificate{}, err
 	}
-	runningIssue, err := m.store.FindRunningCertificateOperation(ctx, id, store.CertOpTypeIssue)
+	_, err = m.store.FindRunningCertificateOperation(ctx, id, store.CertOpTypeIssue)
 	if err != nil && !store.IsNotFound(err) {
 		return PublicManagedCertificate{}, err
 	}
 	issueRunning := err == nil
-	runningRenew, err := m.store.FindRunningCertificateOperation(ctx, id, store.CertOpTypeRenew)
+	_, err = m.store.FindRunningCertificateOperation(ctx, id, store.CertOpTypeRenew)
 	if err != nil && !store.IsNotFound(err) {
 		return PublicManagedCertificate{}, err
 	}
 	renewRunning := err == nil
-	runningRevoke, err := m.store.FindRunningCertificateOperation(ctx, id, store.CertOpTypeRevoke)
+	_, err = m.store.FindRunningCertificateOperation(ctx, id, store.CertOpTypeRevoke)
 	if err != nil && !store.IsNotFound(err) {
 		return PublicManagedCertificate{}, err
 	}
@@ -234,14 +234,17 @@ func (m *Manager) UpdateManagedCertificate(ctx context.Context, id string, input
 	if (issueRunning || renewRunning || revokeRunning) && issueFieldsChanged(existing, updated) {
 		return PublicManagedCertificate{}, ErrIssueFieldsLocked
 	}
-	_ = runningIssue
-	_ = runningRenew
-	_ = runningRevoke
-
-	updated.ActiveVersion = existing.ActiveVersion
-	updated.PreviousVersion = existing.PreviousVersion
-	updated.NotificationState = existing.NotificationState
-	saved, err := m.store.UpdateManagedCertificate(ctx, id, updated)
+	saved, err := m.store.UpdateManagedCertificate(ctx, id, store.ManagedCertificateUpdate{
+		Name:                 updated.Name,
+		Domains:              updated.Domains,
+		CertificateIssuerID:  updated.CertificateIssuerID,
+		DNSProviderAccountID: updated.DNSProviderAccountID,
+		KeyType:              updated.KeyType,
+		AutoRenewEnabled:     updated.AutoRenewEnabled,
+		RenewBeforeDays:      updated.RenewBeforeDays,
+		NotifyGroupIDs:       updated.NotifyGroupIDs,
+		ServerIDs:            updated.ServerIDs,
+	})
 	if err != nil {
 		return PublicManagedCertificate{}, err
 	}

@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/orvice/neo-line/internal/certstate"
 	"github.com/orvice/neo-line/internal/notify"
 	"github.com/orvice/neo-line/internal/store"
 )
@@ -107,7 +108,7 @@ func (d *Dispatcher) OnOperationFailure(ctx context.Context, cert store.ManagedC
 		}
 		eventType = EventOperationFailedReminder
 	}
-	validity, _ := computeValidity(cert, now)
+	validity, _ := certstate.ComputeValidity(cert, now)
 	p := Payload{
 		EventType:            eventType,
 		ManagedCertificateID: cert.ID,
@@ -137,7 +138,7 @@ func (d *Dispatcher) OnOperationSuccess(ctx context.Context, cert store.ManagedC
 	if !recorded {
 		return
 	}
-	validity, _ := computeValidity(cert, now)
+	validity, _ := certstate.ComputeValidity(cert, now)
 	p := Payload{
 		EventType:            EventOperationRecovered,
 		ManagedCertificateID: cert.ID,
@@ -167,7 +168,7 @@ func (d *Dispatcher) ScanValidityNotifications(ctx context.Context) {
 		if cert.ActiveVersion == nil || len(cert.NotifyGroupIDs) == 0 {
 			continue
 		}
-		validity, _ := computeValidity(cert, now)
+		validity, _ := certstate.ComputeValidity(cert, now)
 		v := cert.ActiveVersion
 		remaining := v.NotAfter.Sub(now)
 		if validity == store.CertValidityExpired {
@@ -285,40 +286,6 @@ func (d *Dispatcher) resolveChannels(ctx context.Context, notifyGroupIDs []strin
 		channels = append(channels, ng.Channels...)
 	}
 	return channels
-}
-
-func computeValidity(cert store.ManagedCertificate, now time.Time) (validity string, bundleAvailable bool) {
-	v := cert.ActiveVersion
-	if v == nil {
-		return store.CertValidityMissing, false
-	}
-	if v.RevokedAt != nil || v.RevokePending {
-		return store.CertValidityRevoked, false
-	}
-	bundleAvailable = true
-	if now.After(v.NotAfter) {
-		return store.CertValidityExpired, bundleAvailable
-	}
-	if !now.Before(v.NotBefore) {
-		window := effectiveRenewalWindow(v.NotBefore, v.NotAfter, cert.RenewBeforeDays)
-		if !now.Before(v.NotAfter.Add(-window)) {
-			return store.CertValidityRenewalDue, bundleAvailable
-		}
-	}
-	return store.CertValidityValid, bundleAvailable
-}
-
-func effectiveRenewalWindow(notBefore, notAfter time.Time, renewBeforeDays uint32) time.Duration {
-	cfg := time.Duration(renewBeforeDays) * 24 * time.Hour
-	lifetime := notAfter.Sub(notBefore)
-	if lifetime <= 0 {
-		return cfg
-	}
-	third := lifetime / 3
-	if third < cfg {
-		return third
-	}
-	return cfg
 }
 
 // ErrNilDispatcher indicates a nil dispatcher was used.

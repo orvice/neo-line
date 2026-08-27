@@ -1035,6 +1035,7 @@ Admin 可在 Web 控制台「证书 → ACME Issuer」或通过 `CertificateIssu
 - 内置 preset：Let's Encrypt 生产 / Staging、ZeroSSL、Google Public CA；另支持自定义 HTTPS Directory（系统根信任，不支持私有 Root CA）。
 - 创建前必须显式同意 Directory 元数据中的 Terms of Service；持久化 ToS URL 与 agreed-at。
 - 创建后异步注册 ACME account，状态为 Pending / Ready / Failed；仅 Ready 可用于后续 ManagedCertificate 签发。
+- 注册任务继承证书 manager 生命周期并纳入优雅关闭等待；关闭中断时写入脱敏 Failed 状态，允许 Admin 后续重试。
 - Failed 可修正邮箱、Directory、EAB、account key 并重试；Ready 仅允许修改显示名称。
 - account key 与 EAB 存入 MongoDB，读取接口与审计日志永不返回明文。
 - 删除仅本地级联，不调用远端 account deactivation。
@@ -1055,6 +1056,8 @@ Admin 可在 Web 控制台「证书 → 托管证书」或通过 `ManagedCertifi
 - 创建成功后自动提交 **Pending Issue** operation；重复提交运行中 Issue 返回现有 operation。
 - 尚无 active version 时 `active_validity` 为 **Missing**，bundle 不可用。
 - Operation 进行中禁止修改签发字段；名称、Server 分配与 NotifyGroup 仍可更新。
+- desired 更新使用字段级原子写入，不覆盖并发激活的 active/previous 版本或通知节流状态。
+- DNS-01 每次 `Present` 成功后立即把该 TXT 写入 operation 的 `pending_txt_records`；写入失败时中止 attempt 并尽力清理刚创建的 TXT。
 - 读取响应不含 DNS/EAB/account key/私钥 secret。
 
 领域区别：**ManagedCertificate**（期望配置与版本容器）、**CertificateVersion**（一次成功签发的不可变 bundle）、**CertificateInfo**（Monitor TLS 探测快照，与托管生命周期独立）。

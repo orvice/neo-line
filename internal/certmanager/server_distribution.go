@@ -6,6 +6,7 @@ import (
 	"slices"
 	"time"
 
+	"github.com/orvice/neo-line/internal/certstate"
 	"github.com/orvice/neo-line/internal/store"
 )
 
@@ -122,14 +123,5 @@ func serverAssigned(cert store.ManagedCertificate, serverID string) bool {
 }
 
 func versionDistributable(v *store.CertificateVersion) bool {
-	if v == nil {
-		return false
-	}
-	if v.RevokePending {
-		return false
-	}
-	if v.RevokedAt != nil && !v.RevokedAt.IsZero() {
-		return false
-	}
-	return true
+	return certstate.VersionDistributable(v)
 }

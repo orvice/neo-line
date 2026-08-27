@@ -26,8 +26,13 @@ func TestDeleteManagedCertificateConstraints(t *testing.T) {
 		t.Fatalf("servers: %v", err)
 	}
 
-	cert.ServerIDs = nil
-	if _, err := st.UpdateManagedCertificate(ctx, "mcert_del", cert); err != nil {
+	if _, err := st.UpdateManagedCertificate(ctx, "mcert_del", ManagedCertificateUpdate{
+		Name:                 cert.Name,
+		Domains:              cert.Domains,
+		CertificateIssuerID:  cert.CertificateIssuerID,
+		DNSProviderAccountID: cert.DNSProviderAccountID,
+		KeyType:              cert.KeyType,
+	}); err != nil {
 		t.Fatalf("update: %v", err)
 	}
 	if _, err := st.CreateCertificateOperation(ctx, CertificateOperation{
@@ -122,7 +127,17 @@ func (s *managedCertTestStore) CreateManagedCertificate(_ context.Context, cert 
 	return cert, nil
 }
 
-func (s *managedCertTestStore) UpdateManagedCertificate(_ context.Context, id string, cert ManagedCertificate) (ManagedCertificate, error) {
+func (s *managedCertTestStore) UpdateManagedCertificate(_ context.Context, id string, update ManagedCertificateUpdate) (ManagedCertificate, error) {
+	cert := s.certs[id]
+	cert.Name = update.Name
+	cert.Domains = append([]string(nil), update.Domains...)
+	cert.CertificateIssuerID = update.CertificateIssuerID
+	cert.DNSProviderAccountID = update.DNSProviderAccountID
+	cert.KeyType = update.KeyType
+	cert.AutoRenewEnabled = update.AutoRenewEnabled
+	cert.RenewBeforeDays = update.RenewBeforeDays
+	cert.NotifyGroupIDs = append([]string(nil), update.NotifyGroupIDs...)
+	cert.ServerIDs = append([]string(nil), update.ServerIDs...)
 	s.certs[id] = cert
 	return cert, nil
 }
