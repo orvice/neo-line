@@ -45,6 +45,12 @@ type Store interface {
 	UpdateDNSProviderAccount(ctx context.Context, id string, account DNSProviderAccount) (DNSProviderAccount, error)
 	DeleteDNSProviderAccount(ctx context.Context, id string) error
 
+	ListCertificateIssuers(ctx context.Context, limit int64, pageToken string) ([]CertificateIssuer, string, error)
+	CreateCertificateIssuer(ctx context.Context, issuer CertificateIssuer) (CertificateIssuer, error)
+	GetCertificateIssuer(ctx context.Context, id string) (CertificateIssuer, error)
+	UpdateCertificateIssuer(ctx context.Context, id string, issuer CertificateIssuer) (CertificateIssuer, error)
+	DeleteCertificateIssuer(ctx context.Context, id string) error
+
 	ListCheckResults(ctx context.Context, serverID, monitorID string, limit int64, pageToken string, start, end *time.Time) ([]CheckResult, string, error)
 	// SaveCheckResult persists a probe result and returns the monitor's prior
 	// status (empty when no prior status existed).
@@ -63,6 +69,7 @@ type Store interface {
 	EnsureGroupIndexes(ctx context.Context) error
 	EnsureNotifyGroupIndexes(ctx context.Context) error
 	EnsureDNSProviderAccountIndexes(ctx context.Context) error
+	EnsureCertificateIssuerIndexes(ctx context.Context) error
 	EnsureMcpTokenIndexes(ctx context.Context) error
 	EnsureResultIndexes(ctx context.Context) error
 

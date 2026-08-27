@@ -68,6 +68,22 @@ func (f *fakeStore) DeleteDNSProviderAccount(_ context.Context, id string) error
 	return nil
 }
 
+func (f *fakeStore) ListCertificateIssuers(context.Context, int64, string) ([]store.CertificateIssuer, string, error) {
+	return nil, "", nil
+}
+func (f *fakeStore) CreateCertificateIssuer(context.Context, store.CertificateIssuer) (store.CertificateIssuer, error) {
+	return store.CertificateIssuer{}, errors.New("not implemented")
+}
+func (f *fakeStore) GetCertificateIssuer(context.Context, string) (store.CertificateIssuer, error) {
+	return store.CertificateIssuer{}, errors.New("not implemented")
+}
+func (f *fakeStore) UpdateCertificateIssuer(context.Context, string, store.CertificateIssuer) (store.CertificateIssuer, error) {
+	return store.CertificateIssuer{}, errors.New("not implemented")
+}
+func (f *fakeStore) DeleteCertificateIssuer(context.Context, string) error {
+	return errors.New("not implemented")
+}
+
 type fixedClock struct{ t time.Time }
 
 func (c fixedClock) Now() time.Time { return c.t }

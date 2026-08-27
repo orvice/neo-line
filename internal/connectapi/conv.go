@@ -362,6 +362,48 @@ func dnsProviderAccountToProto(a certmanager.PublicAccount) *pb.DNSProviderAccou
 	}
 }
 
+func certificateIssuerRegistrationStatusToProto(status string) pb.CertificateIssuerRegistrationStatus {
+	switch status {
+	case store.IssuerRegistrationPending:
+		return pb.CertificateIssuerRegistrationStatus_CERTIFICATE_ISSUER_REGISTRATION_STATUS_PENDING
+	case store.IssuerRegistrationReady:
+		return pb.CertificateIssuerRegistrationStatus_CERTIFICATE_ISSUER_REGISTRATION_STATUS_READY
+	case store.IssuerRegistrationFailed:
+		return pb.CertificateIssuerRegistrationStatus_CERTIFICATE_ISSUER_REGISTRATION_STATUS_FAILED
+	default:
+		return pb.CertificateIssuerRegistrationStatus_CERTIFICATE_ISSUER_REGISTRATION_STATUS_UNSPECIFIED
+	}
+}
+
+func certificateIssuerToProto(i certmanager.PublicIssuer) *pb.CertificateIssuer {
+	return &pb.CertificateIssuer{
+		Id:                     i.ID,
+		Name:                   i.Name,
+		CaType:                 i.CAType,
+		DirectoryUrl:           i.DirectoryURL,
+		Email:                  i.Email,
+		RegistrationStatus:     certificateIssuerRegistrationStatusToProto(i.RegistrationStatus),
+		RegistrationError:      i.RegistrationError,
+		StagingUntrusted:       i.StagingUntrusted,
+		TermsOfServiceUrl:      i.TermsOfServiceURL,
+		TermsOfServiceAgreedAt: timeToTSPtr(i.TermsOfServiceAgreedAt),
+		AccountKeyConfigured:   i.AccountKeyConfigured,
+		EabConfigured:          i.EABConfigured,
+		CreatedAt:              timeToTS(i.CreatedAt),
+		UpdatedAt:              timeToTS(i.UpdatedAt),
+	}
+}
+
+func certificateIssuerDirectoryPreviewToProto(p certmanager.DirectoryPreview) *pb.CertificateIssuerDirectoryPreview {
+	return &pb.CertificateIssuerDirectoryPreview{
+		CaType:            p.CAType,
+		DirectoryUrl:      p.DirectoryURL,
+		TermsOfServiceUrl: p.TermsOfServiceURL,
+		StagingUntrusted:  p.StagingUntrusted,
+		RequiresEab:       p.RequiresEAB,
+	}
+}
+
 func timeToTSPtr(t *time.Time) *timestamppb.Timestamp {
 	if t == nil || t.IsZero() {
 		return nil

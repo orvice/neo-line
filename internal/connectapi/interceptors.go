@@ -37,7 +37,7 @@ func requiresAdmin(procedure string) bool {
 		return false
 	}
 	switch service {
-	case "SshService", "McpTokenService", "DNSProviderAccountService":
+	case "SshService", "McpTokenService", "DNSProviderAccountService", "CertificateIssuerService":
 		return true
 	}
 	return strings.HasPrefix(method, "Create") ||
@@ -183,6 +183,8 @@ func auditResourceType(procedure string) string {
 		return "notify_group"
 	case "DNSProviderAccountService":
 		return "dns_provider_account"
+	case "CertificateIssuerService":
+		return "certificate_issuer"
 	case "McpTokenService":
 		return "mcp_token"
 	case "SshService":
@@ -198,6 +200,7 @@ func auditResourceID(msg any) string {
 	type groupID interface{ GetGroupId() string }
 	type notifyGroupID interface{ GetNotifyGroupId() string }
 	type dnsProviderAccountID interface{ GetDnsProviderAccountId() string }
+	type certificateIssuerID interface{ GetCertificateIssuerId() string }
 	type serverID interface{ GetServerId() string }
 	type tokenID interface{ GetTokenId() string }
 
@@ -218,6 +221,9 @@ func auditResourceID(msg any) string {
 	}
 	if m, ok := msg.(dnsProviderAccountID); ok && m.GetDnsProviderAccountId() != "" {
 		return m.GetDnsProviderAccountId()
+	}
+	if m, ok := msg.(certificateIssuerID); ok && m.GetCertificateIssuerId() != "" {
+		return m.GetCertificateIssuerId()
 	}
 	if m, ok := msg.(tokenID); ok && m.GetTokenId() != "" {
 		return m.GetTokenId()

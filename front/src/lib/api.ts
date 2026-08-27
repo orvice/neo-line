@@ -43,6 +43,12 @@ import {
   type DNSProviderAccount as PbDNSProviderAccount,
 } from "@/gen/neoline/v1/dns_provider_account_pb"
 import {
+  CertificateIssuerService,
+  CertificateIssuerRegistrationStatus as PbIssuerStatus,
+  type CertificateIssuer as PbCertificateIssuer,
+  type CertificateIssuerDirectoryPreview as PbIssuerPreview,
+} from "@/gen/neoline/v1/certificate_issuer_pb"
+import {
   type StatusGroup as PbStatusGroup,
   type StatusServer as PbStatusServer,
   type StatusMonitor as PbStatusMonitor,
@@ -65,6 +71,9 @@ import type {
   MonitorUptime,
   NotifyGroup,
   DNSProviderAccount,
+  CertificateIssuer,
+  CertificateIssuerDirectoryPreview,
+  CertificateIssuerRegistrationStatus,
   Server,
   ServerEvent,
   ServerHealth,
@@ -121,6 +130,7 @@ const monitorClient = createClient(MonitorService, transport)
 const groupClient = createClient(MonitorGroupService, transport)
 const notifyClient = createClient(NotifyGroupService, transport)
 const dnsAccountClient = createClient(DNSProviderAccountService, transport)
+const issuerClient = createClient(CertificateIssuerService, transport)
 const mcpClient = createClient(McpTokenService, transport)
 const sshClient = createClient(SshService, transport)
 const auditClient = createClient(AuditLogService, transport)
@@ -366,6 +376,48 @@ function dnsProviderAccountFromProto(a: PbDNSProviderAccount): DNSProviderAccoun
     token_last_verified_at: iso(a.tokenLastVerifiedAt),
     created_at: iso(a.createdAt) ?? "",
     updated_at: iso(a.updatedAt) ?? "",
+  }
+}
+
+function issuerStatusFromProto(s: PbIssuerStatus): CertificateIssuerRegistrationStatus {
+  switch (s) {
+    case PbIssuerStatus.PENDING:
+      return "Pending"
+    case PbIssuerStatus.READY:
+      return "Ready"
+    case PbIssuerStatus.FAILED:
+      return "Failed"
+    default:
+      return "Unspecified"
+  }
+}
+
+function certificateIssuerFromProto(i: PbCertificateIssuer): CertificateIssuer {
+  return {
+    id: i.id,
+    name: i.name,
+    ca_type: i.caType,
+    directory_url: i.directoryUrl,
+    email: i.email,
+    registration_status: issuerStatusFromProto(i.registrationStatus),
+    registration_error: i.registrationError || undefined,
+    staging_untrusted: i.stagingUntrusted,
+    terms_of_service_url: i.termsOfServiceUrl || undefined,
+    terms_of_service_agreed_at: iso(i.termsOfServiceAgreedAt),
+    account_key_configured: i.accountKeyConfigured,
+    eab_configured: i.eabConfigured,
+    created_at: iso(i.createdAt) ?? "",
+    updated_at: iso(i.updatedAt) ?? "",
+  }
+}
+
+function issuerPreviewFromProto(p: PbIssuerPreview): CertificateIssuerDirectoryPreview {
+  return {
+    ca_type: p.caType,
+    directory_url: p.directoryUrl,
+    terms_of_service_url: p.termsOfServiceUrl || undefined,
+    staging_untrusted: p.stagingUntrusted,
+    requires_eab: p.requiresEab,
   }
 }
 
@@ -858,6 +910,86 @@ export const api = {
   deleteDNSProviderAccount: (id: string) =>
     call<void>(async () => {
       await dnsAccountClient.deleteDNSProviderAccount({ dnsProviderAccountId: id })
+    }),
+
+  // Certificate issuers
+  listCertificateIssuers: (query?: { page_token?: string; page_size?: number }) =>
+    call<ListResponse & { issuers: CertificateIssuer[] }>(async () => {
+      const res = await issuerClient.listCertificateIssuers({
+        pageToken: query?.page_token ?? "",
+        pageSize: query?.page_size ?? 0,
+      })
+      return {
+        issuers: res.issuers.map(certificateIssuerFromProto),
+        next_page_token: res.nextPageToken,
+      }
+    }),
+  getCertificateIssuerDirectoryPreview: (caType: string, customDirectoryUrl?: string) =>
+    call<{ preview: CertificateIssuerDirectoryPreview }>(async () => {
+      const res = await issuerClient.getCertificateIssuerDirectoryPreview({
+        caType,
+        customDirectoryUrl: customDirectoryUrl ?? "",
+      })
+      return { preview: issuerPreviewFromProto(res.preview!) }
+    }),
+  createCertificateIssuer: (body: {
+    name: string
+    ca_type: string
+    email: string
+    custom_directory_url?: string
+    account_key_pem?: string
+    eab_kid?: string
+    eab_hmac?: string
+    terms_of_service_agreed: boolean
+  }) =>
+    call<{ issuer: CertificateIssuer }>(async () => {
+      const res = await issuerClient.createCertificateIssuer({
+        issuer: { name: body.name, caType: body.ca_type, email: body.email },
+        customDirectoryUrl: body.custom_directory_url ?? "",
+        accountKeyPem: body.account_key_pem ?? "",
+        eabKid: body.eab_kid ?? "",
+        eabHmac: body.eab_hmac ?? "",
+        termsOfServiceAgreed: body.terms_of_service_agreed,
+      })
+      return { issuer: certificateIssuerFromProto(res.issuer!) }
+    }),
+  updateCertificateIssuer: (
+    id: string,
+    body: {
+      name: string
+      ca_type?: string
+      email?: string
+      custom_directory_url?: string
+      account_key_pem?: string
+      eab_kid?: string
+      eab_hmac?: string
+    }
+  ) =>
+    call<{ issuer: CertificateIssuer }>(async () => {
+      const res = await issuerClient.updateCertificateIssuer({
+        certificateIssuerId: id,
+        issuer: {
+          name: body.name,
+          caType: body.ca_type ?? "",
+          email: body.email ?? "",
+        },
+        customDirectoryUrl: body.custom_directory_url ?? "",
+        accountKeyPem: body.account_key_pem ?? "",
+        eabKid: body.eab_kid ?? "",
+        eabHmac: body.eab_hmac ?? "",
+      })
+      return { issuer: certificateIssuerFromProto(res.issuer!) }
+    }),
+  retryCertificateIssuerRegistration: (id: string) =>
+    call<{ issuer: CertificateIssuer }>(async () => {
+      const res = await issuerClient.retryCertificateIssuerRegistration({
+        certificateIssuerId: id,
+      })
+      return { issuer: certificateIssuerFromProto(res.issuer!) }
+    }),
+  deleteCertificateIssuer: (id: string) =>
+    call<void>(async () => {
+      await issuerClient.deleteCertificateIssuer({ certificateIssuerId: id })
     }),
 
   // MCP tokens

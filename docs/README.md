@@ -11,6 +11,7 @@ neo-line 是一个基于 Go 和 Butterfly 应用框架构建的服务器监控�
 - [功能说明](./features.md) — 当前已实现能力、规划功能和功能边界
 - [监控配置](./monitoring-configuration.md) — MongoDB 中 Server、TCP、URL、TLS Port、SNI 和证书状态的配置模型
 - [证书管理 — DNS 账户](./certificate-management-dns-accounts.md) — Cloudflare DNSProviderAccount 配置、权限与传播超时
+- [证书管理 — ACME Issuer](./certificate-management-issuers.md) — CertificateIssuer preset、EAB、ToS 与注册状态
 
 ## 当前应用基础
 
@@ -27,6 +28,7 @@ neo-line 是一个基于 Go 和 Butterfly 应用框架构建的服务器监控�
 - MonitorGroupService：Monitor Group 管理（含分组级告警策略，引用通知组派发）
 - NotifyGroupService：可复用的 webhook / Telegram / Discord / Mastodon 通知组
 - DNSProviderAccountService：Cloudflare DNS-01 账户管理（admin 专用；Token 验证后保存，读取接口脱敏）
+- CertificateIssuerService：ACME Issuer 管理（admin 专用；异步注册、ToS 同意、Secret 脱敏）
 - AuditLogService：按来源、动作、资源、调用方、结果与时间范围查询操作审计日志
 - 探测调度器：随应用启动，每 `5s` 从 MongoDB 读取已启用的 monitor 并按各自间隔执行探测
 - 默认 HTTP 服务端口：`8080`，由 Butterfly 提供

@@ -35,3 +35,23 @@ func (s *mongoStore) UpdateDNSProviderAccount(ctx context.Context, id string, ac
 func (s *mongoStore) DeleteDNSProviderAccount(ctx context.Context, id string) error {
 	return s.st.DeleteDNSProviderAccount(ctx, id)
 }
+
+func (s *mongoStore) ListCertificateIssuers(ctx context.Context, limit int64, pageToken string) ([]store.CertificateIssuer, string, error) {
+	return s.st.ListCertificateIssuers(ctx, limit, pageToken)
+}
+
+func (s *mongoStore) CreateCertificateIssuer(ctx context.Context, issuer store.CertificateIssuer) (store.CertificateIssuer, error) {
+	return s.st.CreateCertificateIssuer(ctx, issuer)
+}
+
+func (s *mongoStore) GetCertificateIssuer(ctx context.Context, id string) (store.CertificateIssuer, error) {
+	return s.st.GetCertificateIssuer(ctx, id)
+}
+
+func (s *mongoStore) UpdateCertificateIssuer(ctx context.Context, id string, issuer store.CertificateIssuer) (store.CertificateIssuer, error) {
+	return s.st.UpdateCertificateIssuer(ctx, id, issuer)
+}
+
+func (s *mongoStore) DeleteCertificateIssuer(ctx context.Context, id string) error {
+	return s.st.DeleteCertificateIssuer(ctx, id)
+}
