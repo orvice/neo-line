@@ -57,6 +57,16 @@ export function formatCertExpiry(cert?: CertificateInfo): string {
   return `${date} · 剩 ${cert.days_remaining} 天`
 }
 
+export function formatManagedCertExpiry(notAfter?: string): string {
+  if (isZeroTime(notAfter)) return "—"
+  const date = formatDate(notAfter)
+  const end = new Date(notAfter as string).getTime()
+  if (Number.isNaN(end)) return date
+  const days = Math.ceil((end - Date.now()) / (24 * 60 * 60 * 1000))
+  if (days < 0) return `${date} · 已过期`
+  return `${date} · 剩 ${days} 天`
+}
+
 export function formatDuration(ms: number): string {
   if (ms < 1000) return `${ms} ms`
   return `${(ms / 1000).toFixed(2)} s`

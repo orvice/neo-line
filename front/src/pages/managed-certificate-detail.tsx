@@ -1,7 +1,18 @@
-import { useState } from "react"
+import { useState, type ReactNode } from "react"
 import { Link, useNavigate, useParams } from "react-router-dom"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { ChevronLeft, Download, Pencil, RefreshCw, Repeat, Rocket, ShieldOff, Trash2 } from "lucide-react"
+import {
+  ChevronLeft,
+  Download,
+  Loader2,
+  Pencil,
+  RefreshCw,
+  Repeat,
+  Rocket,
+  RotateCcw,
+  ShieldOff,
+  Trash2,
+} from "lucide-react"
 import { toast } from "sonner"
 
 import { api, ApiError } from "@/lib/api"
@@ -12,27 +23,29 @@ import type {
   ManagedCertificate,
 } from "@/lib/types"
 import { useAuth } from "@/lib/auth"
+import {
+  certQueryKeys,
+  operationInFlight,
+  validityDescriptions,
+} from "@/lib/certificate-ui"
+import { formatManagedCertExpiry, formatTime } from "@/lib/format"
 import { CertificateNavTabs } from "@/components/certificate-nav-tabs"
+import {
+  CertificateAvailabilityBadge,
+  CertificateOperationBadge,
+  CertificateStagingBadge,
+  CertificateValidityBadge,
+} from "@/components/certificate-status-badges"
 import { ManagedCertificateForm } from "@/components/managed-certificate-form"
 import { ManagedCertificateServerAssignment } from "@/components/managed-certificate-server-assignment"
 import { ConfirmDialog } from "@/components/confirm-dialog"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { formatTime } from "@/lib/format"
+import { cn } from "@/lib/utils"
 
 const KEY_LABELS: Record<CertificateKeyType, string> = {
   ec_p256: "EC P-256",
   rsa_2048: "RSA-2048",
   unspecified: "—",
-}
-
-const VALIDITY_LABELS: Record<string, string> = {
-  Missing: "Missing",
-  Valid: "Valid",
-  RenewalDue: "RenewalDue",
-  Expired: "Expired",
-  Revoked: "Revoked",
-  Unspecified: "—",
 }
 
 const REVOKE_REASON_LABELS: Record<CertificateRevocationReason, string> = {
@@ -101,7 +114,31 @@ function desiredDiffLines(
   return lines
 }
 
-function VersionPanel({
+function DetailSection({
+  title,
+  description,
+  children,
+  className,
+}: {
+  title: string
+  description?: string
+  children: ReactNode
+  className?: string
+}) {
+  return (
+    <section className={cn("border-b py-6 last:border-b-0", className)}>
+      <div className="mb-4">
+        <h2 className="text-base font-semibold">{title}</h2>
+        {description ? (
+          <p className="text-muted-foreground mt-1 text-sm">{description}</p>
+        ) : null}
+      </div>
+      {children}
+    </section>
+  )
+}
+
+function VersionSection({
   title,
   version,
   certName,
@@ -133,18 +170,15 @@ function VersionPanel({
       toast.success(`${title} bundle 已下载（版本 ${bundle.version_id}）`)
     },
     onError: (err: unknown) => {
-      toast.error(err instanceof ApiError ? err.message : "下载失败")
+      toast.error(err instanceof ApiError ? err.message : "下载失败，请稍后重试")
     },
   })
 
   if (!version) {
     return (
-      <Card>
-        <CardContent className="flex flex-col gap-2 pt-6 text-sm">
-          <h2 className="font-semibold">{title}</h2>
-          <p className="text-muted-foreground">暂无版本</p>
-        </CardContent>
-      </Card>
+      <DetailSection title={title}>
+        <p className="text-muted-foreground text-sm">暂无版本</p>
+      </DetailSection>
     )
   }
 
@@ -153,84 +187,99 @@ function VersionPanel({
   const pendingRevoke = Boolean(version.revoke_pending)
 
   return (
-    <Card>
-      <CardContent className="flex flex-col gap-2 pt-6 text-sm">
-        <h2 className="font-semibold">{title}</h2>
-        <dl className="grid gap-2">
-          <div>
-            <dt className="text-muted-foreground">版本 ID</dt>
-            <dd className="font-mono text-xs">{version.id}</dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground">指纹 (SHA-256)</dt>
-            <dd className="font-mono text-xs break-all">{version.leaf_fingerprint}</dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground">Serial</dt>
-            <dd className="font-mono text-xs">{version.serial_number}</dd>
-          </div>
-          {version.not_before && version.not_after && (
-            <div>
-              <dt className="text-muted-foreground">有效期</dt>
-              <dd>
-                {formatTime(version.not_before)} — {formatTime(version.not_after)}
-                {expired ? (
-                  <span className="ml-2 text-amber-700">（已过期）</span>
-                ) : null}
-                {revoked ? (
-                  <span className="ml-2 text-destructive">（已吊销）</span>
-                ) : null}
-                {pendingRevoke ? (
-                  <span className="ml-2 text-destructive">（吊销处理中，已停止分发）</span>
-                ) : null}
-              </dd>
-            </div>
-          )}
-          {version.config_snapshot && (
-            <div>
-              <dt className="text-muted-foreground">签发快照域名</dt>
-              <dd className="font-mono text-xs break-all">
-                {(version.config_snapshot.domains ?? []).join(", ")}
-              </dd>
-            </div>
-          )}
-        </dl>
-        {!readOnly && !revoked && !pendingRevoke ? (
-          <div className="mt-2 flex flex-wrap gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={downloadBundle.isPending}
-              onClick={() => downloadBundle.mutate()}
-            >
-              <Download className="size-4" />
-              下载 PEM
-            </Button>
-            {onRevoke ? (
-              <Button
-                variant="destructive"
-                size="sm"
-                disabled={revokePending}
-                onClick={onRevoke}
-              >
-                <ShieldOff className="size-4" />
-                吊销此版本
-              </Button>
+    <DetailSection title={title}>
+      <dl className="grid gap-3 text-sm sm:grid-cols-2">
+        <Field label="版本 ID" mono>
+          {version.id}
+        </Field>
+        <Field label="指纹 (SHA-256)" mono>
+          {version.leaf_fingerprint}
+        </Field>
+        <Field label="Serial" mono>
+          {version.serial_number}
+        </Field>
+        {version.not_before && version.not_after ? (
+          <Field label="有效期">
+            {formatTime(version.not_before)} — {formatTime(version.not_after)}
+            {expired ? <span className="ml-2 text-amber-700">（已过期）</span> : null}
+            {revoked ? <span className="ml-2 text-destructive">（已吊销）</span> : null}
+            {pendingRevoke ? (
+              <span className="ml-2 text-destructive">（吊销处理中，已停止分发）</span>
             ) : null}
-            {versionSlot === "previous" && onActivate ? (
-              <Button
-                variant="secondary"
-                size="sm"
-                disabled={activatePending}
-                onClick={onActivate}
-              >
-                激活此 previous 版本
-              </Button>
-            ) : null}
+          </Field>
+        ) : null}
+        {version.config_snapshot ? (
+          <Field label="签发快照域名" mono className="sm:col-span-2">
+            {(version.config_snapshot.domains ?? []).join(", ")}
+          </Field>
+        ) : null}
+        {version.staging_untrusted ? (
+          <div className="sm:col-span-2">
+            <CertificateStagingBadge />
           </div>
         ) : null}
-      </CardContent>
-    </Card>
+      </dl>
+      {!readOnly && !revoked && !pendingRevoke ? (
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={downloadBundle.isPending}
+            onClick={() => downloadBundle.mutate()}
+          >
+            {downloadBundle.isPending ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <Download className="size-4" />
+            )}
+            {downloadBundle.isPending ? "下载中…" : "下载 PEM bundle"}
+          </Button>
+          {onRevoke ? (
+            <Button
+              variant="destructive"
+              size="sm"
+              disabled={revokePending}
+              onClick={onRevoke}
+            >
+              <ShieldOff className="size-4" />
+              吊销此版本
+            </Button>
+          ) : null}
+          {versionSlot === "previous" && onActivate ? (
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={activatePending}
+              onClick={onActivate}
+            >
+              {activatePending ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : null}
+              激活 previous 版本
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
+    </DetailSection>
+  )
+}
+
+function Field({
+  label,
+  children,
+  mono,
+  className,
+}: {
+  label: string
+  children: ReactNode
+  mono?: boolean
+  className?: string
+}) {
+  return (
+    <div className={className}>
+      <dt className="text-muted-foreground">{label}</dt>
+      <dd className={cn("mt-0.5 break-all", mono && "font-mono text-xs")}>{children}</dd>
+    </div>
   )
 }
 
@@ -252,23 +301,22 @@ export function ManagedCertificateDetailPage() {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
 
   const certQuery = useQuery({
-    queryKey: ["managed-certificate", id],
+    queryKey: certQueryKeys.detail(id),
     queryFn: () => api.getManagedCertificate(id),
     enabled: Boolean(id),
     refetchInterval: (q) => {
       const op = q.state.data?.certificate.latest_operation
-      if (op?.status === "Pending" || op?.status === "Running") return 3000
-      return false
+      return operationInFlight(op) ? 3000 : false
     },
   })
 
   const issuerQuery = useQuery({
-    queryKey: ["certificate-issuers"],
+    queryKey: certQueryKeys.issuers,
     queryFn: () => api.listCertificateIssuers({ page_size: 200 }),
     enabled: Boolean(id),
   })
   const dnsQuery = useQuery({
-    queryKey: ["dns-provider-accounts"],
+    queryKey: certQueryKeys.dnsAccounts,
     queryFn: () => api.listDNSProviderAccounts({ page_size: 200 }),
     enabled: Boolean(id),
   })
@@ -293,14 +341,19 @@ export function ManagedCertificateDetailPage() {
   const op = cert?.latest_operation
   const diffLines = cert ? desiredDiffLines(cert, issuers, dnsAccounts) : []
 
+  function invalidateCertQueries() {
+    queryClient.invalidateQueries({ queryKey: certQueryKeys.detail(id) })
+    queryClient.invalidateQueries({ queryKey: certQueryKeys.list })
+  }
+
   const issueMutation = useMutation({
     mutationFn: () => api.submitIssueOperation(id),
     onSuccess: () => {
       toast.success("已提交签发新版本（使用 desired config）")
-      queryClient.invalidateQueries({ queryKey: ["managed-certificate", id] })
+      invalidateCertQueries()
     },
     onError: (err: unknown) => {
-      toast.error(err instanceof ApiError ? err.message : "提交失败")
+      toast.error(err instanceof ApiError ? err.message : "签发提交失败，请检查 Issuer 与 DNS 配置")
     },
   })
 
@@ -308,10 +361,29 @@ export function ManagedCertificateDetailPage() {
     mutationFn: () => api.submitRenewOperation(id),
     onSuccess: () => {
       toast.success("已提交续期（使用 active 签发快照）")
-      queryClient.invalidateQueries({ queryKey: ["managed-certificate", id] })
+      invalidateCertQueries()
     },
     onError: (err: unknown) => {
-      toast.error(err instanceof ApiError ? err.message : "提交失败")
+      toast.error(err instanceof ApiError ? err.message : "续期提交失败，请稍后重试")
+    },
+  })
+
+  const retryMutation = useMutation({
+    mutationFn: async () => {
+      if (!op || op.status !== "Failed") {
+        throw new Error("当前没有可重试的失败 operation")
+      }
+      if (op.type === "Renew") {
+        return api.submitRenewOperation(id)
+      }
+      return api.submitIssueOperation(id)
+    },
+    onSuccess: () => {
+      toast.success("已重新提交失败 operation")
+      invalidateCertQueries()
+    },
+    onError: (err: unknown) => {
+      toast.error(err instanceof ApiError ? err.message : "重试失败，请稍后重试")
     },
   })
 
@@ -321,10 +393,10 @@ export function ManagedCertificateDetailPage() {
     onSuccess: () => {
       toast.success("已激活 previous 版本")
       setActivateConfirmOpen(false)
-      queryClient.invalidateQueries({ queryKey: ["managed-certificate", id] })
+      invalidateCertQueries()
     },
     onError: (err: unknown) => {
-      toast.error(err instanceof ApiError ? err.message : "激活失败")
+      toast.error(err instanceof ApiError ? err.message : "激活失败，请确认版本未被吊销")
     },
   })
 
@@ -335,10 +407,10 @@ export function ManagedCertificateDetailPage() {
       toast.success("吊销请求已接受；该版本已立即停止分发")
       setRevokeConfirmOpen(false)
       setRevokeTarget(null)
-      queryClient.invalidateQueries({ queryKey: ["managed-certificate", id] })
+      invalidateCertQueries()
     },
     onError: (err: unknown) => {
-      toast.error(err instanceof ApiError ? err.message : "吊销提交失败")
+      toast.error(err instanceof ApiError ? err.message : "吊销提交失败，请稍后重试")
     },
   })
 
@@ -346,30 +418,34 @@ export function ManagedCertificateDetailPage() {
     mutationFn: () => api.deleteManagedCertificate(id),
     onSuccess: () => {
       toast.success("已删除托管证书（本地记录；未向 CA 隐式吊销）")
-      queryClient.invalidateQueries({ queryKey: ["managed-certificates"] })
+      queryClient.invalidateQueries({ queryKey: certQueryKeys.list })
       navigate("/certificates/managed")
     },
     onError: (err: unknown) => {
-      toast.error(err instanceof ApiError ? err.message : "删除失败")
+      toast.error(err instanceof ApiError ? err.message : "删除失败，请解除 Server 分配并等待 operation 结束")
     },
   })
 
-  const issueRunning =
-    op?.type === "Issue" &&
-    (op.status === "Pending" || op.status === "Running")
-  const renewRunning =
-    op?.type === "Renew" &&
-    (op.status === "Pending" || op.status === "Running")
-  const revokeRunning =
-    op?.type === "Revoke" &&
-    (op.status === "Pending" || op.status === "Running")
+  const issueRunning = op?.type === "Issue" && operationInFlight(op)
+  const renewRunning = op?.type === "Renew" && operationInFlight(op)
+  const revokeRunning = op?.type === "Revoke" && operationInFlight(op)
   const anyOpRunning = issueRunning || renewRunning || revokeRunning
+  const canRetryFailed = op?.status === "Failed" && !anyOpRunning
 
   const canDelete =
     user &&
     cert &&
     (cert.server_ids ?? []).length === 0 &&
     !anyOpRunning
+
+  const canIssue =
+    user &&
+    cert &&
+    (cert.has_unpublished_desired_changes || cert.active_version) &&
+    !issueRunning &&
+    !renewRunning
+
+  const canRenew = user && cert?.active_version && !issueRunning && !renewRunning
 
   return (
     <div className="animate-enter flex flex-col gap-6">
@@ -387,15 +463,21 @@ export function ManagedCertificateDetailPage() {
           <div className="text-destructive">
             {certQuery.error instanceof ApiError
               ? certQuery.error.message
-              : "加载失败"}
+              : "加载证书详情失败"}
           </div>
         ) : cert ? (
           <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h1 className="text-2xl font-semibold">{cert.name}</h1>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-2xl font-semibold">{cert.name}</h1>
+                <CertificateValidityBadge validity={cert.active_validity} />
+                {cert.active_version?.staging_untrusted ? (
+                  <CertificateStagingBadge />
+                ) : null}
+              </div>
               <p className="text-muted-foreground font-mono text-xs">{cert.id}</p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Button
                 variant="outline"
                 size="icon"
@@ -407,26 +489,48 @@ export function ManagedCertificateDetailPage() {
               </Button>
               {user ? (
                 <>
-                  {cert.has_unpublished_desired_changes || cert.active_version ? (
+                  {canIssue ? (
                     <Button
-                      variant="default"
-                      disabled={issueRunning || renewRunning || issueMutation.isPending}
+                      disabled={issueMutation.isPending}
                       onClick={() => issueMutation.mutate()}
                       title="发布 desired config 并签发新版本"
                     >
-                      <Rocket className="size-4" />
-                      签发新版本
+                      {issueMutation.isPending ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : (
+                        <Rocket className="size-4" />
+                      )}
+                      {issueMutation.isPending ? "提交中…" : "签发新版本"}
                     </Button>
                   ) : null}
-                  {cert.active_version ? (
+                  {canRenew ? (
                     <Button
                       variant="secondary"
-                      disabled={issueRunning || renewRunning || renewMutation.isPending}
+                      disabled={renewMutation.isPending}
                       onClick={() => renewMutation.mutate()}
                       title="按 active 签发快照续期（与 desired 无关）"
                     >
-                      <Repeat className="size-4" />
-                      续期 active
+                      {renewMutation.isPending ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : (
+                        <Repeat className="size-4" />
+                      )}
+                      {renewMutation.isPending ? "提交中…" : "续期 active"}
+                    </Button>
+                  ) : null}
+                  {canRetryFailed ? (
+                    <Button
+                      variant="outline"
+                      disabled={retryMutation.isPending}
+                      onClick={() => retryMutation.mutate()}
+                      title={`重试失败的 ${op?.type} operation`}
+                    >
+                      {retryMutation.isPending ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : (
+                        <RotateCcw className="size-4" />
+                      )}
+                      {retryMutation.isPending ? "重试中…" : "重试失败 operation"}
                     </Button>
                   ) : null}
                   <Button variant="outline" onClick={() => setFormOpen(true)}>
@@ -449,316 +553,253 @@ export function ManagedCertificateDetailPage() {
         ) : null}
       </div>
 
-      {cert && (
-        <div className="grid gap-4 lg:grid-cols-2">
-          <Card>
-            <CardContent className="flex flex-col gap-3 pt-6 text-sm">
-              <h2 className="font-semibold">Desired config</h2>
-              {cert.has_unpublished_desired_changes && diffLines.length > 0 ? (
-                <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-900">
-                  <p className="mb-1 font-medium">与 active 签发快照存在差异（尚未发布）：</p>
-                  <ul className="list-inside list-disc space-y-0.5">
-                    {diffLines.map((line) => (
-                      <li key={line}>{line}</li>
-                    ))}
-                  </ul>
-                </div>
-              ) : cert.active_version ? (
-                <p className="text-muted-foreground text-xs">
-                  当前 desired config 与 active 签发快照一致。
-                </p>
-              ) : null}
-              <dl className="grid gap-2">
-                <div>
-                  <dt className="text-muted-foreground">域名</dt>
-                  <dd className="font-mono text-xs break-all">
-                    {cert.domains.map((d, i) => (
-                      <div key={d}>
-                        {i === 0 ? "★ " : "  "}
-                        {d}
-                        {i === 0 ? "（主域名）" : ""}
-                      </div>
-                    ))}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-muted-foreground">ACME Issuer</dt>
-                  <dd>{issuerName}</dd>
-                </div>
-                <div>
-                  <dt className="text-muted-foreground">DNS 账户</dt>
-                  <dd>{dnsName}</dd>
-                </div>
-                <div>
-                  <dt className="text-muted-foreground">密钥类型</dt>
-                  <dd>{KEY_LABELS[cert.key_type] ?? cert.key_type}</dd>
-                </div>
-                <div>
-                  <dt className="text-muted-foreground">自动续期</dt>
-                  <dd>{cert.auto_renew_enabled ? "开启" : "关闭"}</dd>
-                </div>
-                <div>
-                  <dt className="text-muted-foreground">续期提前（配置）</dt>
-                  <dd>{cert.renew_before_days} 天</dd>
-                </div>
-                {cert.active_version ? (
-                  <>
-                    <div>
-                      <dt className="text-muted-foreground">有效续期窗口</dt>
-                      <dd>
-                        {cert.effective_renewal_window_days ?? cert.renew_before_days} 天
-                        <span className="text-muted-foreground ml-1 text-xs">
-                          （min(配置, 有效期/3)）
-                        </span>
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-muted-foreground">下次自动续期</dt>
-                      <dd>
-                        {cert.auto_renew_enabled ? (
-                          cert.next_renewal_at ? (
-                            formatTime(cert.next_renewal_at)
-                          ) : (
-                            "—"
-                          )
-                        ) : (
-                          <span className="text-muted-foreground">已关闭自动续期</span>
-                        )}
-                      </dd>
-                    </div>
-                  </>
-                ) : null}
-                <div>
-                  <dt className="text-muted-foreground">通知组</dt>
-                  <dd>
-                    {(cert.notify_group_ids ?? []).length === 0
-                      ? "（无）"
-                      : (cert.notify_group_ids ?? [])
-                          .map(
-                            (nid) =>
-                              notifyGroups.find((g) => g.id === nid)?.name ?? nid
-                          )
-                          .join("、")}
-                  </dd>
-                </div>
-                {cert.last_notification_warning ? (
-                  <div>
-                    <dt className="text-muted-foreground">最近通知告警</dt>
-                    <dd className="text-amber-700">{cert.last_notification_warning}</dd>
-                    {cert.last_notification_warning_at ? (
-                      <dd className="text-muted-foreground text-xs">
-                        {formatTime(cert.last_notification_warning_at)}
-                      </dd>
-                    ) : null}
+      {cert ? (
+        <div className="rounded-lg border bg-card px-4 sm:px-6">
+          <DetailSection
+            title="Active 状态"
+            description={validityDescriptions[cert.active_validity]}
+          >
+            <div className="flex flex-wrap items-center gap-3 text-sm">
+              <CertificateValidityBadge validity={cert.active_validity} />
+              <CertificateAvailabilityBadge available={cert.bundle_available} />
+              <span className="text-muted-foreground">
+                到期：{formatManagedCertExpiry(cert.active_version?.not_after)}
+              </span>
+            </div>
+            {cert.active_validity === "Missing" && !cert.bundle_available ? (
+              <p className="text-muted-foreground mt-3 text-xs">
+                首次签发尚未完成；Pending Issue operation 由后台 reconciler 执行。
+              </p>
+            ) : null}
+          </DetailSection>
+
+          <DetailSection
+            title="Desired / Active 差异"
+            description="修改签发字段只更新 desired config；点击「签发新版本」才会发布。"
+          >
+            {cert.has_unpublished_desired_changes && diffLines.length > 0 ? (
+              <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-900 dark:text-amber-200">
+                <p className="mb-1 font-medium">与 active 签发快照存在差异（尚未发布）：</p>
+                <ul className="list-inside list-disc space-y-0.5">
+                  {diffLines.map((line) => (
+                    <li key={line}>{line}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : cert.active_version ? (
+              <p className="text-muted-foreground text-sm">
+                当前 desired config 与 active 签发快照一致。
+              </p>
+            ) : (
+              <p className="text-muted-foreground text-sm">
+                尚无 active 版本；desired config 将在首次签发成功后成为 active 快照。
+              </p>
+            )}
+            <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+              <Field label="Desired 域名" mono className="sm:col-span-2">
+                {cert.domains.map((d, i) => (
+                  <div key={d}>
+                    {i === 0 ? "★ " : "  "}
+                    {d}
+                    {i === 0 ? "（主域名）" : ""}
                   </div>
-                ) : null}
-              </dl>
-            </CardContent>
-          </Card>
+                ))}
+              </Field>
+              <Field label="ACME Issuer">{issuerName}</Field>
+              <Field label="DNS 账户">{dnsName}</Field>
+              <Field label="密钥类型">{KEY_LABELS[cert.key_type] ?? cert.key_type}</Field>
+            </dl>
+          </DetailSection>
 
-          <div className="flex flex-col gap-4">
-            <Card>
-              <CardContent className="flex flex-col gap-2 pt-6 text-sm">
-                <h2 className="font-semibold">Active 有效性</h2>
-                <p>
-                  状态：
-                  <span className="font-medium">
-                    {VALIDITY_LABELS[cert.active_validity] ?? cert.active_validity}
-                  </span>
-                  {cert.active_version?.staging_untrusted ? (
-                    <span className="ml-2 inline-flex rounded-full bg-amber-500/15 px-2 py-0.5 text-xs text-amber-800">
-                      staging / 不受信任
-                    </span>
+          <VersionSection
+            title="Active 版本"
+            version={cert.active_version}
+            certName={cert.name}
+            versionSlot="active"
+            certId={id}
+            readOnly={!user}
+            revokePending={revokeMutation.isPending}
+            onRevoke={
+              cert.active_version &&
+              !cert.active_version.revoked_at &&
+              !cert.active_version.revoke_pending &&
+              !anyOpRunning
+                ? () => {
+                    setRevokeTarget({
+                      versionId: cert.active_version!.id,
+                      slot: "active",
+                    })
+                    setRevokeReason("unspecified")
+                    setRevokeConfirmOpen(true)
+                  }
+                : undefined
+            }
+          />
+
+          <VersionSection
+            title="Previous 版本"
+            version={cert.previous_version}
+            certName={cert.name}
+            versionSlot="previous"
+            certId={id}
+            readOnly={!user}
+            activatePending={activateMutation.isPending}
+            revokePending={revokeMutation.isPending}
+            onRevoke={
+              cert.previous_version &&
+              !cert.previous_version.revoked_at &&
+              !cert.previous_version.revoke_pending &&
+              !anyOpRunning
+                ? () => {
+                    setRevokeTarget({
+                      versionId: cert.previous_version!.id,
+                      slot: "previous",
+                    })
+                    setRevokeReason("unspecified")
+                    setRevokeConfirmOpen(true)
+                  }
+                : undefined
+            }
+            onActivate={
+              cert.previous_version && !cert.previous_version.revoked_at
+                ? () => {
+                    if (versionExpired(cert.previous_version)) {
+                      setActivateConfirmOpen(true)
+                    } else {
+                      activateMutation.mutate()
+                    }
+                  }
+                : undefined
+            }
+          />
+
+          <DetailSection title="最新 Operation">
+            {!op ? (
+              <p className="text-muted-foreground text-sm">暂无 operation 记录</p>
+            ) : (
+              <>
+                <div className="mb-3">
+                  <CertificateOperationBadge operation={op} />
+                </div>
+                <dl className="grid gap-3 text-sm sm:grid-cols-2">
+                  <Field label="尝试次数">{op.attempt_count}</Field>
+                  {op.config_snapshot ? (
+                    <Field label="配置快照" mono className="sm:col-span-2">
+                      {op.config_snapshot.domains.join(", ")}
+                    </Field>
                   ) : null}
-                </p>
-                <p>
-                  Bundle 可下载：
-                  {cert.bundle_available ? (
-                    <span className="text-emerald-600">是</span>
-                  ) : (
-                    <span className="text-muted-foreground">否</span>
-                  )}
-                </p>
-                {cert.active_validity === "Missing" && !cert.bundle_available && (
+                  {op.error_summary ? (
+                    <Field label="错误摘要" className="sm:col-span-2">
+                      <span className="text-destructive">{op.error_summary}</span>
+                    </Field>
+                  ) : null}
+                  {op.warning ? (
+                    <Field label="告警" className="sm:col-span-2">
+                      <span className="text-amber-700">{op.warning}</span>
+                    </Field>
+                  ) : null}
+                  {op.started_at ? (
+                    <Field label="开始时间">{formatTime(op.started_at)}</Field>
+                  ) : null}
+                  {op.finished_at ? (
+                    <Field label="结束时间">{formatTime(op.finished_at)}</Field>
+                  ) : null}
+                  {op.next_attempt_at && op.status === "Pending" ? (
+                    <Field label="下次自动重试">{formatTime(op.next_attempt_at)}</Field>
+                  ) : null}
+                  <Field label="创建时间">{formatTime(op.created_at)}</Field>
+                </dl>
+              </>
+            )}
+          </DetailSection>
+
+          <DetailSection
+            title="续期策略"
+            description="自动续期使用 active 签发快照；未发布的 desired config 不会被自动续期采用。"
+          >
+            <dl className="grid gap-3 text-sm sm:grid-cols-2">
+              <Field label="自动续期">{cert.auto_renew_enabled ? "开启" : "关闭"}</Field>
+              <Field label="续期提前（配置）">{cert.renew_before_days} 天</Field>
+              {cert.active_version ? (
+                <>
+                  <Field label="有效续期窗口">
+                    {cert.effective_renewal_window_days ?? cert.renew_before_days} 天
+                    <span className="text-muted-foreground ml-1 text-xs">
+                      （min(配置, 有效期/3)）
+                    </span>
+                  </Field>
+                  <Field label="下次自动续期">
+                    {cert.auto_renew_enabled ? (
+                      cert.next_renewal_at ? (
+                        formatTime(cert.next_renewal_at)
+                      ) : (
+                        "—"
+                      )
+                    ) : (
+                      <span className="text-muted-foreground">已关闭自动续期</span>
+                    )}
+                  </Field>
+                </>
+              ) : null}
+            </dl>
+          </DetailSection>
+
+          <DetailSection title="通知组">
+            <p className="text-sm">
+              {(cert.notify_group_ids ?? []).length === 0
+                ? "（无）"
+                : (cert.notify_group_ids ?? [])
+                    .map(
+                      (nid) => notifyGroups.find((g) => g.id === nid)?.name ?? nid
+                    )
+                    .join("、")}
+            </p>
+            {cert.last_notification_warning ? (
+              <div className="mt-3 text-sm">
+                <p className="text-muted-foreground">最近通知告警</p>
+                <p className="text-amber-700">{cert.last_notification_warning}</p>
+                {cert.last_notification_warning_at ? (
                   <p className="text-muted-foreground text-xs">
-                    首次签发尚未完成；Pending Issue operation 由后台 runner 执行。
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-
-            <VersionPanel
-              title="Active 版本"
-              version={cert.active_version}
-              certName={cert.name}
-              versionSlot="active"
-              certId={id}
-              readOnly={!user}
-              revokePending={revokeMutation.isPending}
-              onRevoke={
-                cert.active_version &&
-                !cert.active_version.revoked_at &&
-                !cert.active_version.revoke_pending &&
-                !anyOpRunning
-                  ? () => {
-                      setRevokeTarget({
-                        versionId: cert.active_version!.id,
-                        slot: "active",
-                      })
-                      setRevokeReason("unspecified")
-                      setRevokeConfirmOpen(true)
-                    }
-                  : undefined
-              }
-            />
-
-            <VersionPanel
-              title="Previous 版本"
-              version={cert.previous_version}
-              certName={cert.name}
-              versionSlot="previous"
-              certId={id}
-              readOnly={!user}
-              activatePending={activateMutation.isPending}
-              revokePending={revokeMutation.isPending}
-              onRevoke={
-                cert.previous_version &&
-                !cert.previous_version.revoked_at &&
-                !cert.previous_version.revoke_pending &&
-                !anyOpRunning
-                  ? () => {
-                      setRevokeTarget({
-                        versionId: cert.previous_version!.id,
-                        slot: "previous",
-                      })
-                      setRevokeReason("unspecified")
-                      setRevokeConfirmOpen(true)
-                    }
-                  : undefined
-              }
-              onActivate={
-                cert.previous_version && !cert.previous_version.revoked_at
-                  ? () => {
-                      if (versionExpired(cert.previous_version)) {
-                        setActivateConfirmOpen(true)
-                      } else {
-                        activateMutation.mutate()
-                      }
-                    }
-                  : undefined
-              }
-            />
-
-            <Card>
-              <CardContent className="flex flex-col gap-2 pt-6 text-sm">
-                <h2 className="font-semibold">最新 Operation</h2>
-                {!op ? (
-                  <p className="text-muted-foreground">暂无 operation 记录</p>
-                ) : (
-                  <dl className="grid gap-2">
-                    <div className="flex flex-wrap gap-2">
-                      <span className="inline-flex rounded-full bg-muted px-2 py-0.5 text-xs">
-                        {op.type}
-                      </span>
-                      <span
-                        className={`inline-flex rounded-full px-2 py-0.5 text-xs ${
-                          op.status === "Pending"
-                            ? "bg-amber-500/15 text-amber-700"
-                            : op.status === "Running"
-                              ? "bg-blue-500/15 text-blue-700"
-                              : "bg-muted"
-                        }`}
-                      >
-                        {op.status}
-                      </span>
-                    </div>
-                    <div>
-                      <dt className="text-muted-foreground">尝试次数</dt>
-                      <dd>{op.attempt_count}</dd>
-                    </div>
-                    {op.config_snapshot && (
-                      <div>
-                        <dt className="text-muted-foreground">配置快照</dt>
-                        <dd className="font-mono text-xs break-all">
-                          {op.config_snapshot.domains.join(", ")}
-                        </dd>
-                      </div>
-                    )}
-                    {op.error_summary && (
-                      <div>
-                        <dt className="text-muted-foreground">错误摘要</dt>
-                        <dd className="text-destructive">{op.error_summary}</dd>
-                      </div>
-                    )}
-                    {op.warning && (
-                      <div>
-                        <dt className="text-muted-foreground">告警</dt>
-                        <dd className="text-amber-700">{op.warning}</dd>
-                      </div>
-                    )}
-                    {op.started_at && (
-                      <div>
-                        <dt className="text-muted-foreground">开始时间</dt>
-                        <dd>{formatTime(op.started_at)}</dd>
-                      </div>
-                    )}
-                    {op.finished_at && (
-                      <div>
-                        <dt className="text-muted-foreground">结束时间</dt>
-                        <dd>{formatTime(op.finished_at)}</dd>
-                      </div>
-                    )}
-                    {op.next_attempt_at && op.status === "Pending" && (
-                      <div>
-                        <dt className="text-muted-foreground">下次自动重试</dt>
-                        <dd>{formatTime(op.next_attempt_at)}</dd>
-                      </div>
-                    )}
-                    <div>
-                      <dt className="text-muted-foreground">创建时间</dt>
-                      <dd>{formatTime(op.created_at)}</dd>
-                    </div>
-                  </dl>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="text-muted-foreground pt-6 text-xs">
-                创建于 {formatTime(cert.created_at)} · 更新于{" "}
-                {formatTime(cert.updated_at)}
-                {user && (cert.server_ids ?? []).length > 0 ? (
-                  <p className="mt-2 text-amber-700">
-                    删除前须解除全部 Server 分配且无运行中 operation。
+                    {formatTime(cert.last_notification_warning_at)}
                   </p>
                 ) : null}
-              </CardContent>
-            </Card>
-          </div>
+              </div>
+            ) : null}
+          </DetailSection>
+
+          <ManagedCertificateServerAssignment
+            certificate={cert}
+            readOnly={!user}
+            variant="flat"
+          />
+
+          <DetailSection title="元数据">
+            <p className="text-muted-foreground text-xs">
+              创建于 {formatTime(cert.created_at)} · 更新于 {formatTime(cert.updated_at)}
+            </p>
+            {user && (cert.server_ids ?? []).length > 0 ? (
+              <p className="mt-2 text-sm text-amber-700">
+                删除前须解除全部 Server 分配且无运行中 operation。
+              </p>
+            ) : null}
+          </DetailSection>
         </div>
-      )}
+      ) : null}
 
-      {cert && (
-        <ManagedCertificateServerAssignment
-          certificate={cert}
-          readOnly={!user}
-        />
-      )}
-
-      {cert && (
+      {cert ? (
         <ManagedCertificateForm
           open={formOpen}
           onOpenChange={setFormOpen}
           certificate={cert}
         />
-      )}
+      ) : null}
 
       <ConfirmDialog
         open={activateConfirmOpen}
         onOpenChange={setActivateConfirmOpen}
         title="激活已过期的 previous 版本？"
         description="该 previous 版本证书已过期。激活后 Server 将下载过期 bundle；请确认这是有意的灾难恢复操作。Desired config 不会被修改。"
-        confirmText="确认激活"
+        confirmText="确认激活 previous"
         pending={activateMutation.isPending}
         onConfirm={() => activateMutation.mutate()}
       />
