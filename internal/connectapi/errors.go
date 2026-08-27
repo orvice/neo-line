@@ -5,6 +5,7 @@ import (
 	"log/slog"
 
 	"connectrpc.com/connect"
+	"github.com/orvice/neo-line/internal/certmanager"
 	"github.com/orvice/neo-line/internal/store"
 )
 
@@ -19,9 +20,13 @@ func toConnectError(err error) error {
 		return connect.NewError(connect.CodeNotFound, errors.New("not found"))
 	case errors.Is(err, store.ErrInvalidCredentials):
 		return connect.NewError(connect.CodeUnauthenticated, errors.New("invalid email or password"))
-	case errors.Is(err, store.ErrGroupNameTaken), errors.Is(err, store.ErrNotifyGroupNameTaken):
+	case errors.Is(err, store.ErrGroupNameTaken), errors.Is(err, store.ErrNotifyGroupNameTaken), errors.Is(err, store.ErrDNSProviderAccountNameTaken):
 		return connect.NewError(connect.CodeAlreadyExists, err)
 	case errors.Is(err, store.ErrInvalidGroupIDs), errors.Is(err, store.ErrInvalidNotifyGroupIDs):
+		return connect.NewError(connect.CodeInvalidArgument, err)
+	case errors.Is(err, store.ErrInvalidDNSProvider), errors.Is(err, store.ErrInvalidPropagationTimeout), errors.Is(err, certmanager.ErrTokenRequired):
+		return connect.NewError(connect.CodeInvalidArgument, err)
+	case errors.Is(err, certmanager.ErrCloudflareTokenInvalid):
 		return connect.NewError(connect.CodeInvalidArgument, err)
 	case err.Error() == "invalid page_token":
 		return connect.NewError(connect.CodeInvalidArgument, err)

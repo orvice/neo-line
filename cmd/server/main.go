@@ -14,6 +14,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/orvice/neo-line/internal/alert"
 	"github.com/orvice/neo-line/internal/archive"
+	"github.com/orvice/neo-line/internal/certmanager"
 	"github.com/orvice/neo-line/internal/connectapi"
 	"github.com/orvice/neo-line/internal/mcpserver"
 	"github.com/orvice/neo-line/internal/scheduler"
@@ -75,6 +76,7 @@ func main() {
 	defer cancel()
 
 	var mongoStore *store.MongoStore
+	var certMgr *certmanager.Manager
 	var sshRunner *nlssh.Runner
 	var archiver archive.Archiver = archive.Noop{}
 	archiveEnabled := false
@@ -91,7 +93,7 @@ func main() {
 			r.GET("/ping", func(c *gin.Context) {
 				c.JSON(http.StatusOK, gin.H{"message": "pong"})
 			})
-			connectapi.Register(r, mongoStore, sshRunner)
+			connectapi.Register(r, mongoStore, certMgr, sshRunner)
 			mcpserver.Register(r, mongoStore, sshRunner)
 		},
 		InitFunc: []func() error{
@@ -118,6 +120,9 @@ func main() {
 				}
 				if err := mongoStore.EnsureNotifyGroupIndexes(ctx); err != nil {
 					return fmt.Errorf("ensure notify group indexes: %w", err)
+				}
+				if err := mongoStore.EnsureDNSProviderAccountIndexes(ctx); err != nil {
+					return fmt.Errorf("ensure dns provider account indexes: %w", err)
 				}
 				if err := mongoStore.EnsureMcpTokenIndexes(ctx); err != nil {
 					return fmt.Errorf("ensure mcp token indexes: %w", err)
@@ -150,6 +155,10 @@ func main() {
 				if sshRunner != nil {
 					log.Println("SSH remote execution enabled")
 				}
+				certMgr = certmanager.NewManager(
+					certmanager.NewStore(mongoStore),
+					certmanager.NewCloudflareClient(nil),
+				)
 				return nil
 			},
 			func() error {
