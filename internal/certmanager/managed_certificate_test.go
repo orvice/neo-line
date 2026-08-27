@@ -309,6 +309,54 @@ func (f *managedCertFakeStore) ActivateFirstIssueVersion(_ context.Context, mana
 	return nil
 }
 
+func (f *managedCertFakeStore) ActivateSubsequentIssueVersion(_ context.Context, managedCertID string, version store.CertificateVersion, expectedActiveID, opID, warning string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	cert, ok := f.certs[managedCertID]
+	if !ok || cert.ActiveVersion == nil || cert.ActiveVersion.ID != expectedActiveID {
+		return store.ErrActiveVersionConflict
+	}
+	previous := *cert.ActiveVersion
+	cert.PreviousVersion = &previous
+	cert.ActiveVersion = &version
+	cert.UpdatedAt = time.Now().UTC()
+	f.certs[managedCertID] = cert
+	op, ok := f.ops[opID]
+	if !ok || op.Status != store.CertOpStatusRunning {
+		return store.ErrCertificateOperationConflict
+	}
+	now := time.Now().UTC()
+	op.Status = store.CertOpStatusSucceeded
+	op.FinishedAt = &now
+	op.Warning = warning
+	op.UpdatedAt = now
+	f.ops[opID] = op
+	return nil
+}
+
+func (f *managedCertFakeStore) ActivatePreviousVersion(_ context.Context, managedCertID, versionID string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	cert, ok := f.certs[managedCertID]
+	if !ok || cert.PreviousVersion == nil || cert.PreviousVersion.ID != versionID {
+		return store.ErrVersionNotFound
+	}
+	if cert.PreviousVersion.RevokedAt != nil {
+		return store.ErrVersionRevoked
+	}
+	newActive := *cert.PreviousVersion
+	if cert.ActiveVersion != nil {
+		prev := *cert.ActiveVersion
+		cert.PreviousVersion = &prev
+	} else {
+		cert.PreviousVersion = nil
+	}
+	cert.ActiveVersion = &newActive
+	cert.UpdatedAt = time.Now().UTC()
+	f.certs[managedCertID] = cert
+	return nil
+}
+
 func boolPtr(v bool) *bool { return &v }
 
 func TestNormalizeDomains(t *testing.T) {

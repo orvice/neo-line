@@ -43,6 +43,7 @@ type PublicCertificateVersion struct {
 	KeyType          string
 	StagingUntrusted bool
 	CreatedAt        int64
+	RevokedAt        int64 // unix seconds; zero when not revoked
 }
 
 var issueInflight sync.Map // opID -> struct{}
@@ -129,8 +130,18 @@ func (m *Manager) executeIssue(ctx context.Context, op store.CertificateOperatio
 		CertificateIssuerID: issuer.ID,
 		CreatedAt:           now,
 	}
-	if err := m.store.ActivateFirstIssueVersion(ctx, op.ManagedCertificateID, version, op.ID, warning); err != nil {
+	cert, err := m.store.GetManagedCertificate(ctx, op.ManagedCertificateID)
+	if err != nil {
 		return "", err
+	}
+	if cert.ActiveVersion == nil {
+		if err := m.store.ActivateFirstIssueVersion(ctx, op.ManagedCertificateID, version, op.ID, warning); err != nil {
+			return "", err
+		}
+	} else {
+		if err := m.store.ActivateSubsequentIssueVersion(ctx, op.ManagedCertificateID, version, cert.ActiveVersion.ID, op.ID, warning); err != nil {
+			return "", err
+		}
 	}
 	return warning, nil
 }
@@ -153,16 +164,19 @@ func sanitizeIssueError(err error) string {
 	return msg
 }
 
-func (m *Manager) GetCertificateBundle(ctx context.Context, managedCertificateID string) (CertificateBundle, error) {
+func (m *Manager) GetCertificateBundle(ctx context.Context, managedCertificateID, versionSlot string) (CertificateBundle, error) {
 	cert, err := m.store.GetManagedCertificate(ctx, managedCertificateID)
 	if err != nil {
 		return CertificateBundle{}, err
 	}
-	if cert.ActiveVersion == nil {
+	v := versionFromSlot(cert, versionSlot)
+	if v == nil {
 		return CertificateBundle{}, ErrBundleNotAvailable
 	}
-	v := cert.ActiveVersion
-	validity, _ := computeValidity(cert, m.clock.Now())
+	validity, available := computeVersionValidity(v, cert.RenewBeforeDays, m.clock.Now())
+	if !available {
+		return CertificateBundle{}, ErrBundleNotAvailable
+	}
 	return CertificateBundle{
 		ManagedCertificateID: cert.ID,
 		VersionID:            v.ID,
@@ -183,24 +197,6 @@ func snapDomains(v *store.CertificateVersion) []string {
 		return nil
 	}
 	return v.ConfigSnapshot.Domains
-}
-
-func publicVersionFromStore(v *store.CertificateVersion) *PublicCertificateVersion {
-	if v == nil {
-		return nil
-	}
-	return &PublicCertificateVersion{
-		ID:               v.ID,
-		ConfigSnapshot:   v.ConfigSnapshot,
-		LeafFingerprint:  v.LeafFingerprint,
-		SerialNumber:     v.SerialNumber,
-		IssuerCommonName: v.IssuerCommonName,
-		NotBefore:        v.NotBefore.Unix(),
-		NotAfter:         v.NotAfter.Unix(),
-		KeyType:          v.KeyType,
-		StagingUntrusted: v.StagingUntrusted,
-		CreatedAt:        v.CreatedAt.Unix(),
-	}
 }
 
 type cleanupTrackingProvider struct {

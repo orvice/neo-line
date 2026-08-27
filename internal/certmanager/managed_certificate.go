@@ -40,22 +40,24 @@ type PublicOperation struct {
 
 // PublicManagedCertificate is a ManagedCertificate safe for API responses.
 type PublicManagedCertificate struct {
-	ID                   string
-	Name                 string
-	Domains              []string
-	CertificateIssuerID  string
-	DNSProviderAccountID string
-	KeyType              string
-	AutoRenewEnabled     bool
-	RenewBeforeDays      uint32
-	NotifyGroupIDs       []string
-	ServerIDs            []string
-	ActiveValidity       string
-	BundleAvailable      bool
-	ActiveVersion        *PublicCertificateVersion
-	LatestOperation      *PublicOperation
-	CreatedAt            time.Time
-	UpdatedAt            time.Time
+	ID                           string
+	Name                         string
+	Domains                      []string
+	CertificateIssuerID          string
+	DNSProviderAccountID         string
+	KeyType                      string
+	AutoRenewEnabled             bool
+	RenewBeforeDays              uint32
+	NotifyGroupIDs               []string
+	ServerIDs                    []string
+	ActiveValidity               string
+	BundleAvailable              bool
+	ActiveVersion                *PublicCertificateVersion
+	PreviousVersion              *PublicCertificateVersion
+	HasUnpublishedDesiredChanges bool
+	LatestOperation              *PublicOperation
+	CreatedAt                    time.Time
+	UpdatedAt                    time.Time
 }
 
 func publicOperationFromStore(op store.CertificateOperation) PublicOperation {
@@ -76,41 +78,53 @@ func publicOperationFromStore(op store.CertificateOperation) PublicOperation {
 	}
 }
 
-func computeValidity(cert store.ManagedCertificate, now time.Time) (validity string, bundleAvailable bool) {
-	if cert.ActiveVersion == nil {
-		return store.CertValidityMissing, false
+func publicVersionFromStore(v *store.CertificateVersion) *PublicCertificateVersion {
+	if v == nil {
+		return nil
 	}
-	bundleAvailable = true
-	v := cert.ActiveVersion
-	if now.After(v.NotAfter) {
-		return store.CertValidityExpired, bundleAvailable
+	out := &PublicCertificateVersion{
+		ID:               v.ID,
+		ConfigSnapshot:   v.ConfigSnapshot,
+		LeafFingerprint:  v.LeafFingerprint,
+		SerialNumber:     v.SerialNumber,
+		IssuerCommonName: v.IssuerCommonName,
+		NotBefore:        v.NotBefore.Unix(),
+		NotAfter:         v.NotAfter.Unix(),
+		KeyType:          v.KeyType,
+		StagingUntrusted: v.StagingUntrusted,
+		CreatedAt:        v.CreatedAt.Unix(),
 	}
-	return store.CertValidityValid, bundleAvailable
+	if v.RevokedAt != nil {
+		out.RevokedAt = v.RevokedAt.Unix()
+	}
+	return out
 }
 
 func publicCertFromStore(cert store.ManagedCertificate, latest *store.CertificateOperation, now time.Time) PublicManagedCertificate {
 	validity, available := computeValidity(cert, now)
 	out := PublicManagedCertificate{
-		ID:                   cert.ID,
-		Name:                 cert.Name,
-		Domains:              append([]string(nil), cert.Domains...),
-		CertificateIssuerID:  cert.CertificateIssuerID,
-		DNSProviderAccountID: cert.DNSProviderAccountID,
-		KeyType:              cert.KeyType,
-		AutoRenewEnabled:     cert.AutoRenewEnabled,
-		RenewBeforeDays:      cert.RenewBeforeDays,
-		NotifyGroupIDs:       append([]string(nil), cert.NotifyGroupIDs...),
-		ServerIDs:            append([]string(nil), cert.ServerIDs...),
-		ActiveValidity:       validity,
-		BundleAvailable:      available,
-		CreatedAt:            cert.CreatedAt,
-		UpdatedAt:            cert.UpdatedAt,
+		ID:                           cert.ID,
+		Name:                         cert.Name,
+		Domains:                      append([]string(nil), cert.Domains...),
+		CertificateIssuerID:          cert.CertificateIssuerID,
+		DNSProviderAccountID:         cert.DNSProviderAccountID,
+		KeyType:                      cert.KeyType,
+		AutoRenewEnabled:             cert.AutoRenewEnabled,
+		RenewBeforeDays:              cert.RenewBeforeDays,
+		NotifyGroupIDs:               append([]string(nil), cert.NotifyGroupIDs...),
+		ServerIDs:                    append([]string(nil), cert.ServerIDs...),
+		ActiveValidity:               validity,
+		BundleAvailable:              available,
+		HasUnpublishedDesiredChanges: desiredDiffersFromActive(cert),
+		CreatedAt:                    cert.CreatedAt,
+		UpdatedAt:                    cert.UpdatedAt,
 	}
 	if latest != nil {
 		op := publicOperationFromStore(*latest)
 		out.LatestOperation = &op
 	}
 	out.ActiveVersion = publicVersionFromStore(cert.ActiveVersion)
+	out.PreviousVersion = publicVersionFromStore(cert.PreviousVersion)
 	return out
 }
 

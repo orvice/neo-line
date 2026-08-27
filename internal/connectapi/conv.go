@@ -491,7 +491,7 @@ func certificateVersionToProto(v *certmanager.PublicCertificateVersion) *pb.Cert
 	if v == nil {
 		return nil
 	}
-	return &pb.CertificateVersionMetadata{
+	out := &pb.CertificateVersionMetadata{
 		Id:               v.ID,
 		ConfigSnapshot:   issueConfigSnapshotToProto(v.ConfigSnapshot),
 		LeafFingerprint:  v.LeafFingerprint,
@@ -503,6 +503,10 @@ func certificateVersionToProto(v *certmanager.PublicCertificateVersion) *pb.Cert
 		StagingUntrusted: v.StagingUntrusted,
 		CreatedAt:        unixToTS(v.CreatedAt),
 	}
+	if v.RevokedAt != 0 {
+		out.RevokedAt = unixToTS(v.RevokedAt)
+	}
+	return out
 }
 
 func certificateBundleToProto(b certmanager.CertificateBundle) *pb.CertificateBundle {
@@ -552,6 +556,10 @@ func managedCertificateToProto(c certmanager.PublicManagedCertificate) *pb.Manag
 	if c.ActiveVersion != nil {
 		out.ActiveVersion = certificateVersionToProto(c.ActiveVersion)
 	}
+	if c.PreviousVersion != nil {
+		out.PreviousVersion = certificateVersionToProto(c.PreviousVersion)
+	}
+	out.HasUnpublishedDesiredChanges = c.HasUnpublishedDesiredChanges
 	return out
 }
 

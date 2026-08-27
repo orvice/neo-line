@@ -277,6 +277,7 @@ export interface CertificateVersionMetadata {
   key_type: CertificateKeyType
   staging_untrusted: boolean
   created_at?: string
+  revoked_at?: string
 }
 
 export interface CertificateBundle {
@@ -306,7 +307,9 @@ export interface ManagedCertificate {
   server_ids?: string[]
   active_validity: CertificateValidity
   bundle_available: boolean
+  has_unpublished_desired_changes?: boolean
   active_version?: CertificateVersionMetadata
+  previous_version?: CertificateVersionMetadata
   latest_operation?: CertificateOperation
   created_at: string
   updated_at: string

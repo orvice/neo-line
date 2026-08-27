@@ -66,6 +66,8 @@ type Store interface {
 	FindPendingIssueOperations(ctx context.Context, limit int64) ([]CertificateOperation, error)
 	UpdateCertificateOperation(ctx context.Context, id string, op CertificateOperation) (CertificateOperation, error)
 	ActivateFirstIssueVersion(ctx context.Context, managedCertID string, version CertificateVersion, opID, warning string) error
+	ActivateSubsequentIssueVersion(ctx context.Context, managedCertID string, version CertificateVersion, expectedActiveID, opID, warning string) error
+	ActivatePreviousVersion(ctx context.Context, managedCertID, versionID string) error
 	ValidateNotifyGroupIDs(ctx context.Context, ids []string) error
 	ValidateServerIDs(ctx context.Context, ids []string) error
 

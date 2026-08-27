@@ -32,6 +32,10 @@ func toConnectError(err error) error {
 		return connect.NewError(connect.CodeFailedPrecondition, err)
 	case errors.Is(err, certmanager.ErrBundleNotAvailable):
 		return connect.NewError(connect.CodeFailedPrecondition, err)
+	case errors.Is(err, store.ErrVersionRevoked):
+		return connect.NewError(connect.CodeFailedPrecondition, err)
+	case errors.Is(err, store.ErrVersionNotFound):
+		return connect.NewError(connect.CodeNotFound, err)
 	case errors.Is(err, store.ErrCertificateIssuerNotRetryable):
 		return connect.NewError(connect.CodeFailedPrecondition, err)
 	case errors.Is(err, certmanager.ErrCloudflareTokenInvalid):
