@@ -1020,6 +1020,25 @@ Admin 可在 Web 控制台「证书 → ACME Issuer」或通过 `CertificateIssu
 
 详见 [证书管理 — ACME Issuer](./certificate-management-issuers.md)。
 
+### ManagedCertificate（desired config）
+
+**状态：** 已实现（#17）
+
+Admin 可在 Web 控制台「证书 → 托管证书」或通过 `ManagedCertificateService` 管理证书 desired config：
+
+- 名称全局唯一；`id` 自动生成（`mcert_` 前缀）。
+- 有序 `domains`（≤100）：trim、小写、IDNA、去尾点、泛域名校验、去重；**第一个为主域名**。
+- 引用 **Ready** CertificateIssuer 与存在的 DNSProviderAccount；可选 NotifyGroup 与 Server（**允许零 Server**）。
+- 密钥类型 **EC P-256**（默认）或 **RSA-2048**；`renew_before_days` 默认 **30**；`auto_renew_enabled` 默认 **true**。
+- 创建成功后自动提交 **Pending Issue** operation；重复提交运行中 Issue 返回现有 operation。
+- 尚无 active version 时 `active_validity` 为 **Missing**，bundle 不可用。
+- Operation 进行中禁止修改签发字段；名称、Server 分配与 NotifyGroup 仍可更新。
+- 读取响应不含 DNS/EAB/account key/私钥 secret。
+
+领域区别：**ManagedCertificate**（期望配置与版本容器）、**CertificateVersion**（一次成功签发的不可变 bundle）、**CertificateInfo**（Monitor TLS 探测快照，与托管生命周期独立）。
+
+详见 [证书管理 — 托管证书](./certificate-management-managed-certificates.md)。
+
 ## 未来增强
 
 ### 更多探测类型

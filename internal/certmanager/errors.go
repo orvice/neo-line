@@ -25,3 +25,27 @@ var ErrInvalidDirectoryURL = errors.New("invalid custom directory URL")
 
 // ErrIssuerRegistrationPending is returned when mutating a pending issuer.
 var ErrIssuerRegistrationPending = errors.New("issuer registration is still pending")
+
+// ErrDNSAccountRequired is returned when dns_provider_account_id is missing.
+var ErrDNSAccountRequired = errors.New("dns provider account is required")
+
+// ErrCertificateIssuerRequired is returned when certificate_issuer_id is missing.
+var ErrCertificateIssuerRequired = errors.New("certificate issuer is required")
+
+// ErrManagedCertificateNameRequired is returned when name is empty.
+var ErrManagedCertificateNameRequired = errors.New("managed certificate name is required")
+
+// ErrInvalidDomains is returned when domain normalization or validation fails.
+var ErrInvalidDomains = errors.New("invalid domains")
+
+// ErrTooManyDomains is returned when more than 100 domains are supplied.
+var ErrTooManyDomains = errors.New("at most 100 domains are allowed")
+
+// ErrInvalidKeyType is returned for unsupported key types.
+var ErrInvalidKeyType = errors.New("invalid certificate key type")
+
+// ErrIssuerNotReady is returned when the referenced issuer is not Ready.
+var ErrIssuerNotReady = errors.New("certificate issuer is not ready for issuance")
+
+// ErrIssueFieldsLocked is returned when issue fields are changed during a running operation.
+var ErrIssueFieldsLocked = errors.New("issue fields cannot be changed while an operation is running")

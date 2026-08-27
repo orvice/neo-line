@@ -37,7 +37,7 @@ func requiresAdmin(procedure string) bool {
 		return false
 	}
 	switch service {
-	case "SshService", "McpTokenService", "DNSProviderAccountService", "CertificateIssuerService":
+	case "SshService", "McpTokenService", "DNSProviderAccountService", "CertificateIssuerService", "ManagedCertificateService":
 		return true
 	}
 	return strings.HasPrefix(method, "Create") ||
@@ -185,6 +185,8 @@ func auditResourceType(procedure string) string {
 		return "dns_provider_account"
 	case "CertificateIssuerService":
 		return "certificate_issuer"
+	case "ManagedCertificateService":
+		return "managed_certificate"
 	case "McpTokenService":
 		return "mcp_token"
 	case "SshService":

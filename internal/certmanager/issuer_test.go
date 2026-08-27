@@ -103,6 +103,36 @@ func (f *fakeIssuerStore) DeleteCertificateIssuer(_ context.Context, id string) 
 	return nil
 }
 
+func (f *fakeIssuerStore) ListManagedCertificates(context.Context, int64, string) ([]store.ManagedCertificate, string, error) {
+	return nil, "", nil
+}
+func (f *fakeIssuerStore) CreateManagedCertificate(context.Context, store.ManagedCertificate) (store.ManagedCertificate, error) {
+	return store.ManagedCertificate{}, errors.New("not implemented")
+}
+func (f *fakeIssuerStore) GetManagedCertificate(context.Context, string) (store.ManagedCertificate, error) {
+	return store.ManagedCertificate{}, errors.New("not implemented")
+}
+func (f *fakeIssuerStore) UpdateManagedCertificate(context.Context, string, store.ManagedCertificate) (store.ManagedCertificate, error) {
+	return store.ManagedCertificate{}, errors.New("not implemented")
+}
+func (f *fakeIssuerStore) CreateCertificateOperation(context.Context, store.CertificateOperation) (store.CertificateOperation, error) {
+	return store.CertificateOperation{}, errors.New("not implemented")
+}
+func (f *fakeIssuerStore) GetCertificateOperation(context.Context, string) (store.CertificateOperation, error) {
+	return store.CertificateOperation{}, errors.New("not implemented")
+}
+func (f *fakeIssuerStore) FindRunningCertificateOperation(context.Context, string, string) (store.CertificateOperation, error) {
+	return store.CertificateOperation{}, errors.New("not found")
+}
+func (f *fakeIssuerStore) ListCertificateOperationsByCertificate(context.Context, string, int64) ([]store.CertificateOperation, error) {
+	return nil, nil
+}
+func (f *fakeIssuerStore) LatestCertificateOperation(context.Context, string) (store.CertificateOperation, error) {
+	return store.CertificateOperation{}, errors.New("not found")
+}
+func (f *fakeIssuerStore) ValidateNotifyGroupIDs(context.Context, []string) error { return nil }
+func (f *fakeIssuerStore) ValidateServerIDs(context.Context, []string) error      { return nil }
+
 func startFakeACMEServer(t *testing.T, failRegister bool) *httptest.Server {
 	t.Helper()
 	var nonceCounter int

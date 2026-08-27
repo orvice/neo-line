@@ -21,6 +21,19 @@ type Store interface {
 	GetCertificateIssuer(ctx context.Context, id string) (store.CertificateIssuer, error)
 	UpdateCertificateIssuer(ctx context.Context, id string, issuer store.CertificateIssuer) (store.CertificateIssuer, error)
 	DeleteCertificateIssuer(ctx context.Context, id string) error
+
+	ListManagedCertificates(ctx context.Context, limit int64, pageToken string) ([]store.ManagedCertificate, string, error)
+	CreateManagedCertificate(ctx context.Context, cert store.ManagedCertificate) (store.ManagedCertificate, error)
+	GetManagedCertificate(ctx context.Context, id string) (store.ManagedCertificate, error)
+	UpdateManagedCertificate(ctx context.Context, id string, cert store.ManagedCertificate) (store.ManagedCertificate, error)
+
+	CreateCertificateOperation(ctx context.Context, op store.CertificateOperation) (store.CertificateOperation, error)
+	GetCertificateOperation(ctx context.Context, id string) (store.CertificateOperation, error)
+	FindRunningCertificateOperation(ctx context.Context, managedCertificateID, opType string) (store.CertificateOperation, error)
+	ListCertificateOperationsByCertificate(ctx context.Context, managedCertificateID string, limit int64) ([]store.CertificateOperation, error)
+	LatestCertificateOperation(ctx context.Context, managedCertificateID string) (store.CertificateOperation, error)
+	ValidateNotifyGroupIDs(ctx context.Context, ids []string) error
+	ValidateServerIDs(ctx context.Context, ids []string) error
 }
 
 // TokenVerifier validates DNS provider API tokens before persistence.

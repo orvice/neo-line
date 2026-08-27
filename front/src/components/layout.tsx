@@ -112,7 +112,7 @@ export function Layout() {
                   通知组
                 </NavLink>
                 <NavLink
-                  to="/certificates/issuers"
+                  to="/certificates/managed"
                   className={navClass}
                 >
                   <ShieldCheck className="size-4" />

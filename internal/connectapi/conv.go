@@ -404,6 +404,105 @@ func certificateIssuerDirectoryPreviewToProto(p certmanager.DirectoryPreview) *p
 	}
 }
 
+func certificateKeyTypeToProto(keyType string) pb.CertificateKeyType {
+	switch keyType {
+	case store.CertKeyTypeRSA2048:
+		return pb.CertificateKeyType_CERTIFICATE_KEY_TYPE_RSA_2048
+	case store.CertKeyTypeECP256:
+		return pb.CertificateKeyType_CERTIFICATE_KEY_TYPE_EC_P256
+	default:
+		return pb.CertificateKeyType_CERTIFICATE_KEY_TYPE_UNSPECIFIED
+	}
+}
+
+func certificateValidityToProto(validity string) pb.CertificateValidity {
+	switch validity {
+	case store.CertValidityMissing:
+		return pb.CertificateValidity_CERTIFICATE_VALIDITY_MISSING
+	default:
+		return pb.CertificateValidity_CERTIFICATE_VALIDITY_UNSPECIFIED
+	}
+}
+
+func certificateOperationTypeToProto(opType string) pb.CertificateOperationType {
+	switch opType {
+	case store.CertOpTypeIssue:
+		return pb.CertificateOperationType_CERTIFICATE_OPERATION_TYPE_ISSUE
+	case store.CertOpTypeRenew:
+		return pb.CertificateOperationType_CERTIFICATE_OPERATION_TYPE_RENEW
+	case store.CertOpTypeRevoke:
+		return pb.CertificateOperationType_CERTIFICATE_OPERATION_TYPE_REVOKE
+	default:
+		return pb.CertificateOperationType_CERTIFICATE_OPERATION_TYPE_UNSPECIFIED
+	}
+}
+
+func certificateOperationStatusToProto(status string) pb.CertificateOperationStatus {
+	switch status {
+	case store.CertOpStatusPending:
+		return pb.CertificateOperationStatus_CERTIFICATE_OPERATION_STATUS_PENDING
+	case store.CertOpStatusRunning:
+		return pb.CertificateOperationStatus_CERTIFICATE_OPERATION_STATUS_RUNNING
+	case store.CertOpStatusSucceeded:
+		return pb.CertificateOperationStatus_CERTIFICATE_OPERATION_STATUS_SUCCEEDED
+	case store.CertOpStatusFailed:
+		return pb.CertificateOperationStatus_CERTIFICATE_OPERATION_STATUS_FAILED
+	default:
+		return pb.CertificateOperationStatus_CERTIFICATE_OPERATION_STATUS_UNSPECIFIED
+	}
+}
+
+func issueConfigSnapshotToProto(s store.IssueConfigSnapshot) *pb.IssueConfigSnapshot {
+	return &pb.IssueConfigSnapshot{
+		Domains:              append([]string(nil), s.Domains...),
+		CertificateIssuerId:  s.CertificateIssuerID,
+		DnsProviderAccountId: s.DNSProviderAccountID,
+		KeyType:              certificateKeyTypeToProto(s.KeyType),
+	}
+}
+
+func certificateOperationToProto(op certmanager.PublicOperation) *pb.CertificateOperation {
+	return &pb.CertificateOperation{
+		Id:                   op.ID,
+		ManagedCertificateId: op.ManagedCertificateID,
+		Type:                 certificateOperationTypeToProto(op.Type),
+		Status:               certificateOperationStatusToProto(op.Status),
+		AttemptCount:         op.AttemptCount,
+		ConfigSnapshot:       issueConfigSnapshotToProto(op.ConfigSnapshot),
+		ErrorSummary:         op.ErrorSummary,
+		Warning:              op.Warning,
+		StartedAt:            timeToTSPtr(op.StartedAt),
+		FinishedAt:           timeToTSPtr(op.FinishedAt),
+		NextAttemptAt:        timeToTSPtr(op.NextAttemptAt),
+		CreatedAt:            timeToTS(op.CreatedAt),
+		UpdatedAt:            timeToTS(op.UpdatedAt),
+	}
+}
+
+func managedCertificateToProto(c certmanager.PublicManagedCertificate) *pb.ManagedCertificate {
+	out := &pb.ManagedCertificate{
+		Id:                   c.ID,
+		Name:                 c.Name,
+		Domains:              append([]string(nil), c.Domains...),
+		CertificateIssuerId:  c.CertificateIssuerID,
+		DnsProviderAccountId: c.DNSProviderAccountID,
+		KeyType:              certificateKeyTypeToProto(c.KeyType),
+		RenewBeforeDays:      c.RenewBeforeDays,
+		NotifyGroupIds:       append([]string(nil), c.NotifyGroupIDs...),
+		ServerIds:            append([]string(nil), c.ServerIDs...),
+		ActiveValidity:       certificateValidityToProto(c.ActiveValidity),
+		BundleAvailable:      c.BundleAvailable,
+		CreatedAt:            timeToTS(c.CreatedAt),
+		UpdatedAt:            timeToTS(c.UpdatedAt),
+	}
+	auto := c.AutoRenewEnabled
+	out.AutoRenewEnabled = &auto
+	if c.LatestOperation != nil {
+		out.LatestOperation = certificateOperationToProto(*c.LatestOperation)
+	}
+	return out
+}
+
 func timeToTSPtr(t *time.Time) *timestamppb.Timestamp {
 	if t == nil || t.IsZero() {
 		return nil

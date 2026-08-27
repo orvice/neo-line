@@ -55,3 +55,47 @@ func (s *mongoStore) UpdateCertificateIssuer(ctx context.Context, id string, iss
 func (s *mongoStore) DeleteCertificateIssuer(ctx context.Context, id string) error {
 	return s.st.DeleteCertificateIssuer(ctx, id)
 }
+
+func (s *mongoStore) ListManagedCertificates(ctx context.Context, limit int64, pageToken string) ([]store.ManagedCertificate, string, error) {
+	return s.st.ListManagedCertificates(ctx, limit, pageToken)
+}
+
+func (s *mongoStore) CreateManagedCertificate(ctx context.Context, cert store.ManagedCertificate) (store.ManagedCertificate, error) {
+	return s.st.CreateManagedCertificate(ctx, cert)
+}
+
+func (s *mongoStore) GetManagedCertificate(ctx context.Context, id string) (store.ManagedCertificate, error) {
+	return s.st.GetManagedCertificate(ctx, id)
+}
+
+func (s *mongoStore) UpdateManagedCertificate(ctx context.Context, id string, cert store.ManagedCertificate) (store.ManagedCertificate, error) {
+	return s.st.UpdateManagedCertificate(ctx, id, cert)
+}
+
+func (s *mongoStore) CreateCertificateOperation(ctx context.Context, op store.CertificateOperation) (store.CertificateOperation, error) {
+	return s.st.CreateCertificateOperation(ctx, op)
+}
+
+func (s *mongoStore) GetCertificateOperation(ctx context.Context, id string) (store.CertificateOperation, error) {
+	return s.st.GetCertificateOperation(ctx, id)
+}
+
+func (s *mongoStore) FindRunningCertificateOperation(ctx context.Context, managedCertificateID, opType string) (store.CertificateOperation, error) {
+	return s.st.FindRunningCertificateOperation(ctx, managedCertificateID, opType)
+}
+
+func (s *mongoStore) ListCertificateOperationsByCertificate(ctx context.Context, managedCertificateID string, limit int64) ([]store.CertificateOperation, error) {
+	return s.st.ListCertificateOperationsByCertificate(ctx, managedCertificateID, limit)
+}
+
+func (s *mongoStore) LatestCertificateOperation(ctx context.Context, managedCertificateID string) (store.CertificateOperation, error) {
+	return s.st.LatestCertificateOperation(ctx, managedCertificateID)
+}
+
+func (s *mongoStore) ValidateNotifyGroupIDs(ctx context.Context, ids []string) error {
+	return s.st.ValidateNotifyGroupIDs(ctx, ids)
+}
+
+func (s *mongoStore) ValidateServerIDs(ctx context.Context, ids []string) error {
+	return s.st.ValidateServerIDs(ctx, ids)
+}

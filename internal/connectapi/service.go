@@ -48,6 +48,7 @@ func Register(r *gin.Engine, st store.Store, certMgr *certmanager.Manager, ssh *
 	mux.Handle(neolinev1connect.NewNotifyGroupServiceHandler(svc, opts))
 	mux.Handle(neolinev1connect.NewDNSProviderAccountServiceHandler(svc, opts))
 	mux.Handle(neolinev1connect.NewCertificateIssuerServiceHandler(svc, opts))
+	mux.Handle(neolinev1connect.NewManagedCertificateServiceHandler(svc, opts))
 	mux.Handle(neolinev1connect.NewMcpTokenServiceHandler(svc, opts))
 	mux.Handle(neolinev1connect.NewSshServiceHandler(svc, opts))
 

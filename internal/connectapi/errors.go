@@ -20,15 +20,15 @@ func toConnectError(err error) error {
 		return connect.NewError(connect.CodeNotFound, errors.New("not found"))
 	case errors.Is(err, store.ErrInvalidCredentials):
 		return connect.NewError(connect.CodeUnauthenticated, errors.New("invalid email or password"))
-	case errors.Is(err, store.ErrGroupNameTaken), errors.Is(err, store.ErrNotifyGroupNameTaken), errors.Is(err, store.ErrDNSProviderAccountNameTaken), errors.Is(err, store.ErrCertificateIssuerNameTaken):
+	case errors.Is(err, store.ErrGroupNameTaken), errors.Is(err, store.ErrNotifyGroupNameTaken), errors.Is(err, store.ErrDNSProviderAccountNameTaken), errors.Is(err, store.ErrCertificateIssuerNameTaken), errors.Is(err, store.ErrManagedCertificateNameTaken):
 		return connect.NewError(connect.CodeAlreadyExists, err)
-	case errors.Is(err, store.ErrInvalidGroupIDs), errors.Is(err, store.ErrInvalidNotifyGroupIDs):
+	case errors.Is(err, store.ErrInvalidGroupIDs), errors.Is(err, store.ErrInvalidNotifyGroupIDs), errors.Is(err, store.ErrInvalidServerIDs):
 		return connect.NewError(connect.CodeInvalidArgument, err)
-	case errors.Is(err, store.ErrInvalidDNSProvider), errors.Is(err, store.ErrInvalidPropagationTimeout), errors.Is(err, certmanager.ErrTokenRequired):
+	case errors.Is(err, store.ErrInvalidDNSProvider), errors.Is(err, store.ErrInvalidPropagationTimeout), errors.Is(err, certmanager.ErrTokenRequired), errors.Is(err, certmanager.ErrManagedCertificateNameRequired), errors.Is(err, certmanager.ErrInvalidDomains), errors.Is(err, certmanager.ErrTooManyDomains), errors.Is(err, certmanager.ErrInvalidKeyType), errors.Is(err, certmanager.ErrCertificateIssuerRequired), errors.Is(err, certmanager.ErrDNSAccountRequired):
 		return connect.NewError(connect.CodeInvalidArgument, err)
-	case errors.Is(err, store.ErrInvalidCertificateIssuerCAType), errors.Is(err, certmanager.ErrIssuerNameRequired), errors.Is(err, certmanager.ErrIssuerEmailRequired), errors.Is(err, certmanager.ErrTermsOfServiceRequired), errors.Is(err, certmanager.ErrEABRequired), errors.Is(err, certmanager.ErrCustomDirectoryRequired), errors.Is(err, certmanager.ErrInvalidDirectoryURL), errors.Is(err, certmanager.ErrIssuerRegistrationPending):
+	case errors.Is(err, store.ErrInvalidCertificateIssuerCAType), errors.Is(err, certmanager.ErrIssuerNameRequired), errors.Is(err, certmanager.ErrIssuerEmailRequired), errors.Is(err, certmanager.ErrTermsOfServiceRequired), errors.Is(err, certmanager.ErrEABRequired), errors.Is(err, certmanager.ErrCustomDirectoryRequired), errors.Is(err, certmanager.ErrInvalidDirectoryURL), errors.Is(err, certmanager.ErrIssuerRegistrationPending), errors.Is(err, certmanager.ErrIssuerNotReady):
 		return connect.NewError(connect.CodeInvalidArgument, err)
-	case errors.Is(err, store.ErrCertificateIssuerImmutable):
+	case errors.Is(err, store.ErrCertificateIssuerImmutable), errors.Is(err, certmanager.ErrIssueFieldsLocked):
 		return connect.NewError(connect.CodeFailedPrecondition, err)
 	case errors.Is(err, store.ErrCertificateIssuerNotRetryable):
 		return connect.NewError(connect.CodeFailedPrecondition, err)

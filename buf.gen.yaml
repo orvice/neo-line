@@ -9,3 +9,8 @@ plugins:
     out: pkg/proto
     opt:
       - paths=source_relative
+  - remote: buf.build/bufbuild/es
+    out: front/src/gen
+    opt:
+      - target=ts
+      - import_extension=js
