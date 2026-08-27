@@ -351,6 +351,22 @@ export interface CreateMcpTokenResponse {
   secret: string
 }
 
+export interface CertificateAccessToken {
+  id: string
+  server_id: string
+  name: string
+  prefix: string
+  created_at: string
+  last_used_at?: string
+  expires_at?: string
+  expired: boolean
+}
+
+export interface CreateCertificateAccessTokenResponse {
+  token: CertificateAccessToken
+  secret: string
+}
+
 export interface AuditLog {
   id: string
   source: string

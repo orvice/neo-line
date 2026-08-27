@@ -9,6 +9,7 @@ import type { CertificateKeyType } from "@/lib/types"
 import { useAuth } from "@/lib/auth"
 import { CertificateNavTabs } from "@/components/certificate-nav-tabs"
 import { ManagedCertificateForm } from "@/components/managed-certificate-form"
+import { ManagedCertificateServerAssignment } from "@/components/managed-certificate-server-assignment"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { formatTime } from "@/lib/format"
@@ -70,17 +71,11 @@ export function ManagedCertificateDetailPage() {
     queryFn: () => api.listNotifyGroups({ page_size: 200 }),
     enabled: Boolean(id),
   })
-  const serverQuery = useQuery({
-    queryKey: ["servers"],
-    queryFn: () => api.listServers({ page_size: 200 }),
-    enabled: Boolean(id),
-  })
 
   const cert = certQuery.data?.certificate
   const issuers = issuerQuery.data?.issuers ?? []
   const dnsAccounts = dnsQuery.data?.accounts ?? []
   const notifyGroups = notifyQuery.data?.groups ?? []
-  const servers = serverQuery.data?.servers ?? []
 
   const issuerName =
     issuers.find((i) => i.id === cert?.certificate_issuer_id)?.name ??
@@ -201,19 +196,6 @@ export function ManagedCertificateDetailPage() {
                           .map(
                             (nid) =>
                               notifyGroups.find((g) => g.id === nid)?.name ?? nid
-                          )
-                          .join("、")}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-muted-foreground">Server 分配</dt>
-                  <dd>
-                    {(cert.server_ids ?? []).length === 0
-                      ? "（无，可先签发再分配）"
-                      : (cert.server_ids ?? [])
-                          .map(
-                            (sid) =>
-                              servers.find((s) => s.id === sid)?.name ?? sid
                           )
                           .join("、")}
                   </dd>
@@ -357,6 +339,13 @@ export function ManagedCertificateDetailPage() {
             </Card>
           </div>
         </div>
+      )}
+
+      {cert && (
+        <ManagedCertificateServerAssignment
+          certificate={cert}
+          readOnly={!user}
+        />
       )}
 
       {cert && (

@@ -592,6 +592,32 @@ func mcpTokenToProto(t store.McpToken) *pb.McpToken {
 	}
 }
 
+func certificateAccessTokenToProto(t store.CertificateAccessToken) *pb.CertificateAccessToken {
+	now := time.Now().UTC()
+	out := &pb.CertificateAccessToken{
+		Id:        t.ID,
+		ServerId:  t.ServerID,
+		Name:      t.Name,
+		Prefix:    t.Prefix,
+		CreatedAt: timeToTS(t.CreatedAt),
+		Expired:   storeCertificateAccessTokenExpired(t, now),
+	}
+	if t.LastUsedAt != nil && !t.LastUsedAt.IsZero() {
+		out.LastUsedAt = timeToTS(*t.LastUsedAt)
+	}
+	if t.ExpiresAt != nil && !t.ExpiresAt.IsZero() {
+		out.ExpiresAt = timeToTS(*t.ExpiresAt)
+	}
+	return out
+}
+
+func storeCertificateAccessTokenExpired(t store.CertificateAccessToken, now time.Time) bool {
+	if t.ExpiresAt == nil || t.ExpiresAt.IsZero() {
+		return false
+	}
+	return !t.ExpiresAt.After(now)
+}
+
 func userToProto(id, email, role string) *pb.User {
 	return &pb.User{Id: id, Email: email, Role: role}
 }
