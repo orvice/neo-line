@@ -1,14 +1,30 @@
 import { useMemo, useState } from "react"
-import { Link } from "react-router-dom"
+import { Link, useSearchParams } from "react-router-dom"
 import { useQuery } from "@tanstack/react-query"
-import { Plus, RefreshCw, Shield } from "lucide-react"
+import { Plus, RefreshCw, Shield, X } from "lucide-react"
 
 import { api, ApiError } from "@/lib/api"
-import type { CertificateValidity, ManagedCertificate } from "@/lib/types"
+import type { ManagedCertificate } from "@/lib/types"
 import { useAuth } from "@/lib/auth"
+import {
+  activeDomains,
+  certQueryKeys,
+  managedCertListFilterLabel,
+  matchesManagedCertFilter,
+  operationInFlight,
+  parseManagedCertListFilter,
+} from "@/lib/certificate-ui"
+import { formatManagedCertExpiry } from "@/lib/format"
 import { CertificateNavTabs } from "@/components/certificate-nav-tabs"
+import {
+  CertificateAvailabilityBadge,
+  CertificateOperationBadge,
+  CertificateStagingBadge,
+  CertificateValidityBadge,
+} from "@/components/certificate-status-badges"
 import { ManagedCertificateForm } from "@/components/managed-certificate-form"
 import { TableSkeleton } from "@/components/table-skeleton"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
@@ -20,113 +36,78 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { formatTime } from "@/lib/format"
 
-const VALIDITY_LABELS: Record<CertificateValidity, string> = {
-  Missing: "Missing",
-  Valid: "Valid",
-  RenewalDue: "RenewalDue",
-  Expired: "Expired",
-  Revoked: "Revoked",
-  Unspecified: "—",
+function AutoRenewCell({ enabled }: { enabled: boolean }) {
+  return enabled ? (
+    <span className="text-sm">开启</span>
+  ) : (
+    <span className="text-muted-foreground text-sm">关闭</span>
+  )
 }
 
-function validityBadge(validity: CertificateValidity) {
-  const base = "inline-flex rounded-full px-2 py-0.5 text-xs font-medium"
-  switch (validity) {
-    case "Missing":
-      return (
-        <span className={`${base} bg-muted text-muted-foreground`}>Missing</span>
-      )
-    case "Valid":
-      return (
-        <span className={`${base} bg-emerald-500/15 text-emerald-700 dark:text-emerald-300`}>
-          Valid
-        </span>
-      )
-    case "RenewalDue":
-      return (
-        <span className={`${base} bg-amber-500/15 text-amber-700 dark:text-amber-300`}>
-          RenewalDue
-        </span>
-      )
-    case "Expired":
-      return (
-        <span className={`${base} bg-orange-500/15 text-orange-700 dark:text-orange-300`}>
-          Expired
-        </span>
-      )
-    case "Revoked":
-      return (
-        <span className={`${base} bg-red-500/15 text-red-700 dark:text-red-300`}>
-          Revoked
-        </span>
-      )
-    default:
-      return (
-        <span className={`${base} bg-muted text-muted-foreground`}>
-          {VALIDITY_LABELS[validity]}
-        </span>
-      )
-  }
-}
-
-function opStatusBadge(cert: ManagedCertificate) {
-  const op = cert.latest_operation
-  if (!op) return <span className="text-muted-foreground text-sm">—</span>
-  const base = "inline-flex rounded-full px-2 py-0.5 text-xs font-medium"
-  if (op.status === "Pending") {
-    return (
-      <span className={`${base} bg-amber-500/15 text-amber-700 dark:text-amber-300`}>
-        Issue · Pending
-      </span>
-    )
-  }
-  if (op.status === "Running") {
-    return (
-      <span className={`${base} bg-blue-500/15 text-blue-700 dark:text-blue-300`}>
-        Issue · Running
-      </span>
-    )
-  }
+function DomainsCell({ domains }: { domains: string[] }) {
+  if (domains.length === 0) return <span className="text-muted-foreground">—</span>
+  const primary = domains[0]
   return (
-    <span className="text-muted-foreground text-sm">
-      {op.type} · {op.status}
-    </span>
+    <div className="min-w-[120px] max-w-[220px]">
+      <div className="truncate font-mono text-xs" title={primary}>
+        {primary}
+      </div>
+      {domains.length > 1 ? (
+        <div className="text-muted-foreground truncate text-xs" title={domains.slice(1).join(", ")}>
+          +{domains.length - 1} SAN
+        </div>
+      ) : null}
+    </div>
   )
 }
 
 export function ManagedCertificatesPage() {
   const { user } = useAuth()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [search, setSearch] = useState("")
   const [formOpen, setFormOpen] = useState(false)
+  const listFilter = parseManagedCertListFilter(searchParams)
 
   const { data, isLoading, isError, error, refetch, isFetching } = useQuery({
-    queryKey: ["managed-certificates"],
+    queryKey: certQueryKeys.list,
     queryFn: () => api.listManagedCertificates({ page_size: 200 }),
     refetchInterval: (q) => {
       const certs = q.state.data?.certificates ?? []
-      return certs.some(
-        (c) =>
-          c.latest_operation?.status === "Pending" ||
-          c.latest_operation?.status === "Running"
-      )
-        ? 3000
-        : false
+      return certs.some((c) => operationInFlight(c.latest_operation)) ? 3000 : false
     },
   })
 
+  const issuerQuery = useQuery({
+    queryKey: certQueryKeys.issuers,
+    queryFn: () => api.listCertificateIssuers({ page_size: 200 }),
+  })
+
   const certificates = data?.certificates ?? []
+  const issuerNames = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const issuer of issuerQuery.data?.issuers ?? []) {
+      map.set(issuer.id, issuer.name)
+    }
+    return map
+  }, [issuerQuery.data])
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
-    if (!q) return certificates
-    return certificates.filter(
-      (c) =>
+    return certificates.filter((c) => {
+      if (!matchesManagedCertFilter(c, listFilter)) return false
+      if (!q) return true
+      return (
         c.name.toLowerCase().includes(q) ||
-        c.domains.some((d) => d.toLowerCase().includes(q))
-    )
-  }, [certificates, search])
+        c.domains.some((d) => d.toLowerCase().includes(q)) ||
+        activeDomains(c).some((d) => d.toLowerCase().includes(q))
+      )
+    })
+  }, [certificates, listFilter, search])
+
+  function clearFilter() {
+    setSearchParams({})
+  }
 
   return (
     <div className="animate-enter flex flex-col gap-6">
@@ -157,6 +138,25 @@ export function ManagedCertificatesPage() {
         </div>
       </div>
 
+      {listFilter.kind !== "all" ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge variant="secondary" className="gap-1 pr-1">
+            筛选：{managedCertListFilterLabel(listFilter)}
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="size-5"
+              onClick={clearFilter}
+              title="清除筛选"
+            >
+              <X className="size-3" />
+            </Button>
+          </Badge>
+          <span className="text-muted-foreground text-sm">匹配 {filtered.length} 张</span>
+        </div>
+      ) : null}
+
       <Input
         placeholder="搜索名称或域名…"
         value={search}
@@ -167,62 +167,105 @@ export function ManagedCertificatesPage() {
       <Card>
         <CardContent className="p-0">
           {isLoading ? (
-            <TableSkeleton columns={6} rows={5} />
+            <TableSkeleton columns={10} rows={5} />
           ) : isError ? (
             <div className="text-destructive p-6 text-sm">
-              {error instanceof ApiError ? error.message : "加载失败"}
+              {error instanceof ApiError ? error.message : "加载托管证书失败，请稍后重试"}
             </div>
           ) : filtered.length === 0 ? (
             <div className="text-muted-foreground flex flex-col items-center gap-2 p-10 text-center text-sm">
               <Shield className="size-8 opacity-40" />
-              <p>暂无托管证书</p>
-              {user ? (
+              <p>{listFilter.kind === "all" ? "暂无托管证书" : "当前筛选下暂无证书"}</p>
+              {user && listFilter.kind === "all" ? (
                 <Button variant="outline" size="sm" onClick={() => setFormOpen(true)}>
                   创建第一张证书
                 </Button>
               ) : null}
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>名称</TableHead>
-                  <TableHead>主域名</TableHead>
-                  <TableHead>有效性</TableHead>
-                  <TableHead>Operation</TableHead>
-                  <TableHead>创建时间</TableHead>
-                  <TableHead className="w-[80px]" />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filtered.map((c) => (
-                  <TableRow key={c.id}>
-                    <TableCell className="font-medium">{c.name}</TableCell>
-                    <TableCell className="text-muted-foreground max-w-[200px] truncate">
-                      {c.domains[0] ?? "—"}
-                      {c.domains.length > 1 ? (
-                        <span className="text-xs"> +{c.domains.length - 1}</span>
-                      ) : null}
-                    </TableCell>
-                    <TableCell>{validityBadge(c.active_validity)}</TableCell>
-                    <TableCell>{opStatusBadge(c)}</TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
-                      {formatTime(c.created_at)}
-                    </TableCell>
-                    <TableCell>
-                      <Button asChild variant="ghost" size="sm">
-                        <Link to={`/certificates/managed/${c.id}`}>详情</Link>
-                      </Button>
-                    </TableCell>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="min-w-[120px]">名称</TableHead>
+                    <TableHead className="min-w-[140px]">Active 域名</TableHead>
+                    <TableHead className="min-w-[100px]">Issuer</TableHead>
+                    <TableHead className="text-center">Server</TableHead>
+                    <TableHead>有效性</TableHead>
+                    <TableHead>可下载</TableHead>
+                    <TableHead className="min-w-[130px]">到期</TableHead>
+                    <TableHead>自动续期</TableHead>
+                    <TableHead className="min-w-[140px]">最近 Operation</TableHead>
+                    <TableHead className="w-[72px]" />
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {filtered.map((c) => (
+                    <ManagedCertificateRow
+                      key={c.id}
+                      cert={c}
+                      issuerName={issuerNames.get(c.certificate_issuer_id) ?? c.certificate_issuer_id}
+                    />
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>
 
       <ManagedCertificateForm open={formOpen} onOpenChange={setFormOpen} />
     </div>
+  )
+}
+
+function ManagedCertificateRow({
+  cert,
+  issuerName,
+}: {
+  cert: ManagedCertificate
+  issuerName: string
+}) {
+  const domains = activeDomains(cert)
+  const staging = cert.active_version?.staging_untrusted
+
+  return (
+    <TableRow>
+      <TableCell className="font-medium">
+        <div className="flex min-w-0 flex-col gap-1">
+          <span className="truncate">{cert.name}</span>
+          {staging ? <CertificateStagingBadge /> : null}
+        </div>
+      </TableCell>
+      <TableCell>
+        <DomainsCell domains={domains} />
+      </TableCell>
+      <TableCell className="max-w-[120px] truncate text-sm" title={issuerName}>
+        {issuerName}
+      </TableCell>
+      <TableCell className="text-center tabular-nums">
+        {(cert.server_ids ?? []).length}
+      </TableCell>
+      <TableCell>
+        <CertificateValidityBadge validity={cert.active_validity} />
+      </TableCell>
+      <TableCell>
+        <CertificateAvailabilityBadge available={cert.bundle_available} />
+      </TableCell>
+      <TableCell className="text-sm whitespace-nowrap">
+        {formatManagedCertExpiry(cert.active_version?.not_after)}
+      </TableCell>
+      <TableCell>
+        <AutoRenewCell enabled={cert.auto_renew_enabled} />
+      </TableCell>
+      <TableCell>
+        <CertificateOperationBadge operation={cert.latest_operation} />
+      </TableCell>
+      <TableCell>
+        <Button asChild variant="ghost" size="sm">
+          <Link to={`/certificates/managed/${cert.id}`}>详情</Link>
+        </Button>
+      </TableCell>
+    </TableRow>
   )
 }

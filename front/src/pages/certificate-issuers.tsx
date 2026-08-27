@@ -5,6 +5,7 @@ import { toast } from "sonner"
 
 import { api, ApiError } from "@/lib/api"
 import type { CertificateIssuer } from "@/lib/types"
+import { certQueryKeys } from "@/lib/certificate-ui"
 import { useAuth } from "@/lib/auth"
 import { CertificateNavTabs } from "@/components/certificate-nav-tabs"
 import { CertificateIssuerForm } from "@/components/certificate-issuer-form"
@@ -22,6 +23,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { formatTime } from "@/lib/format"
+import { IssuerRegistrationBadge } from "@/components/certificate-status-badges"
 
 const CA_LABELS: Record<string, string> = {
   lets_encrypt_production: "Let's Encrypt 生产",
@@ -29,20 +31,6 @@ const CA_LABELS: Record<string, string> = {
   zerossl: "ZeroSSL",
   google_public_ca: "Google Public CA",
   custom: "自定义",
-}
-
-function statusBadge(issuer: CertificateIssuer) {
-  const base = "inline-flex rounded-full px-2 py-0.5 text-xs font-medium"
-  switch (issuer.registration_status) {
-    case "Ready":
-      return <span className={`${base} bg-emerald-500/15 text-emerald-700 dark:text-emerald-300`}>Ready</span>
-    case "Pending":
-      return <span className={`${base} bg-amber-500/15 text-amber-700 dark:text-amber-300`}>Pending</span>
-    case "Failed":
-      return <span className={`${base} bg-red-500/15 text-red-700 dark:text-red-300`}>Failed</span>
-    default:
-      return <span className={`${base} bg-muted text-muted-foreground`}>Unknown</span>
-  }
 }
 
 export function CertificateIssuersPage() {
@@ -54,7 +42,7 @@ export function CertificateIssuersPage() {
   const [deleting, setDeleting] = useState<CertificateIssuer | undefined>()
 
   const { data, isLoading, isError, error, refetch, isFetching } = useQuery({
-    queryKey: ["certificate-issuers"],
+    queryKey: certQueryKeys.issuers,
     queryFn: () => api.listCertificateIssuers({ page_size: 200 }),
     refetchInterval: (q) => {
       const issuers = q.state.data?.issuers ?? []
@@ -176,7 +164,7 @@ export function CertificateIssuersPage() {
                     <TableCell className="text-muted-foreground text-sm">{i.email}</TableCell>
                     <TableCell>
                       <div className="flex flex-col gap-1">
-                        {statusBadge(i)}
+                        <IssuerRegistrationBadge status={i.registration_status} />
                         {i.registration_error ? (
                           <span className="text-destructive max-w-xs truncate text-xs" title={i.registration_error}>
                             {i.registration_error}

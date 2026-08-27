@@ -6,6 +6,7 @@ import { toast } from "sonner"
 
 import { api, ApiError } from "@/lib/api"
 import type { DNSProviderAccount } from "@/lib/types"
+import { certQueryKeys } from "@/lib/certificate-ui"
 import { useAuth } from "@/lib/auth"
 import { ConfirmDialog } from "@/components/confirm-dialog"
 import { DNSProviderAccountForm } from "@/components/dns-provider-account-form"
@@ -32,7 +33,7 @@ export function DNSProviderAccountsPage() {
   const [deleting, setDeleting] = useState<DNSProviderAccount | undefined>()
 
   const { data, isLoading, isError, error, refetch, isFetching } = useQuery({
-    queryKey: ["dns-provider-accounts"],
+    queryKey: certQueryKeys.dnsAccounts,
     queryFn: () => api.listDNSProviderAccounts({ page_size: 200 }),
   })
 

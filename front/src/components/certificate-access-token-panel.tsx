@@ -5,6 +5,7 @@ import { toast } from "sonner"
 
 import { api, ApiError } from "@/lib/api"
 import type { CertificateAccessToken } from "@/lib/types"
+import { certQueryKeys } from "@/lib/certificate-ui"
 import { formatRelative, formatTime } from "@/lib/format"
 import { ConfirmDialog } from "@/components/confirm-dialog"
 import { Badge } from "@/components/ui/badge"
@@ -76,7 +77,7 @@ export function CertificateAccessTokenPanel({ serverId }: { serverId: string }) 
   const [deleting, setDeleting] = useState<CertificateAccessToken | undefined>()
 
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ["certificate-access-tokens", serverId],
+    queryKey: certQueryKeys.tokens(serverId),
     queryFn: () => api.listCertificateAccessTokens(serverId),
     enabled: Boolean(serverId),
   })
@@ -95,7 +96,7 @@ export function CertificateAccessTokenPanel({ serverId }: { serverId: string }) 
     },
     onSuccess: (res) => {
       queryClient.invalidateQueries({
-        queryKey: ["certificate-access-tokens", serverId],
+        queryKey: certQueryKeys.tokens(serverId),
       })
       setNewSecret(res.secret)
       setCreateOpen(false)
@@ -112,7 +113,7 @@ export function CertificateAccessTokenPanel({ serverId }: { serverId: string }) 
       api.deleteCertificateAccessToken(serverId, tokenId),
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["certificate-access-tokens", serverId],
+        queryKey: certQueryKeys.tokens(serverId),
       })
       toast.success("Token 已吊销")
       setDeleting(undefined)

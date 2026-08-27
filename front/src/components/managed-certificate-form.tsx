@@ -4,6 +4,7 @@ import { toast } from "sonner"
 
 import { api, ApiError } from "@/lib/api"
 import type { CertificateKeyType, ManagedCertificate } from "@/lib/types"
+import { certQueryKeys } from "@/lib/certificate-ui"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -129,10 +130,10 @@ export function ManagedCertificateForm({
         : api.createManagedCertificate(body)
     },
     onSuccess: (res) => {
-      queryClient.invalidateQueries({ queryKey: ["managed-certificates"] })
+      queryClient.invalidateQueries({ queryKey: certQueryKeys.list })
       if (certificate) {
         queryClient.invalidateQueries({
-          queryKey: ["managed-certificate", certificate.id],
+          queryKey: certQueryKeys.detail(certificate.id),
         })
       }
       toast.success(isEdit ? "托管证书已更新" : "托管证书已创建")
