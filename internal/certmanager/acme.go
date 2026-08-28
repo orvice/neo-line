@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	corelog "butterfly.orx.me/core/log"
 	"github.com/go-acme/lego/v4/certcrypto"
 	"github.com/go-acme/lego/v4/certificate"
 	"github.com/go-acme/lego/v4/challenge"
@@ -66,7 +67,7 @@ func NewLegoACMEClient(httpClient *http.Client) *LegoACMEClient {
 	}
 	return &LegoACMEClient{
 		httpClient: httpClient,
-		logger:     slog.Default().With("component", "certmanager"),
+		logger:     corelog.FromContext(context.Background()).With("component", "certmanager"),
 	}
 }
 

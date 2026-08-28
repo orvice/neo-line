@@ -7,6 +7,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	corelog "butterfly.orx.me/core/log"
 	"github.com/orvice/neo-line/internal/certnotify"
 	"github.com/orvice/neo-line/internal/store"
 )
@@ -118,7 +119,7 @@ func NewManagerWithACME(st Store, verifier TokenVerifier, acme ACMEClient) *Mana
 }
 
 func NewManagerWithDeps(st Store, verifier TokenVerifier, acme ACMEClient, dnsFactory DNSProviderFactory) *Manager {
-	logger := slog.Default().With("component", "certmanager")
+	logger := corelog.FromContext(context.Background()).With("component", "certmanager")
 	manager := &Manager{
 		store:      st,
 		verifier:   verifier,
