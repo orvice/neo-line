@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 
+	corelog "butterfly.orx.me/core/log"
 	"github.com/orvice/neo-line/internal/certmanager"
 	"github.com/orvice/neo-line/internal/certnotify"
 	"github.com/orvice/neo-line/internal/store"
@@ -44,7 +45,7 @@ type CertificateRuntime struct {
 // InitCertificates constructs the certificate manager and notification dispatcher.
 func InitCertificates(mongoStore *store.MongoStore, logger *slog.Logger) *CertificateRuntime {
 	if logger == nil {
-		logger = slog.Default()
+		logger = corelog.FromContext(context.Background())
 	}
 	certMgr := certmanager.NewManagerWithDeps(
 		certmanager.NewStore(mongoStore),

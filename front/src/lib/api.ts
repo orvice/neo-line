@@ -1210,6 +1210,13 @@ export const api = {
         next_page_token: res.nextPageToken,
       }
     }),
+  getCertificateIssuer: (id: string) =>
+    call<{ issuer: CertificateIssuer }>(async () => {
+      const res = await issuerClient.getCertificateIssuer({
+        certificateIssuerId: id,
+      })
+      return { issuer: certificateIssuerFromProto(res.issuer!) }
+    }),
   getCertificateIssuerDirectoryPreview: (caType: string, customDirectoryUrl?: string) =>
     call<{ preview: CertificateIssuerDirectoryPreview }>(async () => {
       const res = await issuerClient.getCertificateIssuerDirectoryPreview({

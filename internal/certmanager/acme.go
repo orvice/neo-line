@@ -10,10 +10,12 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
 
+	corelog "butterfly.orx.me/core/log"
 	"github.com/go-acme/lego/v4/certcrypto"
 	"github.com/go-acme/lego/v4/certificate"
 	"github.com/go-acme/lego/v4/challenge"
@@ -29,10 +31,13 @@ type DirectoryMeta struct {
 
 // IssueRequest carries parameters for ACME certificate issuance.
 type IssueRequest struct {
-	Issuer  store.CertificateIssuer
-	Domains []string
-	KeyType string
-	DNS     challenge.Provider
+	Issuer               store.CertificateIssuer
+	Domains              []string
+	KeyType              string
+	DNS                  challenge.Provider
+	OperationID          string
+	ManagedCertificateID string
+	AttemptCount         uint32
 }
 
 // IssueResult is raw PEM material returned by ACME issuance before validation.
@@ -53,13 +58,17 @@ type ACMEClient interface {
 // root trust store for HTTPS directory endpoints.
 type LegoACMEClient struct {
 	httpClient *http.Client
+	logger     *slog.Logger
 }
 
 func NewLegoACMEClient(httpClient *http.Client) *LegoACMEClient {
 	if httpClient == nil {
 		httpClient = &http.Client{Timeout: 30 * time.Second}
 	}
-	return &LegoACMEClient{httpClient: httpClient}
+	return &LegoACMEClient{
+		httpClient: httpClient,
+		logger:     corelog.FromContext(context.Background()).With("component", "certmanager"),
+	}
 }
 
 type legoUser struct {
@@ -160,33 +169,33 @@ func legoCertKeyType(keyType string) certcrypto.KeyType {
 func (c *LegoACMEClient) IssueCertificate(ctx context.Context, req IssueRequest) (IssueResult, error) {
 	key, err := parseAccountKeyPEM(req.Issuer.AccountKeyPEM)
 	if err != nil {
-		return IssueResult{}, err
+		return IssueResult{}, withOperationStage("parse_account_key", err)
 	}
 	user := &legoUser{email: req.Issuer.Email, key: key}
 	config := lego.NewConfig(user)
 	config.CADirURL = req.Issuer.DirectoryURL
 	config.Certificate.KeyType = legoCertKeyType(req.KeyType)
-	config.HTTPClient = c.httpClient
+	config.HTTPClient = newACMEDiagnosticClient(c.httpClient, c.logger, req)
 	client, err := lego.NewClient(config)
 	if err != nil {
-		return IssueResult{}, err
+		return IssueResult{}, withOperationStage("create_acme_client", err)
 	}
 	if req.DNS == nil {
-		return IssueResult{}, errors.New("dns provider is required")
+		return IssueResult{}, withOperationStage("validate_dns_provider", errors.New("dns provider is required"))
 	}
 	if err := client.Challenge.SetDNS01Provider(req.DNS); err != nil {
-		return IssueResult{}, err
+		return IssueResult{}, withOperationStage("configure_dns_challenge", err)
 	}
 
 	select {
 	case <-ctx.Done():
-		return IssueResult{}, ctx.Err()
+		return IssueResult{}, withOperationStage("acme_context", ctx.Err())
 	default:
 	}
 
 	certKey, err := generateCertificateKey(req.KeyType)
 	if err != nil {
-		return IssueResult{}, err
+		return IssueResult{}, withOperationStage("generate_certificate_key", err)
 	}
 	resource, err := client.Certificate.Obtain(certificate.ObtainRequest{
 		Domains:    req.Domains,
@@ -194,15 +203,15 @@ func (c *LegoACMEClient) IssueCertificate(ctx context.Context, req IssueRequest)
 		PrivateKey: certKey,
 	})
 	if err != nil {
-		return IssueResult{}, err
+		return IssueResult{}, withOperationStage("acme_obtain", err)
 	}
 	fullchain, err := assembleFullchain(resource.Certificate, resource.IssuerCertificate)
 	if err != nil {
-		return IssueResult{}, err
+		return IssueResult{}, withOperationStage("assemble_fullchain", err)
 	}
 	keyPEM, err := marshalPrivateKeyPKCS8(certKey)
 	if err != nil {
-		return IssueResult{}, err
+		return IssueResult{}, withOperationStage("marshal_certificate_key", err)
 	}
 	return IssueResult{FullchainPEM: fullchain, PrivateKeyPEM: keyPEM}, nil
 }
@@ -231,6 +240,13 @@ type noopDNSProvider struct{}
 
 func (noopDNSProvider) Present(_, _, _ string) error { return nil }
 func (noopDNSProvider) CleanUp(_, _, _ string) error { return nil }
+
+// SetLogger configures structured ACME request logging.
+func (c *LegoACMEClient) SetLogger(logger *slog.Logger) {
+	if c != nil && logger != nil {
+		c.logger = logger
+	}
+}
 
 // SetHTTPClient replaces the HTTP client (used by tests with httptest servers).
 func (c *LegoACMEClient) SetHTTPClient(client *http.Client) {

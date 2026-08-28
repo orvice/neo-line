@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"butterfly.orx.me/core/app"
+	corelog "butterfly.orx.me/core/log"
 	bfs3 "butterfly.orx.me/core/store/s3"
 	"github.com/gin-gonic/gin"
 	"github.com/orvice/neo-line/internal/alert"
@@ -155,7 +156,7 @@ func main() {
 				if sshRunner != nil {
 					log.Println("SSH remote execution enabled")
 				}
-				certRuntime = bootstrap.InitCertificates(mongoStore, slog.Default())
+				certRuntime = bootstrap.InitCertificates(mongoStore, corelog.FromContext(context.Background()))
 				return nil
 			},
 			func() error {
