@@ -3,12 +3,16 @@ package certmanager
 import (
 	"fmt"
 	"net/http"
+	"os"
+	"strconv"
 	"time"
 
 	"github.com/go-acme/lego/v4/challenge"
 	"github.com/go-acme/lego/v4/providers/dns/cloudflare"
 	"github.com/orvice/neo-line/internal/store"
 )
+
+const legoDisableCNAMESupportEnv = "LEGO_DISABLE_CNAME_SUPPORT"
 
 // DNSProviderFactory builds DNS-01 challenge providers from stored accounts.
 type DNSProviderFactory interface {
@@ -21,7 +25,19 @@ type CloudflareDNSFactory struct {
 }
 
 func NewCloudflareDNSFactory(httpClient *http.Client) *CloudflareDNSFactory {
+	configureLegoDNS01CNAMEPolicy()
 	return &CloudflareDNSFactory{HTTPClient: httpClient}
+}
+
+func configureLegoDNS01CNAMEPolicy() {
+	if _, configured := os.LookupEnv(legoDisableCNAMESupportEnv); !configured {
+		_ = os.Setenv(legoDisableCNAMESupportEnv, "true")
+	}
+}
+
+func legoCNAMEFollowEnabled() bool {
+	disabled, _ := strconv.ParseBool(os.Getenv(legoDisableCNAMESupportEnv))
+	return !disabled
 }
 
 func (f *CloudflareDNSFactory) NewProvider(account store.DNSProviderAccount) (challenge.Provider, error) {
