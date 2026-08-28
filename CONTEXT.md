@@ -58,6 +58,7 @@ MongoDB collection：`certificate_access_tokens`。
 - Cloudflare API Token 在创建或轮换前必须通过 Cloudflare verify API 验证；验证失败时不保存新 Token，轮换失败时旧 Token 继续有效。
 - 读取接口只返回 `token_configured` 布尔值，不返回 Token 明文；更新时空 `api_token` 表示保留现有 Secret。
 - `propagation_timeout_seconds` 控制 DNS 传播等待时间，默认 **120** 秒，有效范围 **30–900** 秒。
+- DNS-01 默认在原始 `_acme-challenge.<domain>` 创建精确 TXT，避免把普通业务通配符 CNAME 误判为 ACME 委派；显式 CNAME 委派可通过 `LEGO_DISABLE_CNAME_SUPPORT=false` 全局启用。
 
 与 Monitor 探测得到的 **CertificateInfo**（证书快照）不同：DNSProviderAccount 管理的是签发所需的 DNS 凭据，而不是观测到的线上证书元数据。
 

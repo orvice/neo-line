@@ -104,6 +104,7 @@ func (m *Manager) executeCertificateIssuance(ctx context.Context, op store.Certi
 	}
 	if m.logger != nil {
 		attrs := operationLogAttrs(op)
+		attrs = append(attrs, "dns_cname_follow_enabled", legoCNAMEFollowEnabled())
 		m.logger.InfoContext(ctx, "dns challenge provider initialized", attrs...)
 	}
 	trackedDNS := &cleanupTrackingProvider{

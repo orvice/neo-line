@@ -1023,6 +1023,7 @@ Admin 可在 Web 控制台「证书 → DNS 账户」或通过 `DNSProviderAccou
 - 读取接口与审计日志不返回 Token 明文；更新时空 `api_token` 保留现有 Secret。
 - `propagation_timeout_seconds` 默认 **120** 秒，范围 **30–900** 秒。
 - Cloudflare Token 需具备目标 Zone 的 **Zone:Read** 与 **DNS:Edit** 权限。
+- DNS-01 默认在原始 `_acme-challenge.<domain>` 创建精确 TXT，不跟随通配符 CNAME；显式 ACME CNAME 委派可通过 `LEGO_DISABLE_CNAME_SUPPORT=false` 按进程启用。
 
 详见 [证书管理 — DNS 账户](./certificate-management-dns-accounts.md) 与根目录 [CONTEXT.md](../CONTEXT.md)。
 

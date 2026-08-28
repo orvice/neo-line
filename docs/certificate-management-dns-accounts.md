@@ -23,6 +23,24 @@ DNSProviderAccount 存储可复用的 Cloudflare API Token，供后续 ManagedCe
 
 建议使用「编辑区域 DNS」模板或按 Zone 限定权限的自定义 Token。验证失败时 API 返回错误摘要（不含 Token 明文），且不会写入 MongoDB。
 
+## CNAME 与通配符解析
+
+neo-line 默认设置 `LEGO_DISABLE_CNAME_SUPPORT=true`，在原始 `_acme-challenge.<domain>` 名称创建精确 TXT 记录，不跟随查询结果中的 CNAME。这样可以正确处理以下常见业务解析：
+
+```dns
+*.example.com. 300 IN CNAME app.example.net.
+```
+
+在尚无精确 challenge 记录时，DNS 通配符也会为 `_acme-challenge.host.example.com` 合成 CNAME。若错误地把它当成 ACME 委派，provider 会尝试修改 `example.net` 的 Zone。精确 TXT 创建后会覆盖该名称上的通配符匹配，ACME 校验仍可正常读取 TXT。
+
+如果部署明确使用 `_acme-challenge...` 的**显式 CNAME 委派**，可在启动 neo-line 前设置：
+
+```bash
+LEGO_DISABLE_CNAME_SUPPORT=false
+```
+
+该开关对整个进程生效，修改后须重启服务。启用 CNAME 跟随后，Cloudflare Token 必须覆盖委派目标所在 Zone，而不只是证书域名的源 Zone。
+
 ## DNS 传播超时
 
 字段 `propagation_timeout_seconds` 控制 ACME DNS-01 挑战等待 DNS 传播的最长时间（由 certmanager provider adapter 在后续签发流程中使用）。
