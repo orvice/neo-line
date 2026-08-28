@@ -29,6 +29,11 @@ type DirectoryMeta struct {
 	TermsOfService string
 }
 
+// ACMEAccountRegistration is the durable account identity returned by the CA.
+type ACMEAccountRegistration struct {
+	URI string
+}
+
 // IssueRequest carries parameters for ACME certificate issuance.
 type IssueRequest struct {
 	Issuer               store.CertificateIssuer
@@ -49,7 +54,7 @@ type IssueResult struct {
 // ACMEClient fetches directory metadata, registers ACME accounts, issues and revokes certificates.
 type ACMEClient interface {
 	FetchDirectory(ctx context.Context, directoryURL string) (DirectoryMeta, error)
-	RegisterAccount(ctx context.Context, issuer store.CertificateIssuer) error
+	RegisterAccount(ctx context.Context, issuer store.CertificateIssuer) (ACMEAccountRegistration, error)
 	IssueCertificate(ctx context.Context, req IssueRequest) (IssueResult, error)
 	RevokeCertificate(ctx context.Context, issuer store.CertificateIssuer, leafCertPEM []byte, reason *uint) error
 }
@@ -98,9 +103,16 @@ func parseAccountKeyPEM(pemData string) (crypto.PrivateKey, error) {
 	}
 }
 
-func (c *LegoACMEClient) newLegoClient(directoryURL, email string, key crypto.PrivateKey) (*lego.Client, error) {
+func newLegoUser(email string, key crypto.PrivateKey, accountURI string) *legoUser {
 	user := &legoUser{email: email, key: key}
-	config := lego.NewConfig(user)
+	if accountURI = strings.TrimSpace(accountURI); accountURI != "" {
+		user.registration = &registration.Resource{URI: accountURI}
+	}
+	return user
+}
+
+func (c *LegoACMEClient) newLegoClient(directoryURL, email string, key crypto.PrivateKey, accountURI string) (*lego.Client, error) {
+	config := lego.NewConfig(newLegoUser(email, key, accountURI))
 	config.CADirURL = directoryURL
 	config.Certificate.KeyType = certcrypto.EC256
 	config.HTTPClient = c.httpClient
@@ -108,7 +120,7 @@ func (c *LegoACMEClient) newLegoClient(directoryURL, email string, key crypto.Pr
 }
 
 func (c *LegoACMEClient) FetchDirectory(ctx context.Context, directoryURL string) (DirectoryMeta, error) {
-	client, err := c.newLegoClient(directoryURL, "preview@invalid.local", generatePreviewKey())
+	client, err := c.newLegoClient(directoryURL, "preview@invalid.local", generatePreviewKey(), "")
 	if err != nil {
 		return DirectoryMeta{}, err
 	}
@@ -128,33 +140,44 @@ func generatePreviewKey() crypto.PrivateKey {
 	return key
 }
 
-func (c *LegoACMEClient) RegisterAccount(ctx context.Context, issuer store.CertificateIssuer) error {
+func (c *LegoACMEClient) RegisterAccount(ctx context.Context, issuer store.CertificateIssuer) (ACMEAccountRegistration, error) {
 	key, err := parseAccountKeyPEM(issuer.AccountKeyPEM)
 	if err != nil {
-		return err
+		return ACMEAccountRegistration{}, err
 	}
-	client, err := c.newLegoClient(issuer.DirectoryURL, issuer.Email, key)
+	client, err := c.newLegoClient(issuer.DirectoryURL, issuer.Email, key, "")
 	if err != nil {
-		return err
+		return ACMEAccountRegistration{}, err
 	}
 	client.Challenge.SetDNS01Provider(noopDNSProvider{})
 
 	select {
 	case <-ctx.Done():
-		return ctx.Err()
+		return ACMEAccountRegistration{}, ctx.Err()
 	default:
 	}
 
+	var resource *registration.Resource
 	if issuer.EABKid != "" && issuer.EABHMAC != "" {
-		_, err = client.Registration.RegisterWithExternalAccountBinding(registration.RegisterEABOptions{
+		resource, err = client.Registration.RegisterWithExternalAccountBinding(registration.RegisterEABOptions{
 			TermsOfServiceAgreed: true,
 			Kid:                  issuer.EABKid,
 			HmacEncoded:          issuer.EABHMAC,
 		})
-		return err
+	} else {
+		resource, err = client.Registration.Register(registration.RegisterOptions{TermsOfServiceAgreed: true})
 	}
-	_, err = client.Registration.Register(registration.RegisterOptions{TermsOfServiceAgreed: true})
-	return err
+	if err != nil {
+		return ACMEAccountRegistration{}, err
+	}
+	if resource == nil {
+		return ACMEAccountRegistration{}, ErrIssuerAccountURIRequired
+	}
+	accountURI := strings.TrimSpace(resource.URI)
+	if accountURI == "" {
+		return ACMEAccountRegistration{}, ErrIssuerAccountURIRequired
+	}
+	return ACMEAccountRegistration{URI: accountURI}, nil
 }
 
 func legoCertKeyType(keyType string) certcrypto.KeyType {
@@ -167,12 +190,14 @@ func legoCertKeyType(keyType string) certcrypto.KeyType {
 }
 
 func (c *LegoACMEClient) IssueCertificate(ctx context.Context, req IssueRequest) (IssueResult, error) {
+	if strings.TrimSpace(req.Issuer.AccountURI) == "" {
+		return IssueResult{}, withOperationStage("resolve_acme_account", ErrIssuerAccountURIRequired)
+	}
 	key, err := parseAccountKeyPEM(req.Issuer.AccountKeyPEM)
 	if err != nil {
 		return IssueResult{}, withOperationStage("parse_account_key", err)
 	}
-	user := &legoUser{email: req.Issuer.Email, key: key}
-	config := lego.NewConfig(user)
+	config := lego.NewConfig(newLegoUser(req.Issuer.Email, key, req.Issuer.AccountURI))
 	config.CADirURL = req.Issuer.DirectoryURL
 	config.Certificate.KeyType = legoCertKeyType(req.KeyType)
 	config.HTTPClient = newACMEDiagnosticClient(c.httpClient, c.logger, req)
@@ -217,13 +242,16 @@ func (c *LegoACMEClient) IssueCertificate(ctx context.Context, req IssueRequest)
 }
 
 func (c *LegoACMEClient) RevokeCertificate(ctx context.Context, issuer store.CertificateIssuer, leafCertPEM []byte, reason *uint) error {
+	if strings.TrimSpace(issuer.AccountURI) == "" {
+		return withOperationStage("resolve_acme_account", ErrIssuerAccountURIRequired)
+	}
 	key, err := parseAccountKeyPEM(issuer.AccountKeyPEM)
 	if err != nil {
-		return err
+		return withOperationStage("parse_account_key", err)
 	}
-	client, err := c.newLegoClient(issuer.DirectoryURL, issuer.Email, key)
+	client, err := c.newLegoClient(issuer.DirectoryURL, issuer.Email, key, issuer.AccountURI)
 	if err != nil {
-		return err
+		return withOperationStage("create_acme_client", err)
 	}
 	select {
 	case <-ctx.Done():

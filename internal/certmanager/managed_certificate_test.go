@@ -41,8 +41,14 @@ func newManagedCertFakeStore() *managedCertFakeStore {
 	}
 }
 
+const testAccountURI = "https://acme.test/account/1"
+
 func (f *managedCertFakeStore) seedReadyIssuer(id string) {
-	f.issuers[id] = store.CertificateIssuer{ID: id, RegistrationStatus: store.IssuerRegistrationReady}
+	f.issuers[id] = store.CertificateIssuer{
+		ID:                 id,
+		RegistrationStatus: store.IssuerRegistrationReady,
+		AccountURI:         testAccountURI,
+	}
 }
 
 func (f *managedCertFakeStore) seedDNS(id string) {
@@ -758,6 +764,26 @@ func TestCreateRejectsNotReadyIssuer(t *testing.T) {
 	})
 	if !errors.Is(err, ErrIssuerNotReady) {
 		t.Fatalf("expected ErrIssuerNotReady, got %v", err)
+	}
+}
+
+func TestCreateRejectsReadyIssuerWithoutAccountURI(t *testing.T) {
+	st := newManagedCertFakeStore()
+	st.issuers["iss_1"] = store.CertificateIssuer{
+		ID:                 "iss_1",
+		RegistrationStatus: store.IssuerRegistrationReady,
+	}
+	st.seedDNS("dns_1")
+	m := NewManager(st, nil)
+
+	_, err := m.CreateManagedCertificate(t.Context(), ManagedCertificateInput{
+		Name:                 "prod",
+		Domains:              []string{"example.com"},
+		CertificateIssuerID:  "iss_1",
+		DNSProviderAccountID: "dns_1",
+	})
+	if !errors.Is(err, ErrIssuerAccountURIRequired) {
+		t.Fatalf("expected ErrIssuerAccountURIRequired, got %v", err)
 	}
 }
 

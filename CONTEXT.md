@@ -14,9 +14,9 @@
 
 ## CertificateIssuer
 
-**CertificateIssuer** 是命名 ACME 签发账户配置，包含 CA preset 或自定义 Directory URL、联系邮箱、Terms of Service 同意记录、注册状态（Pending / Ready / Failed）、ACME account key 与可选 EAB。Admin 通过 `CertificateIssuerService` 管理；仅 **Ready** Issuer 可用于 ManagedCertificate 签发。
+**CertificateIssuer** 是命名 ACME 签发账户配置，包含 CA preset 或自定义 Directory URL、联系邮箱、Terms of Service 同意记录、注册状态（Pending / Ready / Failed）、ACME account key、远端 account URI 与可选 EAB。Admin 通过 `CertificateIssuerService` 管理；仅注册成功且已持久化 account URI 的 **Ready** Issuer 可用于 ManagedCertificate 签发。
 
-MongoDB collection：`certificate_issuers`。Secret（account key、EAB）以明文存储但读取接口与审计日志永不返回。
+MongoDB collection：`certificate_issuers`。Secret（account key、EAB）以明文存储；`account_uri` 作为 Issue / Renew / Revoke 恢复 JWS `kid` 的内部字段持久化。这些字段均不通过读取接口、审计日志或运行日志返回。
 
 ## CertificateOperation
 

@@ -19,15 +19,15 @@
 
 ## MongoDB Collections 概览
 
-| Collection | 主要 Secret 字段 | API 是否返回明文 |
+| Collection | 主要 Secret / 内部字段 | API 是否返回明文 |
 | --- | --- | --- |
 | `dns_provider_accounts` | `api_token` | 否（`token_configured`） |
-| `certificate_issuers` | `account_key_pem`, `eab_hmac_key` | 否 |
+| `certificate_issuers` | `account_key_pem`, `eab_hmac`, `account_uri` | 否 |
 | `managed_certificates` | `active_version` / `previous_version` 内 PEM | 否（Admin bundle 为一次性下载） |
 | `certificate_operations` | 无 PEM | 否（不含 lease/TXT 细节） |
 | `certificate_access_tokens` | `token_hash` 仅 hash | 否（创建时一次性 secret） |
 
-**MongoDB 与备份包含上述全部 Secret 明文。** 部署方必须限制数据库与备份访问；**这些 Secret 不进入 S3 archive**（S3 仍仅归档 `monitor_results`）。
+**MongoDB 与备份包含上述全部 Secret 明文。** 部署方必须限制数据库与备份访问；**这些 Secret 不进入 S3 archive**（S3 仍仅归档 `monitor_results`）。`account_uri` 本身不是凭据，但属于内部 ACME account 标识，仅用于 Issue / Renew / Revoke 的 JWS `kid`，同样不进入 API 或日志。
 
 ## 外部依赖
 

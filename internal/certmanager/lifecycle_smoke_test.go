@@ -23,6 +23,7 @@ func TestCertificateLifecycleSmoke(t *testing.T) {
 	st.issuers["iss_1"] = store.CertificateIssuer{
 		ID:                 "iss_1",
 		RegistrationStatus: store.IssuerRegistrationReady,
+		AccountURI:         testAccountURI,
 	}
 	st.seedDNS("dns_1")
 	st.dns["dns_1"] = store.DNSProviderAccount{ID: "dns_1", APIToken: "cf-token"}
@@ -231,6 +232,7 @@ func TestCertificateLifecycleSmoke(t *testing.T) {
 		ID:                 "iss_1",
 		RegistrationStatus: store.IssuerRegistrationReady,
 		AccountKeyPEM:      testAccountKeyPEM,
+		AccountURI:         testAccountURI,
 	}
 	revokeOp, err := m.SubmitRevokeVersion(ctx, certID, revokeTarget, 0)
 	if err != nil {

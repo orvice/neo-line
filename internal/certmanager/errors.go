@@ -47,6 +47,9 @@ var ErrInvalidKeyType = errors.New("invalid certificate key type")
 // ErrIssuerNotReady is returned when the referenced issuer is not Ready.
 var ErrIssuerNotReady = errors.New("certificate issuer is not ready for issuance")
 
+// ErrIssuerAccountURIRequired is returned when a Ready issuer has no persisted ACME account URI.
+var ErrIssuerAccountURIRequired = errors.New("certificate issuer ACME account URI is missing")
+
 // ErrIssueFieldsLocked is returned when issue fields are changed during a running operation.
 var ErrIssueFieldsLocked = errors.New("issue fields cannot be changed while an operation is running")
 

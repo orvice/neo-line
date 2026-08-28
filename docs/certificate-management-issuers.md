@@ -2,19 +2,25 @@
 
 本文档说明 neo-line 首版 **CertificateIssuer**（ACME 签发账户）的配置字段、内置 CA preset、EAB 要求、Terms of Service 同意语义，以及自定义 ACME Directory 的信任限制。
 
-CertificateIssuer 数据保存在 MongoDB `certificate_issuers` collection。ACME account private key、EAB KID/HMAC 以明文字段存储，但**永远不会**通过 Connect 读取接口或审计日志返回。
+CertificateIssuer 数据保存在 MongoDB `certificate_issuers` collection。ACME account private key、EAB KID/HMAC 以明文字段存储；注册成功后 CA 返回的 ACME account URI 也会作为内部字段持久化。上述字段**永远不会**通过 Connect 读取接口或审计日志返回。
 
 ## 生命周期
 
 | 状态 | 含义 |
 |------|------|
 | `Pending` | 已持久化配置，后台正在向 ACME CA 注册账户 |
-| `Ready` | 注册成功，可被 ManagedCertificate 引用并用于签发 |
+| `Ready` | 注册成功且已持久化 ACME account URI，可被 ManagedCertificate 引用并用于签发、续期或吊销 |
 | `Failed` | 注册失败，`registration_error` 提供脱敏摘要；可修正身份字段后重试 |
 
-创建 Issuer 后 Connect 请求立即返回 `Pending`，注册在受 certificate manager 生命周期管理的后台任务中异步完成。只有 `Ready` Issuer 可用于后续证书签发（#17 及以后）。应用优雅关闭会取消并等待注册任务；被关闭中断的注册写入脱敏 `Failed` 摘要，Admin 可在下次启动后重试。
+创建 Issuer 后 Connect 请求立即返回 `Pending`，注册在受 certificate manager 生命周期管理的后台任务中异步完成。注册响应必须包含非空 account URI，系统将其写入 `account_uri` 后才把 Issuer 标记为 `Ready`。Issue、Renew 与 Revoke 创建新的 ACME client 时，使用该 URI 作为 JWS `kid` 恢复远端账户身份。`account_uri` 不进入 Connect 响应、审计日志或运行日志。
+
+只有 `Ready` Issuer 可用于后续证书签发。应用优雅关闭会取消并等待注册任务；被关闭中断的注册写入脱敏 `Failed` 摘要，Admin 可在下次启动后重试。
 
 删除 Issuer **仅删除本地 MongoDB 文档**，不会调用 ACME 远端 account deactivation。
+
+### 旧数据处理
+
+`Ready` Issuer 必须同时具有 `account_uri`。缺少该字段的旧文档不会通过 ManagedCertificate 引用校验；已存在的 operation 遇到该状态会终态 `Failed`，不会持续重试错误的 ACME 请求。本版本不根据 account key 自动回填 URI：升级时应删除并重新创建旧 Issuer，使系统重新注册并持久化完整账户身份。
 
 ## 内置 CA Preset
 
@@ -101,6 +107,7 @@ staging_untrusted: false
 terms_of_service_url: https://letsencrypt.org/documents/LE-SA-v1.4-April-3-2024.pdf
 terms_of_service_agreed_at: 2026-03-01T12:00:00Z
 account_key_pem: "<secret — 不在 API 中返回>"
+account_uri: "https://acme.example/acme/acct/<account-id>" # 不在 API 或日志中返回
 created_at: 2026-03-01T12:00:00Z
 updated_at: 2026-03-01T12:00:05Z
 ```

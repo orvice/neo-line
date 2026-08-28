@@ -129,6 +129,9 @@ func safeErrorClass(err error) string {
 	if errors.Is(err, ErrIssuerNotReady) {
 		return "issuer_not_ready"
 	}
+	if errors.Is(err, ErrIssuerAccountURIRequired) {
+		return "acme_account_unavailable"
+	}
 	if errors.Is(err, store.ErrCertificateOperationConflict) {
 		return "operation_conflict"
 	}

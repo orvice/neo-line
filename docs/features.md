@@ -1034,10 +1034,11 @@ Admin 可在 Web 控制台「证书 → ACME Issuer」或通过 `CertificateIssu
 
 - 内置 preset：Let's Encrypt 生产 / Staging、ZeroSSL、Google Public CA；另支持自定义 HTTPS Directory（系统根信任，不支持私有 Root CA）。
 - 创建前必须显式同意 Directory 元数据中的 Terms of Service；持久化 ToS URL 与 agreed-at。
-- 创建后异步注册 ACME account，状态为 Pending / Ready / Failed；仅 Ready 可用于后续 ManagedCertificate 签发。
+- 创建后异步注册 ACME account，状态为 Pending / Ready / Failed；只有注册响应包含非空 account URI 并完成持久化后才进入 Ready。
+- Issue / Renew / Revoke 从 MongoDB 恢复 account URI，作为 ACME JWS `kid` 复用注册账户；缺少 URI 的旧 Ready 数据拒绝使用。
 - 注册任务继承证书 manager 生命周期并纳入优雅关闭等待；关闭中断时写入脱敏 Failed 状态，允许 Admin 后续重试。
 - Failed 可修正邮箱、Directory、EAB、account key 并重试；Ready 仅允许修改显示名称。
-- account key 与 EAB 存入 MongoDB，读取接口与审计日志永不返回明文。
+- account key、EAB 与内部 `account_uri` 存入 MongoDB，读取接口、审计日志与运行日志均不返回。
 - 删除仅本地级联，不调用远端 account deactivation。
 
 详见 [证书管理 — ACME Issuer](./certificate-management-issuers.md)。

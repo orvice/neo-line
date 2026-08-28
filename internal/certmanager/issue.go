@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strings"
 	"sync"
 	"time"
 
@@ -77,6 +78,9 @@ func (m *Manager) executeCertificateIssuance(ctx context.Context, op store.Certi
 	}
 	if issuer.RegistrationStatus != store.IssuerRegistrationReady {
 		return "", withOperationStage("issuer_readiness", ErrIssuerNotReady)
+	}
+	if strings.TrimSpace(issuer.AccountURI) == "" {
+		return "", withOperationStage("resolve_acme_account", ErrIssuerAccountURIRequired)
 	}
 	dnsAccount, err := m.store.GetDNSProviderAccount(ctx, snap.DNSProviderAccountID)
 	if err != nil {

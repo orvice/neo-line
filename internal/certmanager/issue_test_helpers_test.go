@@ -29,8 +29,8 @@ func (f *fakeIssueACME) FetchDirectory(context.Context, string) (DirectoryMeta, 
 	return DirectoryMeta{}, nil
 }
 
-func (f *fakeIssueACME) RegisterAccount(context.Context, store.CertificateIssuer) error {
-	return nil
+func (f *fakeIssueACME) RegisterAccount(context.Context, store.CertificateIssuer) (ACMEAccountRegistration, error) {
+	return ACMEAccountRegistration{URI: "https://acme.test/account/1"}, nil
 }
 
 func (f *fakeIssueACME) IssueCertificate(ctx context.Context, req IssueRequest) (IssueResult, error) {
@@ -162,6 +162,7 @@ func seedIssueTestStore(st *managedCertFakeStore, domains []string, keyType stri
 		ID:                 "iss_1",
 		RegistrationStatus: store.IssuerRegistrationReady,
 		StagingUntrusted:   staging,
+		AccountURI:         testAccountURI,
 	}
 	st.seedDNS("dns_1")
 	st.dns["dns_1"] = store.DNSProviderAccount{ID: "dns_1", APIToken: "tok"}

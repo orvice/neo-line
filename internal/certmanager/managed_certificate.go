@@ -360,6 +360,9 @@ func (m *Manager) validateManagedCertificateRefs(ctx context.Context, cert store
 	if issuer.RegistrationStatus != store.IssuerRegistrationReady {
 		return ErrIssuerNotReady
 	}
+	if strings.TrimSpace(issuer.AccountURI) == "" {
+		return ErrIssuerAccountURIRequired
+	}
 	if _, err := m.store.GetDNSProviderAccount(ctx, cert.DNSProviderAccountID); err != nil {
 		if store.IsNotFound(err) {
 			return ErrDNSAccountRequired
