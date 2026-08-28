@@ -1,7 +1,17 @@
 import { useMemo, useState } from "react"
 import { Link, useSearchParams } from "react-router-dom"
-import { useQuery } from "@tanstack/react-query"
-import { Plus, RefreshCw, Shield, X } from "lucide-react"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import {
+  Loader2,
+  Plus,
+  RefreshCw,
+  Repeat,
+  Rocket,
+  RotateCcw,
+  Shield,
+  X,
+} from "lucide-react"
+import { toast } from "sonner"
 
 import { api, ApiError } from "@/lib/api"
 import type { ManagedCertificate } from "@/lib/types"
@@ -196,7 +206,7 @@ export function ManagedCertificatesPage() {
                     <TableHead className="min-w-[130px]">到期</TableHead>
                     <TableHead>自动续期</TableHead>
                     <TableHead className="min-w-[140px]">最近 Operation</TableHead>
-                    <TableHead className="w-[72px]" />
+                    <TableHead className="w-[160px]">操作</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -226,8 +236,65 @@ function ManagedCertificateRow({
   cert: ManagedCertificate
   issuerName: string
 }) {
+  const { user } = useAuth()
+  const queryClient = useQueryClient()
   const domains = activeDomains(cert)
   const staging = cert.active_version?.staging_untrusted
+  const op = cert.latest_operation
+
+  const issueRunning = op?.type === "Issue" && operationInFlight(op)
+  const renewRunning = op?.type === "Renew" && operationInFlight(op)
+  const revokeRunning = op?.type === "Revoke" && operationInFlight(op)
+  const anyOpRunning = issueRunning || renewRunning || revokeRunning
+
+  const canIssue =
+    user &&
+    (cert.has_unpublished_desired_changes || cert.active_version) &&
+    !issueRunning &&
+    !renewRunning
+  const canRenew = user && cert.active_version && !issueRunning && !renewRunning
+  const canRetryFailed = user && op?.status === "Failed" && !anyOpRunning
+
+  const invalidateQueries = () => {
+    queryClient.invalidateQueries({ queryKey: certQueryKeys.detail(cert.id) })
+    queryClient.invalidateQueries({ queryKey: certQueryKeys.list })
+  }
+
+  const issueMutation = useMutation({
+    mutationFn: () => api.submitIssueOperation(cert.id),
+    onSuccess: () => {
+      toast.success("已提交签发（使用 desired config）")
+      invalidateQueries()
+    },
+    onError: (err: unknown) => {
+      toast.error(err instanceof ApiError ? err.message : "签发提交失败，请检查 Issuer 与 DNS 配置")
+    },
+  })
+
+  const renewMutation = useMutation({
+    mutationFn: () => api.submitRenewOperation(cert.id),
+    onSuccess: () => {
+      toast.success("已提交续期（使用 active 签发快照）")
+      invalidateQueries()
+    },
+    onError: (err: unknown) => {
+      toast.error(err instanceof ApiError ? err.message : "续期提交失败，请稍后重试")
+    },
+  })
+
+  const retryMutation = useMutation({
+    mutationFn: async () =>
+      op?.type === "Renew"
+        ? api.submitRenewOperation(cert.id)
+        : api.submitIssueOperation(cert.id),
+    onSuccess: () => {
+      toast.success("已重新提交失败 operation")
+      invalidateQueries()
+    },
+    onError: (err: unknown) => {
+      toast.error(err instanceof ApiError ? err.message : "重试失败，请稍后重试")
+    },
+  })
 
   return (
     <TableRow>
@@ -262,9 +329,44 @@ function ManagedCertificateRow({
         <CertificateOperationBadge operation={cert.latest_operation} />
       </TableCell>
       <TableCell>
-        <Button asChild variant="ghost" size="sm">
-          <Link to={`/certificates/managed/${cert.id}`}>详情</Link>
-        </Button>
+        <div className="flex items-center justify-end gap-1">
+          {canIssue ? (
+            <Button
+              variant="ghost"
+              size="icon"
+              title="签发新版本（发布 desired config）"
+              disabled={issueMutation.isPending}
+              onClick={() => issueMutation.mutate()}
+            >
+              {issueMutation.isPending ? <Loader2 className="size-4 animate-spin" /> : <Rocket className="size-4" />}
+            </Button>
+          ) : null}
+          {canRenew ? (
+            <Button
+              variant="ghost"
+              size="icon"
+              title="续期 active 版本"
+              disabled={renewMutation.isPending}
+              onClick={() => renewMutation.mutate()}
+            >
+              {renewMutation.isPending ? <Loader2 className="size-4 animate-spin" /> : <Repeat className="size-4" />}
+            </Button>
+          ) : null}
+          {canRetryFailed ? (
+            <Button
+              variant="ghost"
+              size="icon"
+              title={`重试失败的 ${op?.type} operation`}
+              disabled={retryMutation.isPending}
+              onClick={() => retryMutation.mutate()}
+            >
+              {retryMutation.isPending ? <Loader2 className="size-4 animate-spin" /> : <RotateCcw className="size-4" />}
+            </Button>
+          ) : null}
+          <Button asChild variant="ghost" size="sm">
+            <Link to={`/certificates/managed/${cert.id}`}>详情</Link>
+          </Button>
+        </div>
       </TableCell>
     </TableRow>
   )
