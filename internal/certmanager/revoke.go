@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/pem"
 	"fmt"
+	"strings"
 
 	"github.com/orvice/neo-line/internal/store"
 )
@@ -120,6 +121,9 @@ func (m *Manager) executeCertificateRevocation(ctx context.Context, op store.Cer
 	}
 	if issuer.RegistrationStatus != store.IssuerRegistrationReady {
 		return ErrIssuerNotReady
+	}
+	if strings.TrimSpace(issuer.AccountURI) == "" {
+		return withOperationStage("resolve_acme_account", ErrIssuerAccountURIRequired)
 	}
 	leafPEM, err := leafCertificatePEM([]byte(target.FullchainPEM))
 	if err != nil {

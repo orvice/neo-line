@@ -350,6 +350,7 @@ func (m *Manager) applyFailedIssuerUpdate(existing store.CertificateIssuer, inpu
 	existing.StagingUntrusted = staging
 	existing.RegistrationStatus = store.IssuerRegistrationPending
 	existing.RegistrationError = ""
+	existing.AccountURI = ""
 	return existing, nil
 }
 
@@ -363,6 +364,7 @@ func (m *Manager) RetryCertificateIssuerRegistration(ctx context.Context, id str
 	}
 	existing.RegistrationStatus = store.IssuerRegistrationPending
 	existing.RegistrationError = ""
+	existing.AccountURI = ""
 	saved, err := m.store.UpdateCertificateIssuer(ctx, id, existing)
 	if err != nil {
 		return PublicIssuer{}, err
@@ -428,7 +430,11 @@ func (m *Manager) runRegistration(ctx context.Context, id string) {
 			"staging_untrusted", issuer.StagingUntrusted,
 		)
 	}
-	regErr := m.acme.RegisterAccount(ctx, issuer)
+	registration, regErr := m.acme.RegisterAccount(ctx, issuer)
+	registration.URI = strings.TrimSpace(registration.URI)
+	if regErr == nil && registration.URI == "" {
+		regErr = ErrIssuerAccountURIRequired
+	}
 	if ctx.Err() != nil {
 		if m.logger != nil {
 			m.logger.WarnContext(ctx, "certificate issuer registration interrupted", "issuer_id", id, "duration_ms", time.Since(started).Milliseconds())
@@ -448,6 +454,7 @@ func (m *Manager) runRegistration(ctx context.Context, id string) {
 	if regErr != nil {
 		issuer.RegistrationStatus = store.IssuerRegistrationFailed
 		issuer.RegistrationError = sanitizeRegistrationError(regErr, issuer.EABKid, issuer.EABHMAC, issuer.AccountKeyPEM)
+		issuer.AccountURI = ""
 		if m.logger != nil {
 			attrs := []any{
 				"issuer_id", id,
@@ -460,6 +467,7 @@ func (m *Manager) runRegistration(ctx context.Context, id string) {
 	} else {
 		issuer.RegistrationStatus = store.IssuerRegistrationReady
 		issuer.RegistrationError = ""
+		issuer.AccountURI = registration.URI
 		if m.logger != nil {
 			m.logger.InfoContext(ctx, "certificate issuer registration succeeded",
 				"issuer_id", id,

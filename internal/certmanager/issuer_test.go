@@ -45,14 +45,14 @@ func (c *blockingRegistrationACME) FetchDirectory(context.Context, string) (Dire
 	return DirectoryMeta{}, nil
 }
 
-func (c *blockingRegistrationACME) RegisterAccount(ctx context.Context, _ store.CertificateIssuer) error {
+func (c *blockingRegistrationACME) RegisterAccount(ctx context.Context, _ store.CertificateIssuer) (ACMEAccountRegistration, error) {
 	close(c.started)
 	defer close(c.finished)
 	select {
 	case <-ctx.Done():
-		return ctx.Err()
+		return ACMEAccountRegistration{}, ctx.Err()
 	case <-c.release:
-		return nil
+		return ACMEAccountRegistration{URI: "https://acme.test/account/1"}, nil
 	}
 }
 
@@ -275,6 +275,9 @@ func TestIssuerRegistrationSuccessBecomesReady(t *testing.T) {
 	if final.TermsOfServiceURL == "" {
 		t.Fatal("expected terms_of_service_url persisted")
 	}
+	if final.AccountURI == "" {
+		t.Fatal("expected account_uri persisted")
+	}
 }
 
 func TestIssuerRegistrationFailureAndRetry(t *testing.T) {
@@ -366,6 +369,10 @@ func TestSanitizeRegistrationErrorMasksSensitiveDetails(t *testing.T) {
 			err:  errors.New("EAB hmac-secret rejected; order URL https://ca.example/acme/order/123"),
 		},
 		{
+			name: "account URI",
+			err:  errors.New("ACME account URI https://ca.example/acme/acct/123 was rejected"),
+		},
+		{
 			name:    "bare configured secret",
 			err:     errors.New("registration credential kid-value-123 was rejected"),
 			secrets: []string{"kid-value-123"},
@@ -391,6 +398,7 @@ func TestIssuerReadyOnlyAllowsNameUpdate(t *testing.T) {
 		Email:              "admin@example.com",
 		RegistrationStatus: store.IssuerRegistrationReady,
 		AccountKeyPEM:      mustGenerateKeyPEM(t),
+		AccountURI:         testAccountURI,
 		CreatedAt:          now,
 		UpdatedAt:          now,
 	}
@@ -424,6 +432,7 @@ func TestIssuerPublicResponsesOmitSecrets(t *testing.T) {
 		Email:              "admin@example.com",
 		RegistrationStatus: store.IssuerRegistrationReady,
 		AccountKeyPEM:      "secret-key-pem",
+		AccountURI:         testAccountURI,
 		EABKid:             "kid-secret",
 		EABHMAC:            "hmac-secret",
 		CreatedAt:          now,
@@ -441,6 +450,9 @@ func TestIssuerPublicResponsesOmitSecrets(t *testing.T) {
 	}
 	if !got.AccountKeyConfigured || !got.EABConfigured {
 		t.Fatalf("configured flags: key=%v eab=%v", got.AccountKeyConfigured, got.EABConfigured)
+	}
+	if strings.Contains(fmt.Sprintf("%+v", got), testAccountURI) {
+		t.Fatal("response leaked ACME account URI")
 	}
 }
 

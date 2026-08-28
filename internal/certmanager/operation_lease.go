@@ -515,7 +515,7 @@ func certOpMetricType(opType string) string {
 }
 
 func isPermanentOperationError(err error) bool {
-	return errors.Is(err, ErrIssuerNotReady)
+	return errors.Is(err, ErrIssuerNotReady) || errors.Is(err, ErrIssuerAccountURIRequired)
 }
 
 func operationDeadlineExceeded(op store.CertificateOperation, now time.Time) bool {

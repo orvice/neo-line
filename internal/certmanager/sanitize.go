@@ -1,6 +1,7 @@
 package certmanager
 
 import (
+	"errors"
 	"strings"
 )
 
@@ -20,6 +21,10 @@ var sensitiveCertificateErrorMarkers = []string{
 	"order url",
 	"new-order",
 	"/order/",
+	"account url",
+	"account uri",
+	"/account/",
+	"/acct/",
 	"acme-staging",
 	"directory",
 }
@@ -27,6 +32,9 @@ var sensitiveCertificateErrorMarkers = []string{
 func sanitizeCertificateError(err error, fallback string, secretValues ...string) string {
 	if err == nil {
 		return ""
+	}
+	if errors.Is(err, ErrIssuerAccountURIRequired) {
+		return ErrIssuerAccountURIRequired.Error()
 	}
 	msg := err.Error()
 	lower := strings.ToLower(msg)

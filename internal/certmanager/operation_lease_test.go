@@ -107,6 +107,33 @@ func TestAutoRetrySameOperationIncrementsAttempt(t *testing.T) {
 	}
 }
 
+func TestMissingIssuerAccountURIFailsWithoutRetry(t *testing.T) {
+	st := newManagedCertFakeStore()
+	dns := NewFakeDNSProvider(&fakeDNSZone{name: "example.com"})
+	_, opID := seedIssueTestStore(st, []string{"example.com"}, store.CertKeyTypeECP256, false)
+	issuer := st.issuers["iss_1"]
+	issuer.AccountURI = ""
+	st.issuers["iss_1"] = issuer
+	acme := &fakeIssueACME{issueFn: func(context.Context, IssueRequest) (IssueResult, error) {
+		t.Fatal("ACME issuance must not start without a persisted account URI")
+		return IssueResult{}, nil
+	}}
+	m := newIssueTestManager(t, st, acme, dns)
+
+	m.runOperation(t.Context(), opID)
+
+	op := st.ops[opID]
+	if op.Status != store.CertOpStatusFailed {
+		t.Fatalf("status = %q, want Failed", op.Status)
+	}
+	if op.NextAttemptAt != nil {
+		t.Fatalf("next_attempt_at = %v, want nil", op.NextAttemptAt)
+	}
+	if op.ErrorSummary != ErrIssuerAccountURIRequired.Error() {
+		t.Fatalf("error_summary = %q, want %q", op.ErrorSummary, ErrIssuerAccountURIRequired)
+	}
+}
+
 func TestManualRetryAfterTerminalCreatesNewOperation(t *testing.T) {
 	st := newManagedCertFakeStore()
 	st.seedReadyIssuer("iss_1")

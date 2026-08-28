@@ -16,6 +16,7 @@ func seedRevokeTestCert(t *testing.T, st *managedCertFakeStore, activeID string)
 		ID:                 "iss_1",
 		RegistrationStatus: store.IssuerRegistrationReady,
 		AccountKeyPEM:      testAccountKeyPEM,
+		AccountURI:         testAccountURI,
 		DirectoryURL:       "https://acme.test/directory",
 		Email:              "admin@example.com",
 	}

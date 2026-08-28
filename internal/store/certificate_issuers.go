@@ -49,6 +49,7 @@ type CertificateIssuer struct {
 	TermsOfServiceURL    string     `bson:"terms_of_service_url" json:"terms_of_service_url"`
 	TermsOfServiceAgreed *time.Time `bson:"terms_of_service_agreed_at,omitempty" json:"terms_of_service_agreed_at,omitempty"`
 	AccountKeyPEM        string     `bson:"account_key_pem,omitempty" json:"-"`
+	AccountURI           string     `bson:"account_uri,omitempty" json:"-"`
 	EABKid               string     `bson:"eab_kid,omitempty" json:"-"`
 	EABHMAC              string     `bson:"eab_hmac,omitempty" json:"-"`
 	CreatedAt            time.Time  `bson:"created_at" json:"created_at"`

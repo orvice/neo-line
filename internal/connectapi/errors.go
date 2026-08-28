@@ -28,7 +28,7 @@ func toConnectError(err error) error {
 		return connect.NewError(connect.CodeInvalidArgument, err)
 	case errors.Is(err, store.ErrInvalidCertificateIssuerCAType), errors.Is(err, certmanager.ErrIssuerNameRequired), errors.Is(err, certmanager.ErrIssuerEmailRequired), errors.Is(err, certmanager.ErrTermsOfServiceRequired), errors.Is(err, certmanager.ErrEABRequired), errors.Is(err, certmanager.ErrCustomDirectoryRequired), errors.Is(err, certmanager.ErrInvalidDirectoryURL), errors.Is(err, certmanager.ErrIssuerRegistrationPending), errors.Is(err, certmanager.ErrIssuerNotReady):
 		return connect.NewError(connect.CodeInvalidArgument, err)
-	case errors.Is(err, certmanager.ErrIssueFieldsLocked):
+	case errors.Is(err, certmanager.ErrIssueFieldsLocked), errors.Is(err, certmanager.ErrIssuerAccountURIRequired):
 		return connect.NewError(connect.CodeFailedPrecondition, err)
 	case errors.Is(err, certmanager.ErrNoActiveVersion), errors.Is(err, certmanager.ErrIssuanceOperationInFlight):
 		return connect.NewError(connect.CodeFailedPrecondition, err)
