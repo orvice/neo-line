@@ -592,6 +592,47 @@ MonitorGroupService.ListMonitorsByGroup
 }
 ```
 
+### 配置导入导出
+
+**状态：** 已实现（Connect API，仅 Admin）
+
+提供 API 用于把监控配置导出为单个 JSON 文件，或把该文件导入到另一个 neo-line 实例（备份、环境迁移、批量编辑）。配置仍以 MongoDB 为唯一权威来源，导入导出只是读写 MongoDB 的一种方式。
+
+```text
+DataService.ExportConfig
+DataService.ImportConfig
+```
+
+两个接口都要求 `admin` 角色：导出文件包含通知渠道的明文密钥（`channels[].extra`，如 `bot_token`、`access_token`、webhook header），请当作敏感文件保管。审计日志记录 action `export` / `import`、`resource_type` 为 `config`，不记录文件内容。
+
+范围：
+
+- 包含：站点设置、通知组、monitor 分组、server 及其下的 monitor。
+- 不包含：`monitor_results`、`server_events`、`users`、`mcp_tokens`、`audit_logs`。
+
+`ImportConfig` 请求字段：
+
+- `data`：由 `ExportConfig` 生成的 JSON 文件内容，解码后上限 `10 MiB`。
+- `mode`：必填。`MERGE` 只新增，已存在（按 ID 匹配）的跳过；`UPSERT` 新增并覆盖已存在的。
+- `dry_run`：为 `true` 时只校验并统计将发生的变化，不写库。
+
+运行行为：
+
+- 导入保留文件中的原始 ID，因此 monitor 对分组、分组对通知组的引用在迁移后保持有效。
+- 按依赖顺序写入：settings → 通知组 → monitor 分组 → server → monitor。
+- 计算与运行时托管字段（健康状态、monitor 状态、证书快照、各类时间戳）不导出，导入时忽略；`UPSERT` 覆盖已有 server / monitor 时保留库内已有的这些字段。
+- `settings` 是单例：`MERGE` 视为已存在并跳过，`UPSERT` 覆盖。
+- 同名但 ID 不同的通知组 / 分组：`MERGE` 跳过并在 `errors` 中报告，`UPSERT` 计入 `failed` 并报告；不会自动改名或合并。
+- 引用了不存在的通知组 / 分组、缺少 `id` / `name`、文件内 ID 重复、monitor `kind` 不支持的条目计入 `failed`，其下依赖它的条目随之失败。
+- 导入不是原子的：单项写入失败只记录并继续，不整体回滚。建议先用 `dry_run` 预检。
+- 导入从不删除库内数据。
+- 响应包含 `dry_run`、按资源类型的 `created` / `updated` / `skipped` / `failed` 计数，以及 `errors`（失败项和因名称冲突被跳过的项，含 `resource_type`、`id`、`name`、`message`）。底层存储错误细节只写服务端日志，不返回给客户端。
+
+错误码：
+
+- `invalid_argument`：JSON 非法、`version` 不是 `1`、存在未知字段、超过大小上限、`mode` 未指定。
+- `unauthenticated` / `permission_denied`：未登录 / 非 admin。
+
 ## MCP Server
 
 **状态：** 已实现
@@ -773,7 +814,7 @@ AuthService.Logout          # 需鉴权，吊销当前 token
 
 - 公开接口：`GET /ping`、`AuthService.Login`、`SettingsService.GetSettings`、`StatusService.GetStatusOverview`。
 - 需鉴权的接口：除上述公开 Connect procedure 外的所有 Connect API，包括 server / monitor / monitor group / notify group / MCP token 的读写操作、审计日志查询、SSH 远程执行、`SettingsService.UpdateSettings`、`AuthService.GetCurrentUser` 和 `AuthService.Logout`。
-- 需 `admin` 角色的接口：在已登录的基础上，所有 mutating procedure（方法名以 `Create` / `Update` / `Delete` 开头）、`SshService` 全部接口和 `McpTokenService` 全部接口额外要求会话角色为 `admin`，否则返回 `permission_denied`。`AuthService`（登录、登出、查询当前用户）不受此限制。
+- 需 `admin` 角色的接口：在已登录的基础上，所有 mutating procedure（方法名以 `Create` / `Update` / `Delete` 开头）、`SshService`、`McpTokenService`、`DataService` 全部接口额外要求会话角色为 `admin`，否则返回 `permission_denied`。`AuthService`（登录、登出、查询当前用户）不受此限制。
 
 ## Monitor 分组
 

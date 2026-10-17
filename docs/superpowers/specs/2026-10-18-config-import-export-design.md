@@ -55,6 +55,7 @@
 规则:
 
 - 导入时保留文件中的原始 ID,因此 monitor 到 group、group 到通知组的引用在迁移后保持有效。
+- `notify_groups`、`monitor_groups`、`servers`、`monitors` 的 `id`、`name` 必填;导入时对字段名严格校验,出现未知字段整体拒绝。
 - monitor 嵌套在 server 下,`server_id` 由嵌套关系决定,文件中不单独出现。
 - 计算与运行时托管字段不导出,导入时即使出现也忽略,与现有 API 规则一致:
   - server:`health_status`、`last_status_change_at`、`last_check_at`、`created_at`、`updated_at`
@@ -75,6 +76,7 @@ DataService.ImportConfig(ImportConfigRequest{ bytes data, ImportMode mode, bool 
 - `ImportMode`:`MERGE`(已存在则跳过)、`UPSERT`(已存在则覆盖);`UNSPECIFIED` 视为非法请求。
 - summary 按资源类型(settings / notify_groups / monitor_groups / servers / monitors)给出 `created`、`updated`、`skipped`、`failed` 计数。
 - `ImportError`:`resource_type`、`id`、`name`、`message`。
+- `errors` 包含失败项和因名称冲突被跳过的项。
 
 ### 鉴权与审计
 
@@ -114,7 +116,9 @@ DataService.ImportConfig(ImportConfigRequest{ bytes data, ImportMode mode, bool 
 
 不会自动改名或自动合并;文件中没有而库内有的数据一律保留。
 
-写入复用 `Store` 现有的 Create / Update 方法,因此 `group_ids` 与 `notify_group_ids` 的存在性校验、名称唯一约束和计算字段剥离沿用既有行为。由于需要保留原始 ID,`Store` 的创建路径需要支持调用方指定 ID。具体做法在实现计划中确认,优先选择对现有 Create 方法影响最小的方式。
+`settings` 是单例,MERGE 视为已存在并跳过,UPSERT 覆盖。
+
+写入复用 `Store` 现有的 Create / Update 方法,因此 `group_ids` 与 `notify_group_ids` 的存在性校验、名称唯一约束和计算字段剥离沿用既有行为。`Store` 的 `Create*` 方法已经在 ID 非空时沿用调用方指定的 ID,无需改动 store 层。
 
 ## 错误码
 

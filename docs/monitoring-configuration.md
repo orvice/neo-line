@@ -554,3 +554,62 @@ monitors:
     timeout_seconds: 5
     enabled: true
 ```
+
+## 配置导入导出文件格式
+
+`DataService.ExportConfig` 生成、`DataService.ImportConfig` 读取的是单个 JSON 文件，顶层 `version` 固定为 `1`。下面是字段结构示例（不是本地配置文件，neo-line 不会从磁盘读取它）：
+
+```json
+{
+  "version": 1,
+  "exported_at": "2026-10-18T00:00:00Z",
+  "settings": { "site_name": "neo-line", "status_page_title": "服务状态" },
+  "notify_groups": [
+    {
+      "id": "ntf_ops",
+      "name": "ops",
+      "channels": [ { "type": "telegram", "target": "123456", "extra": { "bot_token": "..." } } ]
+    }
+  ],
+  "monitor_groups": [
+    {
+      "id": "grp_edge",
+      "name": "prod-edge",
+      "sort_order": 0,
+      "alert_policy": { "enabled": true, "notify_group_ids": ["ntf_ops"], "on_down": true, "on_recover": true }
+    }
+  ],
+  "servers": [
+    {
+      "id": "srv_web1",
+      "name": "web-1",
+      "host": "10.0.0.1",
+      "enabled": true,
+      "monitors": [
+        {
+          "id": "mon_api",
+          "name": "api-health",
+          "kind": "url",
+          "enabled": true,
+          "url": "https://example.com/health",
+          "group_ids": ["grp_edge"],
+          "tls_verify": true,
+          "interval_seconds": 60,
+          "timeout_seconds": 5,
+          "retries": 3
+        }
+      ]
+    }
+  ]
+}
+```
+
+规则：
+
+- `notify_groups`、`monitor_groups`、`servers`、`monitors` 的 `id` 与 `name` 必填；`id` 在文件内必须唯一，分组与通知组的 `name` 在文件内也必须唯一。手工新增条目时需要自行指定 `id`，格式不限，建议沿用 `ntf_` / `grp_` / `srv_` / `mon_` 前缀。
+- monitor 嵌套在所属 server 下，没有 `server_id` 字段；`group_ids` 引用 `monitor_groups[].id`，`alert_policy.notify_group_ids` 引用 `notify_groups[].id`，引用目标可以在同一文件中，也可以已存在于库内。
+- 布尔字段（如 `enabled`、`tls_verify`）缺省时按 `false` 处理，导入时请显式写出。
+- 字段名严格校验，出现未知字段会整体拒绝导入，用于及早发现拼写错误。
+- monitor `kind` 支持 `tcp`、`url`、`tls_port`，以及为兼容历史数据保留的 `http`、`https`、`tls`、`tls_certificate`；缺省按 `tcp` 处理。
+- 以下计算与运行时字段不会出现在导出文件中（DTO 未包含）；若在 JSON 中写入这些或其它未知字段名，整份导入会因严格字段校验被拒绝：server 的 `health_status`、`last_status_change_at`、`last_check_at`、`created_at`、`updated_at`，monitor 的 `status`、`last_check_at`、`last_status_change_at`、`certificate`、`created_at`、`updated_at`。
+- `channels[].extra` 以明文导出，包含密钥，文件需要按敏感文件保管。
