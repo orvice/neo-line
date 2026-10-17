@@ -1,0 +1,65 @@
+syntax = "proto3";
+
+package neoline.v1;
+
+option go_package = "github.com/orvice/neo-line/pkg/proto/neoline/v1;neolinev1";
+
+// ImportMode controls how ImportConfig treats resources that already exist.
+enum ImportMode {
+  IMPORT_MODE_UNSPECIFIED = 0;
+  // IMPORT_MODE_MERGE only creates missing resources; existing ones are skipped.
+  IMPORT_MODE_MERGE = 1;
+  // IMPORT_MODE_UPSERT creates missing resources and overwrites existing ones.
+  IMPORT_MODE_UPSERT = 2;
+}
+
+message ExportConfigRequest {}
+
+message ExportConfigResponse {
+  // data is a JSON document (version 1) containing all monitoring configuration.
+  bytes data = 1;
+}
+
+message ImportConfigRequest {
+  // data is a JSON document previously produced by ExportConfig.
+  bytes data = 1;
+  ImportMode mode = 2;
+  // dry_run validates and counts what would change without writing anything.
+  bool dry_run = 3;
+}
+
+message ImportCounts {
+  uint32 created = 1;
+  uint32 updated = 2;
+  uint32 skipped = 3;
+  uint32 failed = 4;
+}
+
+message ImportSummary {
+  ImportCounts settings = 1;
+  ImportCounts notify_groups = 2;
+  ImportCounts monitor_groups = 3;
+  ImportCounts servers = 4;
+  ImportCounts monitors = 5;
+}
+
+// ImportError describes one failed item, or one item skipped because of a
+// name conflict.
+message ImportError {
+  string resource_type = 1;
+  string id = 2;
+  string name = 3;
+  string message = 4;
+}
+
+message ImportConfigResponse {
+  bool dry_run = 1;
+  ImportSummary summary = 2;
+  repeated ImportError errors = 3;
+}
+
+// DataService exports and imports monitoring configuration. Admin only.
+service DataService {
+  rpc ExportConfig(ExportConfigRequest) returns (ExportConfigResponse) {}
+  rpc ImportConfig(ImportConfigRequest) returns (ImportConfigResponse) {}
+}
