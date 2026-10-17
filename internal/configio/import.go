@@ -213,6 +213,69 @@ func (im *importer) importSettings(ctx context.Context, s *Settings) {
 	c.Updated++
 }
 
+type namedItem struct {
+	ID, Name string
+}
+
+type groupImportSpec[T any] struct {
+	resource string
+	counts   *Counts
+	existing []namedItem
+	items    []T
+	id       func(T) string
+	name     func(T) string
+	validate func(T) string
+	write    func(ctx context.Context, item T, act action) error
+}
+
+func importGroups[T any](ctx context.Context, im *importer, spec groupImportSpec[T]) map[string]bool {
+	byID := map[string]bool{}
+	nameOwner := map[string]string{}
+	available := map[string]bool{}
+	for _, g := range spec.existing {
+		byID[g.ID] = true
+		nameOwner[g.Name] = g.ID
+		available[g.ID] = true
+	}
+
+	seen := newSeenSet()
+	c := spec.counts
+	for _, item := range spec.items {
+		id := spec.id(item)
+		name := spec.name(item)
+		if msg := seen.check(id, name, true); msg != "" {
+			im.failed(c, spec.resource, id, name, msg)
+			continue
+		}
+		if spec.validate != nil {
+			if msg := spec.validate(item); msg != "" {
+				im.failed(c, spec.resource, id, name, msg)
+				continue
+			}
+		}
+		owner, taken := nameOwner[name]
+		act := decide(im.opts.Mode, byID[id], taken && owner != id)
+		switch act {
+		case actSkip:
+			im.skipped(c, spec.resource, id, name, "")
+		case actSkipConflict:
+			im.skipped(c, spec.resource, id, name, conflictMessage(owner))
+		case actConflict:
+			im.failed(c, spec.resource, id, name, conflictMessage(owner))
+		default:
+			if !im.opts.DryRun {
+				if err := spec.write(ctx, item, act); err != nil {
+					im.failed(c, spec.resource, id, name, writeMessage(err))
+					continue
+				}
+			}
+			done(c, act)
+			available[id] = true
+		}
+	}
+	return available
+}
+
 // importNotifyGroups returns the set of notify group IDs a monitor group may
 // reference: everything already stored plus everything imported successfully.
 func (im *importer) importNotifyGroups(ctx context.Context, groups []NotifyGroup) (map[string]bool, error) {
@@ -222,49 +285,26 @@ func (im *importer) importNotifyGroups(ctx context.Context, groups []NotifyGroup
 	if err != nil {
 		return nil, fmt.Errorf("list notify groups: %w", err)
 	}
-	byID := map[string]bool{}
-	nameOwner := map[string]string{}
-	available := map[string]bool{}
-	for _, g := range existing {
-		byID[g.ID] = true
-		nameOwner[g.Name] = g.ID
-		available[g.ID] = true
+	existingNamed := make([]namedItem, len(existing))
+	for i, g := range existing {
+		existingNamed[i] = namedItem{ID: g.ID, Name: g.Name}
 	}
-
-	seen := newSeenSet()
-	c := &im.report.Summary.NotifyGroups
-	for _, g := range groups {
-		if msg := seen.check(g.ID, g.Name, true); msg != "" {
-			im.failed(c, ResourceNotifyGroup, g.ID, g.Name, msg)
-			continue
-		}
-		owner, taken := nameOwner[g.Name]
-		act := decide(im.opts.Mode, byID[g.ID], taken && owner != g.ID)
-		switch act {
-		case actSkip:
-			im.skipped(c, ResourceNotifyGroup, g.ID, g.Name, "")
-		case actSkipConflict:
-			im.skipped(c, ResourceNotifyGroup, g.ID, g.Name, conflictMessage(owner))
-		case actConflict:
-			im.failed(c, ResourceNotifyGroup, g.ID, g.Name, conflictMessage(owner))
-		default:
-			if !im.opts.DryRun {
-				var err error
-				if act == actUpdate {
-					_, err = im.st.UpdateNotifyGroup(ctx, g.ID, g.toStore())
-				} else {
-					_, err = im.st.CreateNotifyGroup(ctx, g.toStore())
-				}
-				if err != nil {
-					im.failed(c, ResourceNotifyGroup, g.ID, g.Name, writeMessage(err))
-					continue
-				}
+	return importGroups(ctx, im, groupImportSpec[NotifyGroup]{
+		resource: ResourceNotifyGroup,
+		counts:   &im.report.Summary.NotifyGroups,
+		existing: existingNamed,
+		items:    groups,
+		id:       func(g NotifyGroup) string { return g.ID },
+		name:     func(g NotifyGroup) string { return g.Name },
+		write: func(ctx context.Context, g NotifyGroup, act action) error {
+			if act == actUpdate {
+				_, err := im.st.UpdateNotifyGroup(ctx, g.ID, g.toStore())
+				return err
 			}
-			done(c, act)
-			available[g.ID] = true
-		}
-	}
-	return available, nil
+			_, err := im.st.CreateNotifyGroup(ctx, g.toStore())
+			return err
+		},
+	}), nil
 }
 
 // importMonitorGroups returns the set of monitor group IDs a monitor may
@@ -276,53 +316,29 @@ func (im *importer) importMonitorGroups(ctx context.Context, groups []MonitorGro
 	if err != nil {
 		return nil, fmt.Errorf("list monitor groups: %w", err)
 	}
-	byID := map[string]bool{}
-	nameOwner := map[string]string{}
-	available := map[string]bool{}
-	for _, g := range existing {
-		byID[g.ID] = true
-		nameOwner[g.Name] = g.ID
-		available[g.ID] = true
+	existingNamed := make([]namedItem, len(existing))
+	for i, g := range existing {
+		existingNamed[i] = namedItem{ID: g.ID, Name: g.Name}
 	}
-
-	seen := newSeenSet()
-	c := &im.report.Summary.MonitorGroups
-	for _, g := range groups {
-		if msg := seen.check(g.ID, g.Name, true); msg != "" {
-			im.failed(c, ResourceMonitorGroup, g.ID, g.Name, msg)
-			continue
-		}
-		if msg := missingRefs("notify group", g.AlertPolicy.NotifyGroupIDs, notify); msg != "" {
-			im.failed(c, ResourceMonitorGroup, g.ID, g.Name, msg)
-			continue
-		}
-		owner, taken := nameOwner[g.Name]
-		act := decide(im.opts.Mode, byID[g.ID], taken && owner != g.ID)
-		switch act {
-		case actSkip:
-			im.skipped(c, ResourceMonitorGroup, g.ID, g.Name, "")
-		case actSkipConflict:
-			im.skipped(c, ResourceMonitorGroup, g.ID, g.Name, conflictMessage(owner))
-		case actConflict:
-			im.failed(c, ResourceMonitorGroup, g.ID, g.Name, conflictMessage(owner))
-		default:
-			if !im.opts.DryRun {
-				var err error
-				if act == actUpdate {
-					_, err = im.st.UpdateMonitorGroup(ctx, g.ID, g.toStore())
-				} else {
-					_, err = im.st.CreateMonitorGroup(ctx, g.toStore())
-				}
-				if err != nil {
-					im.failed(c, ResourceMonitorGroup, g.ID, g.Name, writeMessage(err))
-					continue
-				}
+	return importGroups(ctx, im, groupImportSpec[MonitorGroup]{
+		resource: ResourceMonitorGroup,
+		counts:   &im.report.Summary.MonitorGroups,
+		existing: existingNamed,
+		items:    groups,
+		id:       func(g MonitorGroup) string { return g.ID },
+		name:     func(g MonitorGroup) string { return g.Name },
+		validate: func(g MonitorGroup) string {
+			return missingRefs("notify group", g.AlertPolicy.NotifyGroupIDs, notify)
+		},
+		write: func(ctx context.Context, g MonitorGroup, act action) error {
+			if act == actUpdate {
+				_, err := im.st.UpdateMonitorGroup(ctx, g.ID, g.toStore())
+				return err
 			}
-			done(c, act)
-			available[g.ID] = true
-		}
-	}
-	return available, nil
+			_, err := im.st.CreateMonitorGroup(ctx, g.toStore())
+			return err
+		},
+	}), nil
 }
 
 func (im *importer) failMonitors(srv Server, msg string) {
