@@ -46,6 +46,7 @@ func Register(r *gin.Engine, st store.Store, ssh *nlssh.Runner) {
 	mux.Handle(neolinev1connect.NewNotifyGroupServiceHandler(svc, opts))
 	mux.Handle(neolinev1connect.NewMcpTokenServiceHandler(svc, opts))
 	mux.Handle(neolinev1connect.NewSshServiceHandler(svc, opts))
+	mux.Handle(neolinev1connect.NewDataServiceHandler(svc, opts, connect.WithReadMaxBytes(16<<20)))
 
 	handler := http.StripPrefix(BasePath, mux)
 	r.Any(BasePath+"/*any", gin.WrapH(handler))
