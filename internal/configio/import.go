@@ -360,7 +360,6 @@ func (im *importer) importServers(ctx context.Context, servers []Server, groups 
 	}
 
 	seenServers := newSeenSet()
-	seenMonitors := newSeenSet() // monitor IDs must be unique across the whole file
 	c := &im.report.Summary.Servers
 	for _, srv := range servers {
 		if msg := seenServers.check(srv.ID, srv.Name, false); msg != "" {
@@ -388,14 +387,15 @@ func (im *importer) importServers(ctx context.Context, servers []Server, groups 
 			}
 			done(c, act)
 		}
-		if err := im.importMonitors(ctx, srv, exists, groups, seenMonitors); err != nil {
+		if err := im.importMonitors(ctx, srv, exists, groups); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (im *importer) importMonitors(ctx context.Context, srv Server, serverExists bool, groups map[string]bool, seen *seenSet) error {
+func (im *importer) importMonitors(ctx context.Context, srv Server, serverExists bool, groups map[string]bool) error {
+	seen := newSeenSet() // monitor IDs must be unique within this server
 	existing := map[string]bool{}
 	if serverExists {
 		monitors, err := listAll(func(limit int64, token string) ([]store.Monitor, string, error) {

@@ -623,7 +623,7 @@ DataService.ImportConfig
 - 计算与运行时托管字段（健康状态、monitor 状态、证书快照、各类时间戳）不导出；导入文件中若携带则忽略、不写入库。`UPSERT` 覆盖已有 server / monitor 时保留库内已有的这些字段。
 - `settings` 是单例：`MERGE` 视为已存在并跳过，`UPSERT` 覆盖。
 - 同名但 ID 不同的通知组 / 分组：`MERGE` 跳过并在 `errors` 中报告，`UPSERT` 计入 `failed` 并报告；不会自动改名或合并。
-- 引用了不存在的通知组 / 分组、缺少 `id` / `name`、文件内 ID 重复、monitor `kind` 不支持的条目计入 `failed`，其下依赖它的条目随之失败。
+- 引用了不存在的通知组 / 分组、缺少 `id` / `name`、文件内 ID 重复（通知组 / 分组 / server 全局唯一；monitor 仅在同一 server 内唯一）、monitor `kind` 不支持的条目计入 `failed`，其下依赖它的条目随之失败。
 - 导入不是原子的：单项写入失败只记录并继续，不整体回滚。建议先用 `dry_run` 预检。
 - 导入从不删除库内数据。
 - 响应包含 `dry_run`、按资源类型的 `created` / `updated` / `skipped` / `failed` 计数，以及 `errors`（失败项和因名称冲突被跳过的项，含 `resource_type`、`id`、`name`、`message`）。底层存储错误细节只写服务端日志，不返回给客户端。

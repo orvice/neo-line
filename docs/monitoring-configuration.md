@@ -606,7 +606,7 @@ monitors:
 
 规则：
 
-- `notify_groups`、`monitor_groups`、`servers`、`monitors` 的 `id` 与 `name` 必填；`id` 在文件内必须唯一，分组与通知组的 `name` 在文件内也必须唯一。手工新增条目时需要自行指定 `id`，格式不限，建议沿用 `ntf_` / `grp_` / `srv_` / `mon_` 前缀。
+- `notify_groups`、`monitor_groups`、`servers`、`monitors` 的 `id` 与 `name` 必填。`notify_groups`、`monitor_groups`、`servers` 的 `id` 在文件内必须唯一；monitor 的 `id` 只需在所属 server 内唯一（与库内 `(server_id, id)` 唯一索引一致），不同 server 下可以重复使用同一 monitor `id`。分组与通知组的 `name` 在文件内也必须唯一。手工新增条目时需要自行指定 `id`，格式不限，建议沿用 `ntf_` / `grp_` / `srv_` / `mon_` 前缀。
 - monitor 嵌套在所属 server 下，没有 `server_id` 字段；`group_ids` 引用 `monitor_groups[].id`，`alert_policy.notify_group_ids` 引用 `notify_groups[].id`，引用目标可以在同一文件中，也可以已存在于库内。
 - 布尔字段（如 `enabled`、`tls_verify`）缺省时按 `false` 处理，导入时请显式写出。
 - 字段名严格校验：拼写错误或不在 schema 内的未知字段会整体拒绝导入，用于及早发现错误；下列计算与运行时字段是例外，出现在导入文件中会被忽略、不会写入库。

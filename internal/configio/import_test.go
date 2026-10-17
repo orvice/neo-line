@@ -351,6 +351,67 @@ func TestImportIgnoresComputedFields(t *testing.T) {
 	}
 }
 
+func TestImportAllowsSameMonitorIDOnDifferentServers(t *testing.T) {
+	f := File{
+		Version: Version,
+		Servers: []Server{
+			{
+				ID: "srv_1", Name: "a", Host: "10.0.0.1", Enabled: true,
+				Monitors: []Monitor{{
+					ID: "mon_same", Name: "m1", Kind: "tcp", Enabled: true, Port: 22,
+					IntervalSeconds: 60, TimeoutSeconds: 5, Retries: 3,
+				}},
+			},
+			{
+				ID: "srv_2", Name: "b", Host: "10.0.0.2", Enabled: true,
+				Monitors: []Monitor{{
+					ID: "mon_same", Name: "m2", Kind: "tcp", Enabled: true, Port: 22,
+					IntervalSeconds: 60, TimeoutSeconds: 5, Retries: 3,
+				}},
+			},
+		},
+	}
+	fs := &fakeStore{}
+	report := runImport(t, fs, f, Options{Mode: ModeUpsert})
+
+	if report.Summary.Servers.Created != 2 || report.Summary.Monitors.Created != 2 || report.Summary.Monitors.Failed != 0 {
+		t.Fatalf("summary = %+v errors = %+v", report.Summary, report.Errors)
+	}
+	if len(fs.monitors) != 2 {
+		t.Fatalf("monitors = %+v", fs.monitors)
+	}
+	if fs.monitors[0].ServerID == fs.monitors[1].ServerID {
+		t.Fatalf("expected distinct ServerID: %+v", fs.monitors)
+	}
+}
+
+func TestImportRejectsDuplicateMonitorIDWithinServer(t *testing.T) {
+	f := File{
+		Version: Version,
+		Servers: []Server{{
+			ID: "srv_1", Name: "a", Host: "10.0.0.1", Enabled: true,
+			Monitors: []Monitor{
+				{ID: "mon_dup", Name: "m1", Kind: "tcp", Enabled: true, Port: 22, IntervalSeconds: 60, TimeoutSeconds: 5, Retries: 3},
+				{ID: "mon_dup", Name: "m2", Kind: "tcp", Enabled: true, Port: 22, IntervalSeconds: 60, TimeoutSeconds: 5, Retries: 3},
+			},
+		}},
+	}
+	report := runImport(t, &fakeStore{}, f, Options{Mode: ModeUpsert})
+
+	if report.Summary.Monitors.Created != 1 || report.Summary.Monitors.Failed != 1 {
+		t.Fatalf("summary = %+v", report.Summary)
+	}
+	found := false
+	for _, e := range report.Errors {
+		if e.ResourceType == ResourceMonitor && e.ID == "mon_dup" && strings.Contains(e.Message, "duplicate id in file") {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("expected duplicate id issue, got %+v", report.Errors)
+	}
+}
+
 func TestImportRejectsInvalidInput(t *testing.T) {
 	valid := mustJSON(t, File{Version: Version})
 	for _, tc := range []struct {

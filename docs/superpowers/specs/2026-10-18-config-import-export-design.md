@@ -97,7 +97,7 @@ DataService.ImportConfig(ImportConfigRequest{ bytes data, ImportMode mode, bool 
 
 1. 解析 JSON 并校验 `version`。`version` 大于当前支持版本时返回 `invalid_argument`;JSON 非法或超过大小上限同样返回 `invalid_argument`。
 2. 离线预检(不写库):
-   - 文件内 ID 重复、名称重复(group、通知组)
+   - 文件内 ID 重复(通知组 / 分组 / server 全局唯一;monitor 仅在同一 server 内唯一)、名称重复(group、通知组)
    - monitor 的 `kind` 及必需参数不合法
    - 引用的 `group_ids` / `notify_group_ids` 既不在文件内也不在库内
    预检发现的问题计入 `failed`,对应条目不会被写入。
