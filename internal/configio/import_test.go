@@ -293,6 +293,64 @@ func TestImportWriteFailureIsReportedAndContinues(t *testing.T) {
 	}
 }
 
+func TestImportIgnoresComputedFields(t *testing.T) {
+	withComputed := []byte(`{
+  "version": 1,
+  "servers": [{
+    "id": "srv_1",
+    "name": "web-1",
+    "host": "10.0.0.1",
+    "enabled": true,
+    "health_status": "Down",
+    "last_status_change_at": "2026-01-01T00:00:00Z",
+    "last_check_at": "2026-01-01T00:00:00Z",
+    "created_at": "2026-01-01T00:00:00Z",
+    "updated_at": "2026-01-01T00:00:00Z",
+    "monitors": [{
+      "id": "mon_1",
+      "name": "ssh",
+      "kind": "tcp",
+      "port": 22,
+      "interval_seconds": 60,
+      "timeout_seconds": 5,
+      "retries": 3,
+      "status": "Down",
+      "last_check_at": "2026-01-01T00:00:00Z",
+      "last_status_change_at": "2026-01-01T00:00:00Z",
+      "created_at": "2026-01-01T00:00:00Z",
+      "updated_at": "2026-01-01T00:00:00Z",
+      "certificate": {"subject": "CN=x"}
+    }]
+  }]
+}`)
+	fs := &fakeStore{}
+	report, err := Import(context.Background(), fs, withComputed, Options{Mode: ModeUpsert})
+	if err != nil {
+		t.Fatalf("Import: %v", err)
+	}
+	if report.Summary.Servers.Created != 1 || report.Summary.Monitors.Created != 1 {
+		t.Fatalf("summary = %+v", report.Summary)
+	}
+	if len(fs.servers) != 1 {
+		t.Fatalf("servers = %+v", fs.servers)
+	}
+	if fs.servers[0].HealthStatus != store.StatusUnknown {
+		t.Fatalf("HealthStatus = %q, want %q", fs.servers[0].HealthStatus, store.StatusUnknown)
+	}
+	if len(fs.monitors) != 1 {
+		t.Fatalf("monitors = %+v", fs.monitors)
+	}
+	if fs.monitors[0].Status != store.StatusUnknown || fs.monitors[0].Certificate != nil {
+		t.Fatalf("monitor status/cert = %q %v, want Unknown nil", fs.monitors[0].Status, fs.monitors[0].Certificate)
+	}
+
+	withBogus := []byte(`{"version":1,"servers":[{"id":"srv_1","name":"n","host":"h","enabled":true,"bogus":1}]}`)
+	_, err = Import(context.Background(), fs, withBogus, Options{Mode: ModeUpsert})
+	if !errors.Is(err, ErrInvalidInput) {
+		t.Fatalf("bogus field err = %v, want ErrInvalidInput", err)
+	}
+}
+
 func TestImportRejectsInvalidInput(t *testing.T) {
 	valid := mustJSON(t, File{Version: Version})
 	for _, tc := range []struct {

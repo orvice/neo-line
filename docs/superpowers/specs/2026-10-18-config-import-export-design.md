@@ -55,7 +55,7 @@
 规则:
 
 - 导入时保留文件中的原始 ID,因此 monitor 到 group、group 到通知组的引用在迁移后保持有效。
-- `notify_groups`、`monitor_groups`、`servers`、`monitors` 的 `id`、`name` 必填;导入时对字段名严格校验,出现未知字段整体拒绝。
+- `notify_groups`、`monitor_groups`、`servers`、`monitors` 的 `id`、`name` 必填;导入时对字段名严格校验,未知或拼写错误的字段整体拒绝(计算与运行时字段见下条,除外)。
 - monitor 嵌套在 server 下,`server_id` 由嵌套关系决定,文件中不单独出现。
 - 计算与运行时托管字段不导出,导入时即使出现也忽略,与现有 API 规则一致:
   - server:`health_status`、`last_status_change_at`、`last_check_at`、`created_at`、`updated_at`

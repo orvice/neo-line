@@ -620,7 +620,7 @@ DataService.ImportConfig
 
 - 导入保留文件中的原始 ID，因此 monitor 对分组、分组对通知组的引用在迁移后保持有效。
 - 按依赖顺序写入：settings → 通知组 → monitor 分组 → server → monitor。
-- 计算与运行时托管字段（健康状态、monitor 状态、证书快照、各类时间戳）不导出，导入时忽略；`UPSERT` 覆盖已有 server / monitor 时保留库内已有的这些字段。
+- 计算与运行时托管字段（健康状态、monitor 状态、证书快照、各类时间戳）不导出；导入文件中若携带则忽略、不写入库。`UPSERT` 覆盖已有 server / monitor 时保留库内已有的这些字段。
 - `settings` 是单例：`MERGE` 视为已存在并跳过，`UPSERT` 覆盖。
 - 同名但 ID 不同的通知组 / 分组：`MERGE` 跳过并在 `errors` 中报告，`UPSERT` 计入 `failed` 并报告；不会自动改名或合并。
 - 引用了不存在的通知组 / 分组、缺少 `id` / `name`、文件内 ID 重复、monitor `kind` 不支持的条目计入 `failed`，其下依赖它的条目随之失败。
@@ -630,7 +630,7 @@ DataService.ImportConfig
 
 错误码：
 
-- `invalid_argument`：JSON 非法、`version` 不是 `1`、存在未知字段、超过大小上限、`mode` 未指定。
+- `invalid_argument`：JSON 非法、`version` 不是 `1`、存在未知或拼写错误字段（计算与运行时字段除外）、超过大小上限、`mode` 未指定。
 - `unauthenticated` / `permission_denied`：未登录 / 非 admin。
 
 ## MCP Server

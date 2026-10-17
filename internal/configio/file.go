@@ -99,6 +99,13 @@ type Server struct {
 	Enabled     bool      `json:"enabled"`
 	SSH         *SSH      `json:"ssh,omitempty"`
 	Monitors    []Monitor `json:"monitors,omitempty"`
+	// Accepted and ignored on import so an API response can be pasted into a
+	// file; never exported and never copied to the store.
+	HealthStatus       json.RawMessage `json:"health_status,omitempty"`
+	LastStatusChangeAt json.RawMessage `json:"last_status_change_at,omitempty"`
+	LastCheckAt        json.RawMessage `json:"last_check_at,omitempty"`
+	CreatedAt          json.RawMessage `json:"created_at,omitempty"`
+	UpdatedAt          json.RawMessage `json:"updated_at,omitempty"`
 }
 
 type Monitor struct {
@@ -121,6 +128,14 @@ type Monitor struct {
 	IntervalSeconds     uint32            `json:"interval_seconds"`
 	TimeoutSeconds      uint32            `json:"timeout_seconds"`
 	Retries             uint32            `json:"retries"`
+	// Accepted and ignored on import so an API response can be pasted into a
+	// file; never exported and never copied to the store.
+	Status             json.RawMessage `json:"status,omitempty"`
+	LastCheckAt        json.RawMessage `json:"last_check_at,omitempty"`
+	LastStatusChangeAt json.RawMessage `json:"last_status_change_at,omitempty"`
+	Certificate        json.RawMessage `json:"certificate,omitempty"`
+	CreatedAt          json.RawMessage `json:"created_at,omitempty"`
+	UpdatedAt          json.RawMessage `json:"updated_at,omitempty"`
 }
 
 // decode parses an import document. The version is checked first so a newer
