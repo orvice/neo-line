@@ -438,7 +438,7 @@ alert_policy:
 
 通知组是一组可复用的通知通道，独立于 monitor 分组存在，多个分组可以共享同一个通知组。
 
-MongoDB collection：`notify_groups`。`name` 上建立唯一索引。删除通知组会从所有分组的 `alert_policy.notify_group_ids` 中 `$pull` 掉该 ID。创建或更新 monitor 分组时校验 `notify_group_ids` 中的每个 ID 是否存在，不存在返回 `400`。
+MongoDB collection：`notify_groups`。`name` 上建立唯一索引。删除通知组会从所有分组的 `alert_policy.notify_group_ids` 以及所有 ManagedCertificate 的 `notify_group_ids` 中 `$pull` 掉该 ID（不删除分组或证书）。创建或更新 monitor 分组或托管证书时校验 `notify_group_ids` 中的每个 ID 是否存在，不存在返回 `400`。
 
 MongoDB document 字段示例：
 

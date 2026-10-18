@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+package neoline.v1;
+
+import "google/protobuf/timestamp.proto";
+import "neoline/v1/managed_certificate.proto";
+
+option go_package = "github.com/orvice/neo-line/pkg/proto/neoline/v1;neolinev1";
+
+// ServerCertificate describes one ManagedCertificate authorized for the calling Server.
+message ServerCertificate {
+  string managed_certificate_id = 1;
+  // Config name when no active version exists; omitted when active metadata is shown.
+  string name = 2;
+  repeated string domains = 3;
+  string active_version_id = 4;
+  bool available = 5;
+  CertificateValidity validity = 6;
+  CertificateKeyType key_type = 7;
+  string leaf_fingerprint = 8;
+  google.protobuf.Timestamp not_before = 9;
+  google.protobuf.Timestamp not_after = 10;
+  bool staging_untrusted = 11;
+  // Safe error summary when available=false (e.g. issuance failed).
+  string error_summary = 12;
+}
+
+message ListCertificatesRequest {}
+
+message ListCertificatesResponse {
+  repeated ServerCertificate certificates = 1;
+}
+
+message ServerCertificateServiceGetCertificateBundleRequest {
+  string managed_certificate_id = 1;
+}
+
+message ServerCertificateServiceGetCertificateBundleResponse {
+  CertificateBundle bundle = 1;
+}
+
+// ServerCertificateService is called by Servers using Authorization: Bearer nlct_<secret>.
+// Admin sessions and MCP tokens are rejected.
+service ServerCertificateService {
+  rpc ListCertificates(ListCertificatesRequest) returns (ListCertificatesResponse) {}
+  rpc GetCertificateBundle(ServerCertificateServiceGetCertificateBundleRequest) returns (ServerCertificateServiceGetCertificateBundleResponse) {}
+}

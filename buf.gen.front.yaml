@@ -1,0 +1,9 @@
+version: v2
+inputs:
+  - directory: proto
+plugins:
+  - remote: buf.build/bufbuild/es
+    out: front/src/gen
+    opt:
+      - target=ts
+      - import_extension=js

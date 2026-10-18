@@ -473,8 +473,13 @@ func (s *MongoStore) DeleteServer(ctx context.Context, id string) error {
 	if _, err := s.results().DeleteMany(ctx, bson.M{"server_id": id}); err != nil {
 		return err
 	}
-	_, err = s.events().DeleteMany(ctx, bson.M{"server_id": id})
-	return err
+	if _, err := s.events().DeleteMany(ctx, bson.M{"server_id": id}); err != nil {
+		return err
+	}
+	if err := s.DeleteCertificateAccessTokensByServer(ctx, id); err != nil {
+		return err
+	}
+	return s.RemoveServerFromManagedCertificates(ctx, id)
 }
 
 func (s *MongoStore) ListMonitors(ctx context.Context, serverID string, limit int64, pageToken string) ([]Monitor, string, error) {

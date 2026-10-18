@@ -12,6 +12,10 @@ import { MonitorDetailPage } from "./pages/monitor-detail"
 import { MonitorGroupsPage } from "./pages/monitor-groups"
 import { MonitorGroupDetailPage } from "./pages/monitor-group-detail"
 import { NotifyGroupsPage } from "./pages/notify-groups"
+import { DNSProviderAccountsPage } from "./pages/dns-provider-accounts"
+import { CertificateIssuersPage } from "./pages/certificate-issuers"
+import { ManagedCertificatesPage } from "./pages/managed-certificates"
+import { ManagedCertificateDetailPage } from "./pages/managed-certificate-detail"
 import { SettingsPage } from "./pages/settings"
 import { McpPage } from "./pages/mcp"
 import { AuditLogsPage } from "./pages/audit-logs"
@@ -95,6 +99,38 @@ export function App() {
           element={
             <RequireAuth>
               <NotifyGroupsPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/certificates/managed"
+          element={
+            <RequireAuth>
+              <ManagedCertificatesPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/certificates/managed/:certId"
+          element={
+            <RequireAuth>
+              <ManagedCertificateDetailPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/certificates/issuers"
+          element={
+            <RequireAuth>
+              <CertificateIssuersPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/certificates/dns-accounts"
+          element={
+            <RequireAuth>
+              <DNSProviderAccountsPage />
             </RequireAuth>
           }
         />

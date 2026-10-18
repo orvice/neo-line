@@ -38,7 +38,7 @@ func requiresAdmin(procedure string) bool {
 		return false
 	}
 	switch service {
-	case "SshService", "McpTokenService", "DataService":
+	case "SshService", "McpTokenService", "DataService", "CertificateAccessTokenService", "DNSProviderAccountService", "CertificateIssuerService", "ManagedCertificateService":
 		return true
 	}
 	return strings.HasPrefix(method, "Create") ||
@@ -186,8 +186,16 @@ func auditResourceType(procedure string) string {
 		return "monitor_group"
 	case "NotifyGroupService":
 		return "notify_group"
+	case "DNSProviderAccountService":
+		return "dns_provider_account"
+	case "CertificateIssuerService":
+		return "certificate_issuer"
+	case "ManagedCertificateService":
+		return "managed_certificate"
 	case "McpTokenService":
 		return "mcp_token"
+	case "CertificateAccessTokenService":
+		return "certificate_access_token"
 	case "SshService":
 		return "ssh"
 	case "DataService":
@@ -202,6 +210,9 @@ func auditResourceID(msg any) string {
 	type id interface{ GetId() string }
 	type groupID interface{ GetGroupId() string }
 	type notifyGroupID interface{ GetNotifyGroupId() string }
+	type dnsProviderAccountID interface{ GetDnsProviderAccountId() string }
+	type certificateIssuerID interface{ GetCertificateIssuerId() string }
+	type managedCertificateID interface{ GetManagedCertificateId() string }
 	type serverID interface{ GetServerId() string }
 	type tokenID interface{ GetTokenId() string }
 
@@ -219,6 +230,15 @@ func auditResourceID(msg any) string {
 	}
 	if m, ok := msg.(notifyGroupID); ok && m.GetNotifyGroupId() != "" {
 		return m.GetNotifyGroupId()
+	}
+	if m, ok := msg.(dnsProviderAccountID); ok && m.GetDnsProviderAccountId() != "" {
+		return m.GetDnsProviderAccountId()
+	}
+	if m, ok := msg.(certificateIssuerID); ok && m.GetCertificateIssuerId() != "" {
+		return m.GetCertificateIssuerId()
+	}
+	if m, ok := msg.(managedCertificateID); ok && m.GetManagedCertificateId() != "" {
+		return m.GetManagedCertificateId()
 	}
 	if m, ok := msg.(tokenID); ok && m.GetTokenId() != "" {
 		return m.GetTokenId()

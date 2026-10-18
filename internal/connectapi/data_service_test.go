@@ -36,7 +36,7 @@ func newDataClient(t *testing.T) neolinev1connect.DataServiceClient {
 	Register(r, sessionStore{sessions: map[string]store.Session{
 		"admin-token":  {Token: "admin-token", Role: store.RoleAdmin, Email: "a@example.com"},
 		"viewer-token": {Token: "viewer-token", Role: "viewer", Email: "v@example.com"},
-	}}, nil)
+	}}, nil, nil)
 	srv := httptest.NewServer(r)
 	t.Cleanup(srv.Close)
 	return neolinev1connect.NewDataServiceClient(srv.Client(), srv.URL+BasePath)

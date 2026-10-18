@@ -1,3 +1,4 @@
+import type { ReactNode } from "react"
 import {
   Dialog,
   DialogContent,
@@ -12,7 +13,7 @@ interface ConfirmDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   title: string
-  description?: string
+  description?: ReactNode
   confirmText?: string
   pending?: boolean
   onConfirm: () => void
@@ -32,7 +33,13 @@ export function ConfirmDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
-          {description && <DialogDescription>{description}</DialogDescription>}
+          {description ? (
+            typeof description === "string" ? (
+              <DialogDescription>{description}</DialogDescription>
+            ) : (
+              <div className="text-muted-foreground text-sm">{description}</div>
+            )
+          ) : null}
         </DialogHeader>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>

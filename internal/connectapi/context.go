@@ -12,7 +12,15 @@ type ctxKey int
 const (
 	sessionCtxKey ctxKey = iota
 	sessionHolderCtxKey
+	certAccessTokenCtxKey
+	certAccessTokenHolderCtxKey
 )
+
+const storeCertAccessTokenPrefix = "nlct_"
+
+type certAccessTokenHolder struct {
+	token *store.CertificateAccessToken
+}
 
 // sessionHolder lets the audit interceptor (outermost) observe the session
 // resolved by the auth interceptor (inner), so failed and successful calls are
@@ -46,4 +54,21 @@ func bearerToken(header string) string {
 		return strings.TrimSpace(header[len(prefix):])
 	}
 	return ""
+}
+
+func withCertAccessToken(ctx context.Context, t store.CertificateAccessToken) context.Context {
+	if holder, ok := ctx.Value(certAccessTokenHolderCtxKey).(*certAccessTokenHolder); ok {
+		holder.token = &t
+	}
+	return context.WithValue(ctx, certAccessTokenCtxKey, t)
+}
+
+func withCertAccessTokenHolder(ctx context.Context) (context.Context, *certAccessTokenHolder) {
+	holder := &certAccessTokenHolder{}
+	return context.WithValue(ctx, certAccessTokenHolderCtxKey, holder), holder
+}
+
+func certAccessTokenFromContext(ctx context.Context) (store.CertificateAccessToken, bool) {
+	t, ok := ctx.Value(certAccessTokenCtxKey).(store.CertificateAccessToken)
+	return t, ok
 }

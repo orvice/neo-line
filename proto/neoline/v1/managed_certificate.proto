@@ -1,0 +1,251 @@
+syntax = "proto3";
+
+package neoline.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/orvice/neo-line/pkg/proto/neoline/v1;neolinev1";
+
+// CertificateKeyType selects the private key algorithm for issuance.
+enum CertificateKeyType {
+  CERTIFICATE_KEY_TYPE_UNSPECIFIED = 0;
+  CERTIFICATE_KEY_TYPE_EC_P256 = 1;
+  CERTIFICATE_KEY_TYPE_RSA_2048 = 2;
+}
+
+// CertificateValidity describes the active version lifecycle state.
+enum CertificateValidity {
+  CERTIFICATE_VALIDITY_UNSPECIFIED = 0;
+  CERTIFICATE_VALIDITY_MISSING = 1;
+  CERTIFICATE_VALIDITY_VALID = 2;
+  CERTIFICATE_VALIDITY_RENEWAL_DUE = 3;
+  CERTIFICATE_VALIDITY_EXPIRED = 4;
+  CERTIFICATE_VALIDITY_REVOKED = 5;
+}
+
+enum CertificateOperationType {
+  CERTIFICATE_OPERATION_TYPE_UNSPECIFIED = 0;
+  CERTIFICATE_OPERATION_TYPE_ISSUE = 1;
+  CERTIFICATE_OPERATION_TYPE_RENEW = 2;
+  CERTIFICATE_OPERATION_TYPE_REVOKE = 3;
+}
+
+enum CertificateOperationStatus {
+  CERTIFICATE_OPERATION_STATUS_UNSPECIFIED = 0;
+  CERTIFICATE_OPERATION_STATUS_PENDING = 1;
+  CERTIFICATE_OPERATION_STATUS_RUNNING = 2;
+  CERTIFICATE_OPERATION_STATUS_SUCCEEDED = 3;
+  CERTIFICATE_OPERATION_STATUS_FAILED = 4;
+}
+
+// CertificateRevocationReason maps to RFC 5280 CRLReason codes for ACME revoke.
+enum CertificateRevocationReason {
+  CERTIFICATE_REVOCATION_REASON_UNSPECIFIED = 0;
+  CERTIFICATE_REVOCATION_REASON_KEY_COMPROMISE = 1;
+  CERTIFICATE_REVOCATION_REASON_CA_COMPROMISE = 2;
+  CERTIFICATE_REVOCATION_REASON_AFFILIATION_CHANGED = 3;
+  CERTIFICATE_REVOCATION_REASON_SUPERSEDED = 4;
+  CERTIFICATE_REVOCATION_REASON_CESSATION_OF_OPERATION = 5;
+  CERTIFICATE_REVOCATION_REASON_CERTIFICATE_HOLD = 6;
+  CERTIFICATE_REVOCATION_REASON_PRIVILEGE_WITHDRAWN = 9;
+  CERTIFICATE_REVOCATION_REASON_AA_COMPROMISE = 10;
+}
+
+// IssueConfigSnapshot captures issuance parameters frozen at operation creation.
+message IssueConfigSnapshot {
+  repeated string domains = 1;
+  string certificate_issuer_id = 2;
+  string dns_provider_account_id = 3;
+  CertificateKeyType key_type = 4;
+}
+
+message CertificateOperation {
+  string id = 1;
+  string managed_certificate_id = 2;
+  CertificateOperationType type = 3;
+  CertificateOperationStatus status = 4;
+  uint32 attempt_count = 5;
+  IssueConfigSnapshot config_snapshot = 6;
+  string error_summary = 7;
+  string warning = 8;
+  google.protobuf.Timestamp started_at = 9;
+  google.protobuf.Timestamp finished_at = 10;
+  google.protobuf.Timestamp next_attempt_at = 11;
+  google.protobuf.Timestamp created_at = 12;
+  google.protobuf.Timestamp updated_at = 13;
+  // Revoke operations only: target CertificateVersion id.
+  string target_version_id = 14;
+  CertificateRevocationReason revocation_reason = 15;
+}
+
+// CertificateVersionSlot selects which stored version to download.
+enum CertificateVersionSlot {
+  CERTIFICATE_VERSION_SLOT_UNSPECIFIED = 0;
+  CERTIFICATE_VERSION_SLOT_ACTIVE = 1;
+  CERTIFICATE_VERSION_SLOT_PREVIOUS = 2;
+}
+
+// CertificateVersionMetadata exposes active/previous version facts without PEM secrets.
+message CertificateVersionMetadata {
+  string id = 1;
+  IssueConfigSnapshot config_snapshot = 2;
+  string leaf_fingerprint = 3;
+  string serial_number = 4;
+  string issuer_common_name = 5;
+  google.protobuf.Timestamp not_before = 6;
+  google.protobuf.Timestamp not_after = 7;
+  CertificateKeyType key_type = 8;
+  bool staging_untrusted = 9;
+  google.protobuf.Timestamp created_at = 10;
+  google.protobuf.Timestamp revoked_at = 11;
+  // True while a Revoke operation is pending or running for this version.
+  bool revoke_pending = 12;
+}
+
+message CertificateBundle {
+  string managed_certificate_id = 1;
+  string version_id = 2;
+  repeated string domains = 3;
+  CertificateKeyType key_type = 4;
+  string leaf_fingerprint = 5;
+  google.protobuf.Timestamp not_before = 6;
+  google.protobuf.Timestamp not_after = 7;
+  CertificateValidity validity = 8;
+  bool staging_untrusted = 9;
+  bytes fullchain_pem = 10;
+  bytes private_key_pem = 11;
+}
+
+message GetCertificateBundleRequest {
+  string managed_certificate_id = 1;
+  // Defaults to active when unspecified.
+  CertificateVersionSlot version_slot = 2;
+}
+
+message ActivatePreviousVersionRequest {
+  string managed_certificate_id = 1;
+  string version_id = 2;
+}
+
+message ActivatePreviousVersionResponse {
+  ManagedCertificate certificate = 1;
+}
+
+message GetCertificateBundleResponse {
+  CertificateBundle bundle = 1;
+}
+
+message SubmitIssueOperationRequest {
+  string managed_certificate_id = 1;
+}
+
+message SubmitIssueOperationResponse {
+  CertificateOperation operation = 1;
+}
+
+message SubmitRenewOperationRequest {
+  string managed_certificate_id = 1;
+}
+
+message SubmitRenewOperationResponse {
+  CertificateOperation operation = 1;
+}
+
+message SubmitRevokeVersionRequest {
+  string managed_certificate_id = 1;
+  string version_id = 2;
+  // Defaults to unspecified (RFC 5280 reason 0) when omitted.
+  CertificateRevocationReason revocation_reason = 3;
+}
+
+message SubmitRevokeVersionResponse {
+  CertificateOperation operation = 1;
+}
+
+message DeleteManagedCertificateRequest {
+  string managed_certificate_id = 1;
+}
+
+message DeleteManagedCertificateResponse {}
+
+// ManagedCertificate holds desired config, assignments, and version container.
+// Secrets are never returned on read.
+message ManagedCertificate {
+  string id = 1;
+  string name = 2;
+  repeated string domains = 3;
+  string certificate_issuer_id = 4;
+  string dns_provider_account_id = 5;
+  CertificateKeyType key_type = 6;
+  // Defaults to true on create when omitted.
+  optional bool auto_renew_enabled = 7;
+  uint32 renew_before_days = 8;
+  repeated string notify_group_ids = 9;
+  repeated string server_ids = 10;
+  CertificateValidity active_validity = 11;
+  bool bundle_available = 12;
+  // Most recent non-terminal operation, if any (e.g. Pending Issue after create).
+  CertificateOperation latest_operation = 13;
+  google.protobuf.Timestamp created_at = 14;
+  google.protobuf.Timestamp updated_at = 15;
+  CertificateVersionMetadata active_version = 16;
+  CertificateVersionMetadata previous_version = 17;
+  // True when desired config differs from the active version issuance snapshot.
+  bool has_unpublished_desired_changes = 18;
+  // Effective renewal window in days: min(renew_before_days, lifetime / 3).
+  uint32 effective_renewal_window_days = 19;
+  // When auto-renew should next trigger (not_after minus effective window).
+  google.protobuf.Timestamp next_renewal_at = 20;
+  // Most recent notification channel delivery warning, if any.
+  string last_notification_warning = 21;
+  google.protobuf.Timestamp last_notification_warning_at = 22;
+}
+
+message ListManagedCertificatesRequest {
+  uint32 page_size = 1;
+  string page_token = 2;
+}
+
+message ListManagedCertificatesResponse {
+  repeated ManagedCertificate certificates = 1;
+  string next_page_token = 2;
+}
+
+message CreateManagedCertificateRequest {
+  ManagedCertificate certificate = 1;
+}
+
+message CreateManagedCertificateResponse {
+  ManagedCertificate certificate = 1;
+}
+
+message GetManagedCertificateRequest {
+  string managed_certificate_id = 1;
+}
+
+message GetManagedCertificateResponse {
+  ManagedCertificate certificate = 1;
+}
+
+message UpdateManagedCertificateRequest {
+  string managed_certificate_id = 1;
+  ManagedCertificate certificate = 2;
+}
+
+message UpdateManagedCertificateResponse {
+  ManagedCertificate certificate = 1;
+}
+
+// ManagedCertificateService manages certificate desired config. All methods require admin.
+service ManagedCertificateService {
+  rpc ListManagedCertificates(ListManagedCertificatesRequest) returns (ListManagedCertificatesResponse) {}
+  rpc CreateManagedCertificate(CreateManagedCertificateRequest) returns (CreateManagedCertificateResponse) {}
+  rpc GetManagedCertificate(GetManagedCertificateRequest) returns (GetManagedCertificateResponse) {}
+  rpc UpdateManagedCertificate(UpdateManagedCertificateRequest) returns (UpdateManagedCertificateResponse) {}
+  rpc SubmitIssueOperation(SubmitIssueOperationRequest) returns (SubmitIssueOperationResponse) {}
+  rpc SubmitRenewOperation(SubmitRenewOperationRequest) returns (SubmitRenewOperationResponse) {}
+  rpc SubmitRevokeVersion(SubmitRevokeVersionRequest) returns (SubmitRevokeVersionResponse) {}
+  rpc GetCertificateBundle(GetCertificateBundleRequest) returns (GetCertificateBundleResponse) {}
+  rpc ActivatePreviousVersion(ActivatePreviousVersionRequest) returns (ActivatePreviousVersionResponse) {}
+  rpc DeleteManagedCertificate(DeleteManagedCertificateRequest) returns (DeleteManagedCertificateResponse) {}
+}

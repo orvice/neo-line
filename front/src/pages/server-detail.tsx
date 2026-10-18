@@ -1,22 +1,34 @@
 import { useState } from "react"
 import { Link, useParams } from "react-router-dom"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { ArrowLeft, Pencil, Play, Plus, Terminal, Trash2 } from "lucide-react"
+import { ArrowLeft, Pencil, Play, Plus, Shield, Terminal, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 
 import { api, ApiError } from "@/lib/api"
 import type { Monitor, Server, SshExecResponse, SshTestConnectionResponse } from "@/lib/types"
 import { useAuth } from "@/lib/auth"
 import {
+  activeDomains,
+  certQueryKeys,
+} from "@/lib/certificate-ui"
+import {
   formatCertExpiry,
+  formatManagedCertExpiry,
   formatRelative,
   formatTime,
   isTlsMonitorKind,
   monitorKindLabels,
 } from "@/lib/format"
 import { StatusBadge } from "@/components/status-badge"
+import {
+  CertificateAvailabilityBadge,
+  CertificateOperationBadge,
+  CertificateStagingBadge,
+  CertificateValidityBadge,
+} from "@/components/certificate-status-badges"
 import { MonitorForm } from "@/components/monitor-form"
 import { ConfirmDialog } from "@/components/confirm-dialog"
+import { CertificateAccessTokenPanel } from "@/components/certificate-access-token-panel"
 import { TableSkeleton } from "@/components/table-skeleton"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -57,6 +69,11 @@ export function ServerDetailPage() {
     queryKey: ["events", serverId],
     queryFn: () => api.listServerEvents(serverId, { page_size: 50 }),
   })
+  const managedCertsQuery = useQuery({
+    queryKey: certQueryKeys.list,
+    queryFn: () => api.listManagedCertificates({ page_size: 200 }),
+    enabled: Boolean(serverId),
+  })
 
   const deleteMutation = useMutation({
     mutationFn: (monitorId: string) => api.deleteMonitor(serverId, monitorId),
@@ -74,6 +91,10 @@ export function ServerDetailPage() {
   const health = healthQuery.data?.health
   const monitors = monitorsQuery.data?.monitors ?? []
   const events = eventsQuery.data?.events ?? []
+  const assignedCerts =
+    managedCertsQuery.data?.certificates?.filter((c) =>
+      (c.server_ids ?? []).includes(serverId)
+    ) ?? []
 
   if (serverQuery.isLoading) {
     return <div className="text-muted-foreground py-10 text-center">加载中…</div>
@@ -150,6 +171,9 @@ export function ServerDetailPage() {
         <TabsList>
           <TabsTrigger value="monitors">监控项 ({monitors.length})</TabsTrigger>
           <TabsTrigger value="events">状态事件 ({events.length})</TabsTrigger>
+          <TabsTrigger value="certificates">
+            证书授权 ({assignedCerts.length})
+          </TabsTrigger>
           <TabsTrigger value="ssh">SSH 运维</TabsTrigger>
         </TabsList>
 
@@ -282,6 +306,76 @@ export function ServerDetailPage() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="certificates" className="flex flex-col gap-4">
+          <Card className="py-0">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Shield className="size-4" />
+                已分配的托管证书
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="px-0 pb-0">
+              {managedCertsQuery.isLoading ? (
+                <TableSkeleton rows={3} columns={5} />
+              ) : assignedCerts.length === 0 ? (
+                <p className="text-muted-foreground px-6 pb-6 text-sm">
+                  本 Server 尚未被分配任何 ManagedCertificate。请在「证书 → 托管证书」详情页进行分配。
+                </p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>名称</TableHead>
+                        <TableHead>Active 域名</TableHead>
+                        <TableHead>有效性</TableHead>
+                        <TableHead>可下载</TableHead>
+                        <TableHead>到期</TableHead>
+                        <TableHead>Operation</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {assignedCerts.map((c) => (
+                        <TableRow key={c.id}>
+                          <TableCell className="font-medium">
+                            <div className="flex min-w-0 flex-col gap-1">
+                              <Link
+                                to={`/certificates/managed/${c.id}`}
+                                className="hover:underline"
+                              >
+                                {c.name}
+                              </Link>
+                              {c.active_version?.staging_untrusted ? (
+                                <CertificateStagingBadge />
+                              ) : null}
+                            </div>
+                          </TableCell>
+                          <TableCell className="max-w-[180px] truncate font-mono text-xs">
+                            {activeDomains(c)[0] ?? "—"}
+                          </TableCell>
+                          <TableCell>
+                            <CertificateValidityBadge validity={c.active_validity} />
+                          </TableCell>
+                          <TableCell>
+                            <CertificateAvailabilityBadge available={c.bundle_available} />
+                          </TableCell>
+                          <TableCell className="text-sm whitespace-nowrap">
+                            {formatManagedCertExpiry(c.active_version?.not_after)}
+                          </TableCell>
+                          <TableCell>
+                            <CertificateOperationBadge operation={c.latest_operation} />
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+          {user ? <CertificateAccessTokenPanel serverId={serverId} /> : null}
         </TabsContent>
 
         <TabsContent value="ssh">

@@ -18,14 +18,22 @@ import { api, ApiError } from "@/lib/api"
 import type {
   AuditLog,
   HealthStatus,
+  ManagedCertificate,
   StatusGroup,
   StatusMonitor,
   StatusServer,
 } from "@/lib/types"
 import {
+  certQueryKeys,
+  managedCertListFilterHref,
+  operationInFlight,
+  summarizeManagedCertificates,
+} from "@/lib/certificate-ui"
+import {
   DEFAULT_TLS_WARNING_DAYS,
   formatCertExpiry,
   formatDuration,
+  formatManagedCertExpiry,
   formatRelative,
   formatTime,
   isTlsMonitorKind,
@@ -33,6 +41,10 @@ import {
   statusLabels,
 } from "@/lib/format"
 import { StatusBadge } from "@/components/status-badge"
+import {
+  CertificateOperationBadge,
+  CertificateValidityBadge,
+} from "@/components/certificate-status-badges"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -100,6 +112,14 @@ export function DashboardPage() {
     queryFn: () => api.listAuditLogs({ page_size: 8 }),
     refetchInterval: 60_000,
   })
+  const managedCertsQuery = useQuery({
+    queryKey: certQueryKeys.list,
+    queryFn: () => api.listManagedCertificates({ page_size: 200 }),
+    refetchInterval: (q) => {
+      const certs = q.state.data?.certificates ?? []
+      return certs.some((c) => operationInFlight(c.latest_operation)) ? 15_000 : 60_000
+    },
+  })
 
   const groups = useMemo(
     () => overviewQuery.data?.groups ?? [],
@@ -109,6 +129,15 @@ export function DashboardPage() {
   const monitorGroups = groupsQuery.data?.groups ?? []
   const notifyGroups = notifyQuery.data?.groups ?? []
   const auditLogs = auditQuery.data?.logs ?? []
+  const managedCerts = managedCertsQuery.data?.certificates ?? []
+  const certSummary = useMemo(
+    () => summarizeManagedCertificates(managedCerts),
+    [managedCerts]
+  )
+  const certAttention = useMemo(
+    () => pickCertAttentionRows(managedCerts).slice(0, 6),
+    [managedCerts]
+  )
 
   const monitorRows = useMemo(() => flattenMonitorRows(groups), [groups])
   const serverCounts = useMemo(
@@ -160,6 +189,7 @@ export function DashboardPage() {
     groupsQuery.error,
     notifyQuery.error,
     auditQuery.error,
+    managedCertsQuery.error,
   ])
 
   function refreshAll() {
@@ -168,6 +198,7 @@ export function DashboardPage() {
     groupsQuery.refetch()
     notifyQuery.refetch()
     auditQuery.refetch()
+    managedCertsQuery.refetch()
   }
 
   return (
@@ -240,6 +271,46 @@ export function DashboardPage() {
         />
       </div>
 
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <ShieldCheck className="size-4" />
+            托管证书摘要
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          <CertSummaryLink
+            label="证书总数"
+            value={managedCertsQuery.isLoading ? "-" : String(certSummary.total)}
+            to="/certificates/managed"
+          />
+          <CertSummaryLink
+            label="Operation 失败"
+            value={managedCertsQuery.isLoading ? "-" : String(certSummary.failedOps)}
+            to={managedCertListFilterHref({ kind: "opFailed" })}
+            tone={certSummary.failedOps > 0 ? "danger" : "default"}
+          />
+          <CertSummaryLink
+            label="RenewalDue"
+            value={managedCertsQuery.isLoading ? "-" : String(certSummary.renewalDue)}
+            to={managedCertListFilterHref({ kind: "validity", value: "RenewalDue" })}
+            tone={certSummary.renewalDue > 0 ? "warning" : "default"}
+          />
+          <CertSummaryLink
+            label="7 天内到期"
+            value={managedCertsQuery.isLoading ? "-" : String(certSummary.expiring7)}
+            to={managedCertListFilterHref({ kind: "expiring", days: 7 })}
+            tone={certSummary.expiring7 > 0 ? "warning" : "default"}
+          />
+          <CertSummaryLink
+            label="Expired"
+            value={managedCertsQuery.isLoading ? "-" : String(certSummary.expired)}
+            to={managedCertListFilterHref({ kind: "validity", value: "Expired" })}
+            tone={certSummary.expired > 0 ? "danger" : "default"}
+          />
+        </CardContent>
+      </Card>
+
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
         <div className="flex flex-col gap-4">
           <Card className="py-0">
@@ -258,7 +329,22 @@ export function DashboardPage() {
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base">
                 <ShieldCheck className="size-4" />
-                TLS 证书关注
+                托管证书关注
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="px-0">
+              <ManagedCertAttentionTable
+                rows={certAttention}
+                loading={managedCertsQuery.isLoading}
+              />
+            </CardContent>
+          </Card>
+
+          <Card className="py-0">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <ShieldCheck className="size-4" />
+                TLS 监控证书关注
               </CardTitle>
             </CardHeader>
             <CardContent className="px-0">
@@ -306,6 +392,7 @@ export function DashboardPage() {
               <QuickLink to="/notify-groups" icon={BellRing} label="通知组" />
               <QuickLink to="/audit-logs" icon={FileSearch} label="审计" />
               <QuickLink to="/mcp" icon={Plug} label="MCP" />
+              <QuickLink to="/certificates/managed" icon={ShieldCheck} label="证书" />
               <QuickLink to="/" icon={Activity} label="状态页" />
             </CardContent>
           </Card>
@@ -549,6 +636,108 @@ function QuickLink({
       </Link>
     </Button>
   )
+}
+
+function CertSummaryLink({
+  label,
+  value,
+  to,
+  tone = "default",
+}: {
+  label: string
+  value: string
+  to: string
+  tone?: "default" | "warning" | "danger"
+}) {
+  return (
+    <Link
+      to={to}
+      className={cn(
+        "hover:bg-accent flex flex-col gap-1 rounded-lg border p-3 transition",
+        tone === "warning" && "border-amber-500/30",
+        tone === "danger" && "border-destructive/30"
+      )}
+    >
+      <span className="text-muted-foreground text-xs">{label}</span>
+      <span
+        className={cn(
+          "text-2xl font-semibold tabular-nums",
+          tone === "warning" && "text-amber-700 dark:text-amber-300",
+          tone === "danger" && "text-destructive"
+        )}
+      >
+        {value}
+      </span>
+    </Link>
+  )
+}
+
+function ManagedCertAttentionTable({
+  rows,
+  loading,
+}: {
+  rows: ManagedCertificate[]
+  loading: boolean
+}) {
+  if (loading) {
+    return <EmptyBlock text="加载中…" />
+  }
+  if (rows.length === 0) {
+    return <EmptyBlock text="暂无需要关注的托管证书" />
+  }
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>证书</TableHead>
+          <TableHead>有效性</TableHead>
+          <TableHead>到期</TableHead>
+          <TableHead>Operation</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {rows.map((cert) => (
+          <TableRow key={cert.id}>
+            <TableCell className="font-medium">
+              <Link to={`/certificates/managed/${cert.id}`} className="hover:underline">
+                {cert.name}
+              </Link>
+            </TableCell>
+            <TableCell>
+              <CertificateValidityBadge validity={cert.active_validity} />
+            </TableCell>
+            <TableCell className="text-sm whitespace-nowrap">
+              {formatManagedCertExpiry(cert.active_version?.not_after)}
+            </TableCell>
+            <TableCell>
+              <CertificateOperationBadge operation={cert.latest_operation} />
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  )
+}
+
+function pickCertAttentionRows(certs: ManagedCertificate[]): ManagedCertificate[] {
+  const rank = (cert: ManagedCertificate): number => {
+    if (cert.latest_operation?.status === "Failed") return 0
+    if (cert.active_validity === "Expired") return 1
+    if (cert.active_validity === "Revoked") return 2
+    if (cert.active_validity === "RenewalDue") return 3
+    if (cert.active_validity === "Missing") return 4
+    return 5
+  }
+  return certs
+    .filter(
+      (cert) =>
+        cert.latest_operation?.status === "Failed" ||
+        cert.active_validity === "Expired" ||
+        cert.active_validity === "Revoked" ||
+        cert.active_validity === "RenewalDue" ||
+        cert.active_validity === "Missing"
+    )
+    .sort((a, b) => rank(a) - rank(b))
 }
 
 function EmptyBlock({ text }: { text: string }) {
