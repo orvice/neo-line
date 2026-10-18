@@ -52,6 +52,7 @@ func Register(r *gin.Engine, st store.Store, certMgr *certmanager.Manager, ssh *
 	mux.Handle(neolinev1connect.NewCertificateAccessTokenServiceHandler(svc, opts))
 	mux.Handle(neolinev1connect.NewMcpTokenServiceHandler(svc, opts))
 	mux.Handle(neolinev1connect.NewSshServiceHandler(svc, opts))
+	mux.Handle(neolinev1connect.NewDataServiceHandler(svc, opts, connect.WithReadMaxBytes(16<<20)))
 
 	certDistSvc := &ServerCertService{parent: svc}
 	certDistOpts := connect.WithInterceptors(

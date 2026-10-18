@@ -29,15 +29,16 @@ var adminProcedureExempt = map[string]bool{
 }
 
 // requiresAdmin reports whether a procedure is restricted to admin sessions:
-// remote command execution, MCP token management, and every mutating
-// (Create/Update/Delete) procedure.
+// remote command execution, MCP token management, config import/export (the
+// export contains channel secrets), and every mutating (Create/Update/Delete)
+// procedure.
 func requiresAdmin(procedure string) bool {
 	service, method := splitProcedure(procedure)
 	if adminProcedureExempt[service] {
 		return false
 	}
 	switch service {
-	case "SshService", "McpTokenService", "CertificateAccessTokenService", "DNSProviderAccountService", "CertificateIssuerService", "ManagedCertificateService":
+	case "SshService", "McpTokenService", "DataService", "CertificateAccessTokenService", "DNSProviderAccountService", "CertificateIssuerService", "ManagedCertificateService":
 		return true
 	}
 	return strings.HasPrefix(method, "Create") ||
@@ -159,6 +160,10 @@ func auditAction(procedure string) string {
 		return "update"
 	case strings.HasPrefix(method, "Delete"), method == "Logout":
 		return "delete"
+	case method == "ExportConfig":
+		return "export"
+	case method == "ImportConfig":
+		return "import"
 	default:
 		return "read"
 	}
@@ -193,6 +198,8 @@ func auditResourceType(procedure string) string {
 		return "certificate_access_token"
 	case "SshService":
 		return "ssh"
+	case "DataService":
+		return "config"
 	default:
 		return ""
 	}

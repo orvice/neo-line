@@ -42,6 +42,7 @@ neo-line 是一个基于 Go 和 Butterfly 应用框架构建的服务器监控�
 - CertificateAccessTokenService：按 Server 创建、列出、删除证书分发 token（admin 专用；明文 secret 仅创建时返回一次）
 - ServerCertificateService：Server 侧 `ListCertificates` 与 `GetCertificateBundle`（Bearer `nlct_*` token 鉴权）
 - AuditLogService：按来源、动作、资源、调用方、结果与时间范围查询操作审计日志
+- DataService：Admin 专用的监控配置导入导出（单个 JSON 文件，支持 `MERGE` / `UPSERT` 与 `dry_run` 预检）
 - 探测调度器：随应用启动，每 `5s` 从 MongoDB 读取已启用的 monitor 并按各自间隔执行探测
 - 默认 HTTP 服务端口：`8080`，由 Butterfly 提供
 - Metrics 端口：`2223`，由 Butterfly 初始化流程提供
@@ -65,6 +66,7 @@ neo-line 的核心监控能力包括：
 - 通过 monitor 分组聚合监控项并配置分组级告警策略，引用可复用通知组派发告警
 - 通过 Connect API、MCP 工具和 Web 控制台服务器详情页使用本地 SSH 私钥连接服务器并执行远程命令（`SshService.Exec` / `ssh_exec`）
 - 记录并查询 Connect API 和 MCP 操作的审计日志（`audit_logs` collection / `AuditLogService.ListAuditLogs` / Web 控制台「审计」页面）
+- 导出和导入监控配置（站点设置、通知组、monitor 分组、server 与 monitor），用于备份、环境迁移和批量编辑（`DataService.ExportConfig` / `ImportConfig`，仅 Admin）
 
 ## 文档维护
 
